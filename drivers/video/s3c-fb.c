@@ -1187,8 +1187,6 @@ static int __devinit s3c_fb_probe_win(struct s3c_fb *sfb, unsigned int win_no,
 
 	dev_dbg(sfb->dev, "probing window %d, variant %p\n", win_no, variant);
 
-	init_waitqueue_head(&sfb->vsync_info.wait);
-
 	palette_size = variant->palette_sz * 4;
 
 	fbinfo = framebuffer_alloc(sizeof(struct s3c_fb_win) +
@@ -1336,6 +1334,8 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 		dev_err(dev, "no memory for framebuffers\n");
 		return -ENOMEM;
 	}
+
+	init_waitqueue_head(&sfb->vsync_info.wait);
 
 	dev_dbg(dev, "allocate new framebuffer %p\n", sfb);
 
