@@ -15,9 +15,9 @@
 
 /* S3C6400 and compatible (S3C2416, etc.) EPLL code */
 
-#define PLL6553X_MDIV_MASK	((1 << (23-16)) - 1)
-#define PLL6553X_PDIV_MASK	((1 << (13-8)) - 1)
-#define PLL6553X_SDIV_MASK	((1 << (2-0)) - 1)
+#define PLL6553X_MDIV_MASK	((1 << (23-16+1)) - 1)
+#define PLL6553X_PDIV_MASK	((1 << (13-8+1)) - 1)
+#define PLL6553X_SDIV_MASK	((1 << (2-0+1)) - 1)
 #define PLL6553X_MDIV_SHIFT	(16)
 #define PLL6553X_PDIV_SHIFT	(8)
 #define PLL6553X_SDIV_SHIFT	(0)
