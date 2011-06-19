@@ -345,17 +345,11 @@ static int s3c_adc_probe(struct platform_device *pdev)
 		goto err_alloc;
 	}
 
-	ret = request_irq(adc->irq, s3c_adc_irq, 0, dev_name(dev), adc);
-	if (ret < 0) {
-		dev_err(dev, "failed to attach adc irq\n");
-		goto err_alloc;
-	}
-
 	adc->clk = clk_get(dev, "adc");
 	if (IS_ERR(adc->clk)) {
 		dev_err(dev, "failed to get adc clock\n");
 		ret = PTR_ERR(adc->clk);
-		goto err_irq;
+		goto err_alloc;
 	}
 
 	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -381,20 +375,26 @@ static int s3c_adc_probe(struct platform_device *pdev)
 	}
 	writel(tmp, adc->regs + S3C2410_ADCCON);
 
-	dev_info(dev, "attached adc driver\n");
-
 	platform_set_drvdata(pdev, adc);
 	adc_dev = adc;
 
+	ret = request_irq(adc->irq, s3c_adc_irq, 0, dev_name(dev), adc);
+	if (ret < 0) {
+		dev_err(dev, "failed to attach adc irq\n");
+		goto err_clk_disable;
+	}
+
+	dev_info(dev, "attached adc driver\n");
+
 	return 0;
 
- err_clk:
+err_clk_disable:
+	clk_disable(adc->clk);
+
+err_clk:
 	clk_put(adc->clk);
 
- err_irq:
-	free_irq(adc->irq, adc);
-
- err_alloc:
+err_alloc:
 	kfree(adc);
 	return ret;
 }
