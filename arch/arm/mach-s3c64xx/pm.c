@@ -16,12 +16,14 @@
 #include <linux/suspend.h>
 #include <linux/serial_core.h>
 #include <linux/io.h>
+#include <linux/delay.h>
 
 #include <mach/map.h>
 #include <mach/irqs.h>
 
 #include <plat/pm.h>
 #include <plat/wakeup-mask.h>
+#include <plat/regs-serial.h>
 
 #include <mach/regs-sys.h>
 #include <mach/regs-gpio.h>
@@ -93,12 +95,36 @@ void s3c_pm_configure_extint(void)
 
 void s3c_pm_restore_core(void)
 {
+	u32 pclkgate, tmp;
+	int i;
+
 	__raw_writel(0, S3C64XX_EINT_MASK);
 
 	s3c_pm_debug_smdkled(1 << 2, 0);
 
 	s3c_pm_do_restore_core(core_save, ARRAY_SIZE(core_save));
 	s3c_pm_do_restore(misc_save, ARRAY_SIZE(misc_save));
+
+	tmp = pclkgate = __raw_readl(S3C_PCLK_GATE);
+
+	/* re-start uart clocks */
+	tmp |= S3C_CLKCON_PCLK_UART0;
+	tmp |= S3C_CLKCON_PCLK_UART1;
+	tmp |= S3C_CLKCON_PCLK_UART2;
+	tmp |= S3C_CLKCON_PCLK_UART3;
+
+	__raw_writel(tmp, S3C_PCLK_GATE);
+
+	udelay(10);
+
+	for (i = 0; i < 4; ++i) {
+		__raw_writel(15, S3C_VA_UARTx(i) + S3C64XX_UINTM);
+		__raw_writel(15, S3C_VA_UARTx(i) + S3C64XX_UINTP);
+	}
+
+	udelay(10);
+
+	__raw_writel(pclkgate, S3C_PCLK_GATE);
 }
 
 void s3c_pm_save_core(void)
