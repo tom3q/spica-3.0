@@ -69,6 +69,7 @@ struct adc_device {
 	spinlock_t		 lock;
 
 	unsigned int		 prescale;
+	unsigned int		 precision;
 
 	int			 irq;
 };
@@ -372,6 +373,7 @@ static int s3c_adc_probe(struct platform_device *pdev)
 	if (platform_get_device_id(pdev)->driver_data == TYPE_S3C64XX) {
 		/* Enable 12-bit ADC resolution */
 		tmp |= S3C64XX_ADCCON_RESSEL;
+		adc->precision = S3C64XX_ADCCON_RESSEL;
 	}
 	writel(tmp, adc->regs + S3C2410_ADCCON);
 
@@ -439,7 +441,7 @@ static int s3c_adc_resume(struct platform_device *pdev)
 	clk_enable(adc->clk);
 	enable_irq(adc->irq);
 
-	writel(adc->prescale | S3C2410_ADCCON_PRSCEN,
+	writel(adc->prescale | adc->precision | S3C2410_ADCCON_PRSCEN,
 	       adc->regs + S3C2410_ADCCON);
 
 	return 0;
