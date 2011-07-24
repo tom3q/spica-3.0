@@ -201,6 +201,12 @@ static struct clk init_clocks_off[] = {
 		.enable		= s3c64xx_sclk_ctrl,
 		.ctrlbit	= S3C_CLKCON_SCLK_SPI0_48,
 	}, {
+		.name		= "lcd_27m",
+		.id		= -1,
+		.parent		= &clk_27m,
+		.enable		= s3c64xx_sclk_ctrl,
+		.ctrlbit	= S3C_CLKCON_SCLK_LCD27,
+	}, {
 		.name		= "spi_48m",
 		.id		= 1,
 		.parent		= &clk_48m,
