@@ -27,6 +27,8 @@
 #define OFFS_CON	(0x00)
 #define OFFS_DAT	(0x04)
 #define OFFS_UP		(0x08)
+#define OFFS_CONSLP	(0x0c)
+#define OFFS_UPSLP	(0x10)
 
 static void s3c_gpio_pm_1bit_save(struct s3c_gpio_chip *chip)
 {
@@ -70,6 +72,10 @@ static void s3c_gpio_pm_2bit_save(struct s3c_gpio_chip *chip)
 	chip->pm_save[0] = __raw_readl(chip->base + OFFS_CON);
 	chip->pm_save[1] = __raw_readl(chip->base + OFFS_DAT);
 	chip->pm_save[2] = __raw_readl(chip->base + OFFS_UP);
+	if (chip->alive) {
+		chip->pm_save[3] = __raw_readl(chip->base + OFFS_CONSLP);
+		chip->pm_save[4] = __raw_readl(chip->base + OFFS_UPSLP);
+	}
 }
 
 /* Test whether the given masked+shifted bits of an GPIO configuration
@@ -132,8 +138,12 @@ static void s3c_gpio_pm_2bit_resume(struct s3c_gpio_chip *chip)
 	u32 change_mask = 0x0;
 	int nr;
 
-	/* restore GPIO pull-up settings */
+	/* restore GPIO pull-up (and sleep mode settings if alive) */
 	__raw_writel(chip->pm_save[2], base + OFFS_UP);
+	if (chip->alive) {
+		__raw_writel(chip->pm_save[3], base + OFFS_CONSLP);
+		__raw_writel(chip->pm_save[4], base + OFFS_UPSLP);
+	}
 
 	/* Create a change_mask of all the items that need to have
 	 * their CON value changed before their DAT value, so that
@@ -201,6 +211,11 @@ static void s3c_gpio_pm_4bit_save(struct s3c_gpio_chip *chip)
 
 	if (chip->chip.ngpio > 8)
 		chip->pm_save[0] = __raw_readl(chip->base - 4);
+
+	if (chip->alive) {
+		chip->pm_save[4] = __raw_readl(chip->base + OFFS_CONSLP);
+		chip->pm_save[5] = __raw_readl(chip->base + OFFS_UPSLP);
+	}
 }
 
 static u32 s3c_gpio_pm_4bit_mask(u32 old_gpcon, u32 gps_gpcon)
@@ -284,6 +299,10 @@ static void s3c_gpio_pm_4bit_resume(struct s3c_gpio_chip *chip)
 
 	__raw_writel(chip->pm_save[2], base + OFFS_DAT);
 	__raw_writel(chip->pm_save[3], base + OFFS_UP);
+	if (chip->alive) {
+		__raw_writel(chip->pm_save[4], base + OFFS_CONSLP);
+		__raw_writel(chip->pm_save[5], base + OFFS_UPSLP);
+	}
 
 	if (chip->chip.ngpio > 8) {
 		S3C_PMDBG("%s: CON4 %08x,%08x => %08x,%08x, DAT %08x => %08x\n",

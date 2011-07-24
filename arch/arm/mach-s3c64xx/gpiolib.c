@@ -86,6 +86,7 @@ static struct s3c_gpio_chip gpio_4bit[] = {
 			.ngpio	= S3C64XX_GPIO_A_NR,
 			.label	= "GPA",
 		},
+		.alive	= 1,
 	}, {
 		.base	= S3C64XX_GPB_BASE,
 		.config	= &gpio_4bit_cfg_eint0111,
@@ -94,6 +95,7 @@ static struct s3c_gpio_chip gpio_4bit[] = {
 			.ngpio	= S3C64XX_GPIO_B_NR,
 			.label	= "GPB",
 		},
+		.alive	= 1,
 	}, {
 		.base	= S3C64XX_GPC_BASE,
 		.config	= &gpio_4bit_cfg_eint0111,
@@ -102,6 +104,7 @@ static struct s3c_gpio_chip gpio_4bit[] = {
 			.ngpio	= S3C64XX_GPIO_C_NR,
 			.label	= "GPC",
 		},
+		.alive	= 1,
 	}, {
 		.base	= S3C64XX_GPD_BASE,
 		.config	= &gpio_4bit_cfg_eint0111,
@@ -110,6 +113,7 @@ static struct s3c_gpio_chip gpio_4bit[] = {
 			.ngpio	= S3C64XX_GPIO_D_NR,
 			.label	= "GPD",
 		},
+		.alive	= 1,
 	}, {
 		.base	= S3C64XX_GPE_BASE,
 		.config	= &gpio_4bit_cfg_noint,
@@ -118,6 +122,7 @@ static struct s3c_gpio_chip gpio_4bit[] = {
 			.ngpio	= S3C64XX_GPIO_E_NR,
 			.label	= "GPE",
 		},
+		.alive	= 1,
 	}, {
 		.base	= S3C64XX_GPG_BASE,
 		.config	= &gpio_4bit_cfg_eint0111,
@@ -126,6 +131,7 @@ static struct s3c_gpio_chip gpio_4bit[] = {
 			.ngpio	= S3C64XX_GPIO_G_NR,
 			.label	= "GPG",
 		},
+		.alive	= 1,
 	}, {
 		.base	= S3C64XX_GPM_BASE,
 		.config	= &gpio_4bit_cfg_eint0011,
@@ -152,6 +158,7 @@ static struct s3c_gpio_chip gpio_4bit2[] = {
 			.ngpio	= S3C64XX_GPIO_H_NR,
 			.label	= "GPH",
 		},
+		.alive	= 1,
 	}, {
 		.base	= S3C64XX_GPK_BASE + 0x4,
 		.config	= &gpio_4bit_cfg_noint,
@@ -204,6 +211,7 @@ static struct s3c_gpio_chip gpio_2bit[] = {
 			.ngpio	= S3C64XX_GPIO_F_NR,
 			.label	= "GPF",
 		},
+		.alive	= 1,
 	}, {
 		.base	= S3C64XX_GPI_BASE,
 		.config	= &gpio_2bit_cfg_noint,
@@ -212,6 +220,7 @@ static struct s3c_gpio_chip gpio_2bit[] = {
 			.ngpio	= S3C64XX_GPIO_I_NR,
 			.label	= "GPI",
 		},
+		.alive	= 1,
 	}, {
 		.base	= S3C64XX_GPJ_BASE,
 		.config	= &gpio_2bit_cfg_noint,
@@ -220,6 +229,7 @@ static struct s3c_gpio_chip gpio_2bit[] = {
 			.ngpio	= S3C64XX_GPIO_J_NR,
 			.label	= "GPJ",
 		},
+		.alive	= 1,
 	}, {
 		.base	= S3C64XX_GPN_BASE,
 		.irq_base = IRQ_EINT(0),
@@ -238,6 +248,7 @@ static struct s3c_gpio_chip gpio_2bit[] = {
 			.ngpio	= S3C64XX_GPIO_O_NR,
 			.label	= "GPO",
 		},
+		.alive	= 1,
 	}, {
 		.base	= S3C64XX_GPP_BASE,
 		.config	= &gpio_2bit_cfg_eint11,
@@ -246,6 +257,7 @@ static struct s3c_gpio_chip gpio_2bit[] = {
 			.ngpio	= S3C64XX_GPIO_P_NR,
 			.label	= "GPP",
 		},
+		.alive	= 1,
 	}, {
 		.base	= S3C64XX_GPQ_BASE,
 		.config	= &gpio_2bit_cfg_eint11,
@@ -254,6 +266,7 @@ static struct s3c_gpio_chip gpio_2bit[] = {
 			.ngpio	= S3C64XX_GPIO_Q_NR,
 			.label	= "GPQ",
 		},
+		.alive	= 1,
 	},
 };
 
