@@ -310,6 +310,13 @@ config SAMSUNG_PM_DEBUG
 	  Resume code. See <file:Documentation/arm/Samsung-S3C24XX/Suspend.txt>
 	  for more information.
 
+config SAMSUNG_PM_DEBUG_QUIET
+	bool "Quiesce S3C PM Suspend debug messages"
+	depends on PM && !SAMSUNG_PM_DEBUG
+	help
+	  Say Y here if you want to completely disable debug messages from
+	  PM suspend.
+
 config S3C_PM_DEBUG_LED_SMDK
        bool "SMDK LED suspend/resume debugging"
        depends on PM && (MACH_SMDK6410)

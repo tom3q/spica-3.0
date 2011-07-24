@@ -127,6 +127,9 @@ extern struct syscore_ops s3c24xx_irq_syscore_ops;
 extern void s3c_pm_dbg(const char *msg, ...);
 
 #define S3C_PMDBG(fmt...) s3c_pm_dbg(fmt)
+#elif defined CONFIG_SAMSUNG_PM_DEBUG_QUIET
+static inline void s3c_pm_dbg(const char *msg, ...) {}
+#define S3C_PMDBG(fmt...) s3c_pm_dbg(fmt)
 #else
 #define S3C_PMDBG(fmt...) printk(KERN_DEBUG fmt)
 #endif
