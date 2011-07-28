@@ -45,6 +45,7 @@ struct clksrc_reg {
  * @sources: the sources for this clock
  * @reg_src: the register definition for selecting the clock's source
  * @reg_div: the register definition for the clock's output divisor
+ * @disable: if non-zero, the clock will be disabled after registration
  *
  * This clock implements the features required by the newer SoCs where
  * the standard clock block provides an input mux and a post-mux divisor
@@ -61,6 +62,8 @@ struct clksrc_clk {
 
 	struct clksrc_reg	reg_src;
 	struct clksrc_reg	reg_div;
+
+	int			disable;
 };
 
 /**

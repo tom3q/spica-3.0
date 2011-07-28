@@ -208,5 +208,8 @@ void __init s3c_register_clksrc(struct clksrc_clk *clksrc, int size)
 			printk(KERN_ERR "%s: failed to register %s (%d)\n",
 			       __func__, clksrc->clk.name, ret);
 		}
+
+		if (clksrc->disable)
+			clksrc->clk.enable(&clksrc->clk, 0);
 	}
 }
