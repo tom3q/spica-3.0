@@ -200,6 +200,7 @@ struct s3c_fb {
 	struct device		*dev;
 	struct resource		*regs_res;
 	struct clk		*bus_clk;
+	struct clk		*pix_clk;
 	void __iomem		*regs;
 	struct s3c_fb_variant	 variant;
 
@@ -336,7 +337,7 @@ static int s3c_fb_check_var(struct fb_var_screeninfo *var,
  */
 static int s3c_fb_calc_pixclk(struct s3c_fb *sfb, unsigned int pixclk)
 {
-	unsigned long clk = clk_get_rate(sfb->bus_clk);
+	unsigned long clk = clk_get_rate(sfb->pix_clk);
 	unsigned long long tmp;
 	unsigned int result;
 
@@ -1354,13 +1355,36 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 
 	clk_enable(sfb->bus_clk);
 
+	switch (pd->vidcon0 & VIDCON0_CLKSEL_MASK) {
+	default:
+		pd->vidcon0 &= ~VIDCON0_CLKSEL_MASK;
+		pd->vidcon0 |= VIDCON0_CLKSEL_HCLK;
+		dev_warn(dev, "invalid pixel clock source specified,"
+						" defaulting to HCLK\n");
+	case VIDCON0_CLKSEL_HCLK:
+		sfb->pix_clk = clk_get(dev, "lcd");
+		break;
+	case VIDCON0_CLKSEL_LCD:
+		sfb->pix_clk = clk_get(dev, "lcd_sclk");
+		break;
+	case VIDCON0_CLKSEL_27M:
+		sfb->pix_clk = clk_get(dev, "lcd_27m");
+		break;
+	}
+	if (IS_ERR(sfb->bus_clk)) {
+		dev_err(dev, "failed to get pixel clock\n");
+		goto err_busclk;
+	}
+
+	clk_enable(sfb->pix_clk);
+
 	pm_runtime_enable(sfb->dev);
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		dev_err(dev, "failed to find registers\n");
 		ret = -ENOENT;
-		goto err_clk;
+		goto err_pixclk;
 	}
 
 	sfb->regs_res = request_mem_region(res->start, resource_size(res),
@@ -1368,7 +1392,7 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	if (!sfb->regs_res) {
 		dev_err(dev, "failed to claim register region\n");
 		ret = -ENOENT;
-		goto err_clk;
+		goto err_pixclk;
 	}
 
 	sfb->regs = ioremap(res->start, resource_size(res));
@@ -1450,7 +1474,10 @@ err_ioremap:
 err_req_region:
 	release_mem_region(sfb->regs_res->start, resource_size(sfb->regs_res));
 
-err_clk:
+err_pixclk:
+	clk_disable(sfb->pix_clk);
+	clk_put(sfb->pix_clk);
+err_busclk:
 	clk_disable(sfb->bus_clk);
 	clk_put(sfb->bus_clk);
 
@@ -1481,6 +1508,9 @@ static int __devexit s3c_fb_remove(struct platform_device *pdev)
 
 	iounmap(sfb->regs);
 
+	clk_disable(sfb->pix_clk);
+	clk_put(sfb->pix_clk);
+
 	clk_disable(sfb->bus_clk);
 	clk_put(sfb->bus_clk);
 
@@ -1510,6 +1540,7 @@ static int s3c_fb_suspend(struct device *dev)
 		s3c_fb_blank(FB_BLANK_POWERDOWN, win->fbinfo);
 	}
 
+	clk_disable(sfb->pix_clk);
 	clk_disable(sfb->bus_clk);
 	return 0;
 }
@@ -1523,6 +1554,7 @@ static int s3c_fb_resume(struct device *dev)
 	int win_no;
 
 	clk_enable(sfb->bus_clk);
+	clk_enable(sfb->pix_clk);
 
 	/* setup gpio and output polarity controls */
 	pd->setup_gpio();
@@ -1569,6 +1601,7 @@ static int s3c_fb_runtime_suspend(struct device *dev)
 		s3c_fb_blank(FB_BLANK_POWERDOWN, win->fbinfo);
 	}
 
+	clk_disable(sfb->pix_clk);
 	clk_disable(sfb->bus_clk);
 	return 0;
 }
@@ -1582,6 +1615,7 @@ static int s3c_fb_runtime_resume(struct device *dev)
 	int win_no;
 
 	clk_enable(sfb->bus_clk);
+	clk_enable(sfb->pix_clk);
 
 	/* setup gpio and output polarity controls */
 	pd->setup_gpio();
