@@ -111,5 +111,6 @@ static inline void s3c_pm_saved_gpios(void)
 	 * problems between going to sleep and resuming.
 	 */
 
-	__raw_writel(S3C64XX_SLPEN_USE_xSLP, S3C64XX_SLPEN);
+	__raw_writel(S3C64XX_SLPEN_USE_xSLP
+				| S3C64XX_SLPEN_CFG_BYSLPEN, S3C64XX_SLPEN);
 }
