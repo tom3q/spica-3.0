@@ -38,6 +38,30 @@ config MTD_ONENAND_SAMSUNG
           S5PC110/S5PC210 use generic OneNAND method.
           This driver does not support S3C6410.
 
+config MTD_ONENAND_S3C6410
+	tristate "OneNAND on Samsung S3C6410 SOC controller support"
+	depends on ARCH_S3C64XX
+	help
+	  Support for a OneNAND flash device connected to a Samsung S3C6410 SoC.
+	  This driver supports advanced functionality provided by the controller
+	  embedded in this SoC.
+
+config MTD_ONENAND_S3C6410_BURST_READ
+	bool "Enable burst read on S3C6410"
+	depends on MTD_ONENAND_S3C6410
+	help
+	  This option enables 8-word burst read support in S3C6410 OneNAND
+	  driver. On some systems it gives more than 100% increase in read
+	  speed without any drawbacks.
+
+config MTD_ONENAND_S3C6410_BURST_WRITE
+	bool "Enable burst read on S3C6410"
+	depends on MTD_ONENAND_S3C6410
+	help
+	  This option enables 8-word burst write support in S3C6410 OneNAND
+	  driver. On some systems it gives more than 100% increase in write
+	  speed without any drawbacks.
+
 config MTD_ONENAND_OTP
 	bool "OneNAND OTP Support"
 	select HAVE_MTD_OTP
