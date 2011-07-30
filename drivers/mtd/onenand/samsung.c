@@ -1118,9 +1118,6 @@ static struct platform_device_id s3c_onenand_driver_ids[] = {
 		.name		= "s3c6400-onenand",
 		.driver_data	= TYPE_S3C6400,
 	}, {
-		.name		= "s3c6410-onenand",
-		.driver_data	= TYPE_S3C6410,
-	}, {
 		.name		= "s5pc100-onenand",
 		.driver_data	= TYPE_S5PC100,
 	}, {

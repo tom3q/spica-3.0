@@ -34,8 +34,9 @@ config MTD_ONENAND_SAMSUNG
         depends on ARCH_S3C64XX || ARCH_S5PC100 || ARCH_S5PV210 || ARCH_EXYNOS4
         help
           Support for a OneNAND flash device connected to an Samsung SOC.
-          S3C64XX/S5PC100 use command mapping method.
+          S3C6400/S5PC100 use command mapping method.
           S5PC110/S5PC210 use generic OneNAND method.
+          This driver does not support S3C6410.
 
 config MTD_ONENAND_OTP
 	bool "OneNAND OTP Support"
