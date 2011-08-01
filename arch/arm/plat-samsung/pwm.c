@@ -273,6 +273,13 @@ static int s3c_pwm_probe(struct platform_device *pdev)
 	unsigned int id = pdev->id;
 	int ret;
 
+#ifdef CONFIG_S3C64XX_GENERIC_CLOCKEVENTS
+	if (id == 3 &&
+	    platform_get_device_id(pdev)->driver_data == TYPE_S3C64XX) {
+		dev_err(dev, "TIMER3 is currently not supported\n");
+		return -ENXIO;
+	}
+#endif
 	if (id == 4) {
 		dev_err(dev, "TIMER4 is currently not supported\n");
 		return -ENXIO;
