@@ -25,18 +25,6 @@ config CPU_S3C6410
 	help
 	  Enable S3C6410 CPU support
 
-config S3C64XX_GENERIC_CLOCKEVENTS
-	bool "Enable high resolution generic time support using PWM timers"
-	select GENERIC_CLOCKEVENTS
-	select HAVE_SCHED_CLOCK
-	help
-	  This option enabled high resolution generic time support on S3C64XX
-	  SoCs at the cost of limiting the PWM driver to timers 0 and 1 only.
-
-config S3C64XX_ARCH_USES_GETTIMEOFFSET
-	def_bool y if !S3C64XX_GENERIC_CLOCKEVENTS
-	select ARCH_USES_GETTIMEOFFSET
-
 config S3C64XX_DMA
 	bool "S3C64XX DMA"
 	select S3C_DMA

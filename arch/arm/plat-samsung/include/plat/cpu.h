@@ -74,13 +74,6 @@ extern struct syscore_ops s3c2416_pm_syscore_ops;
 extern struct syscore_ops s3c244x_pm_syscore_ops;
 extern struct syscore_ops s3c64xx_irq_syscore_ops;
 
-/* timer for 64xx */
-#ifdef CONFIG_S3C64XX_GENERIC_CLOCKEVENTS
-extern struct sys_timer s3c64xx_timer;
-#else
-#define s3c64xx_timer s3c24xx_timer
-#endif
-
 /* system device classes */
 
 extern struct sysdev_class s3c2410_sysclass;

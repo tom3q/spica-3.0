@@ -269,5 +269,5 @@ MACHINE_START(HMT, "Airgoo-HMT")
 	.init_irq	= s3c6410_init_irq,
 	.map_io		= hmt_map_io,
 	.init_machine	= hmt_machine_init,
-	.timer		= &s3c64xx_timer,
+	.timer		= &s3c24xx_timer,
 MACHINE_END

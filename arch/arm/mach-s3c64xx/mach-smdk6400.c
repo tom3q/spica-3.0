@@ -90,5 +90,5 @@ MACHINE_START(SMDK6400, "SMDK6400")
 	.init_irq	= s3c6400_init_irq,
 	.map_io		= smdk6400_map_io,
 	.init_machine	= smdk6400_machine_init,
-	.timer		= &s3c64xx_timer,
+	.timer		= &s3c24xx_timer,
 MACHINE_END
