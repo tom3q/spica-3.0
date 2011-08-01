@@ -20,6 +20,7 @@
 #include <mach/irqs.h>
 
 #include <plat/devs.h>
+#include <plat/pwm-core.h>
 
 #define TIMER_RESOURCE_SIZE (1)
 
@@ -51,3 +52,10 @@ struct platform_device s3c_device_timer[] = {
 	[4] = { DEFINE_S3C_TIMER(4, IRQ_TIMER4) },
 };
 EXPORT_SYMBOL(s3c_device_timer);
+
+void s3c_pwm_setname(const char *name)
+{
+	int i;
+	for (i = 0; i < ARRAY_SIZE(s3c_device_timer); ++i)
+		s3c_device_timer[i].name = name;
+}

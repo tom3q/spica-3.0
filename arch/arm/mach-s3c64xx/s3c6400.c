@@ -38,6 +38,7 @@
 #include <plat/sdhci.h>
 #include <plat/iic-core.h>
 #include <plat/onenand-core.h>
+#include <plat/pwm-core.h>
 #include <mach/s3c6400.h>
 
 void __init s3c6400_map_io(void)
@@ -55,6 +56,7 @@ void __init s3c6400_map_io(void)
 
 	s3c_onenand_setname("s3c6400-onenand");
 	s3c64xx_onenand1_setname("s3c6400-onenand");
+	s3c_pwm_setname("s3c64xx-pwm");
 }
 
 void __init s3c6400_init_clocks(int xtal)

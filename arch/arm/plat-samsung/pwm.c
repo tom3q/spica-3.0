@@ -24,6 +24,11 @@
 
 #include <plat/regs-timer.h>
 
+enum soc_type {
+	TYPE_GENERIC,
+	TYPE_S3C64XX,
+};
+
 struct pwm_device {
 	struct list_head	 list;
 	struct platform_device	*pdev;
@@ -380,11 +385,23 @@ static int s3c_pwm_resume(struct platform_device *pdev)
 #define s3c_pwm_resume NULL
 #endif
 
+static struct platform_device_id s3c_pwm_driver_ids[] = {
+	{
+		.name		= "s3c24xx-pwm",
+		.driver_data	= TYPE_GENERIC,
+	}, {
+		.name		= "s3c64xx-pwm",
+		.driver_data	= TYPE_S3C64XX,
+	},
+};
+MODULE_DEVICE_TABLE(platform, s3c_pwm_driver_ids);
+
 static struct platform_driver s3c_pwm_driver = {
 	.driver		= {
-		.name	= "s3c24xx-pwm",
+		.name	= "samsung-pwm",
 		.owner	= THIS_MODULE,
 	},
+	.id_table	= s3c_pwm_driver_ids,
 	.probe		= s3c_pwm_probe,
 	.remove		= __devexit_p(s3c_pwm_remove),
 	.suspend	= s3c_pwm_suspend,
