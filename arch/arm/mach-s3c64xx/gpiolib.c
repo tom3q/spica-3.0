@@ -56,12 +56,27 @@ static struct s3c_gpio_cfg gpio_4bit_cfg_noint = {
 	.get_pull	= s3c_gpio_getpull_updown,
 };
 
+static struct s3c_gpio_cfg gpio_4bit_cfg_noint_alive = {
+	.set_config	= s3c_gpio_setcfg_s3c64xx_4bit,
+	.get_config	= s3c_gpio_getcfg_s3c64xx_4bit,
+	.set_pull	= s3c_gpio_setpull_updown,
+	.get_pull	= s3c_gpio_getpull_updown,
+	.slp_set_config	= s3c_gpio_slp_setcfg_s3c64xx,
+	.slp_get_config	= s3c_gpio_slp_getcfg_s3c64xx,
+	.slp_set_pull	= s3c_gpio_slp_setpull_s3c64xx,
+	.slp_get_pull	= s3c_gpio_slp_getpull_s3c64xx,
+};
+
 static struct s3c_gpio_cfg gpio_4bit_cfg_eint0111 = {
 	.cfg_eint	= 7,
 	.set_config	= s3c_gpio_setcfg_s3c64xx_4bit,
 	.get_config	= s3c_gpio_getcfg_s3c64xx_4bit,
 	.set_pull	= s3c_gpio_setpull_updown,
 	.get_pull	= s3c_gpio_getpull_updown,
+	.slp_set_config	= s3c_gpio_slp_setcfg_s3c64xx,
+	.slp_get_config	= s3c_gpio_slp_getcfg_s3c64xx,
+	.slp_set_pull	= s3c_gpio_slp_setpull_s3c64xx,
+	.slp_get_pull	= s3c_gpio_slp_getpull_s3c64xx,
 };
 
 static struct s3c_gpio_cfg gpio_4bit_cfg_eint0011 = {
@@ -116,7 +131,7 @@ static struct s3c_gpio_chip gpio_4bit[] = {
 		.alive	= 1,
 	}, {
 		.base	= S3C64XX_GPE_BASE,
-		.config	= &gpio_4bit_cfg_noint,
+		.config	= &gpio_4bit_cfg_noint_alive,
 		.chip	= {
 			.base	= S3C64XX_GPE(0),
 			.ngpio	= S3C64XX_GPIO_E_NR,
@@ -184,6 +199,10 @@ static struct s3c_gpio_cfg gpio_2bit_cfg_noint = {
 	.get_config	= s3c_gpio_getcfg_s3c24xx,
 	.set_pull	= s3c_gpio_setpull_updown,
 	.get_pull	= s3c_gpio_getpull_updown,
+	.slp_set_config	= s3c_gpio_slp_setcfg_s3c64xx,
+	.slp_get_config	= s3c_gpio_slp_getcfg_s3c64xx,
+	.slp_set_pull	= s3c_gpio_slp_setpull_s3c64xx,
+	.slp_get_pull	= s3c_gpio_slp_getpull_s3c64xx,
 };
 
 static struct s3c_gpio_cfg gpio_2bit_cfg_eint10 = {
@@ -200,6 +219,10 @@ static struct s3c_gpio_cfg gpio_2bit_cfg_eint11 = {
 	.get_config	= s3c_gpio_getcfg_s3c24xx,
 	.set_pull	= s3c_gpio_setpull_updown,
 	.get_pull	= s3c_gpio_getpull_updown,
+	.slp_set_config	= s3c_gpio_slp_setcfg_s3c64xx,
+	.slp_get_config	= s3c_gpio_slp_getcfg_s3c64xx,
+	.slp_set_pull	= s3c_gpio_slp_setpull_s3c64xx,
+	.slp_get_pull	= s3c_gpio_slp_getpull_s3c64xx,
 };
 
 static struct s3c_gpio_chip gpio_2bit[] = {
