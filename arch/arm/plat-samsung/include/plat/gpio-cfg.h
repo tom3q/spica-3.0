@@ -194,13 +194,31 @@ static inline int s3c_gpio_cfgrange_nopull(unsigned int pin, unsigned int size,
 /* Sleep mode GPIO configuration */
 
 /**
+ * enum s3c64xx_slp_cfg - GPIO sleep state configurations supported by
+ * s3c64xx-compatible GPIO pins
+ * @S3C64XX_GPIO_SLP_LOW: pin is driven low in sleep mode.
+ * @S3C64XX_GPIO_SLP_HIGH: pin is driven high in sleep mode.
+ * @S3C64XX_GPIO_SLP_IN: pin is set to input in sleep mode.
+ * @S3C64XX_GPIO_SLP_RETAIN: pin retains its last state.
+ */
+enum s3c64xx_slp_cfg {
+	S3C64XX_GPIO_SLP_LOW	= 0x00,
+	S3C64XX_GPIO_SLP_HIGH	= 0x01,
+	S3C64XX_GPIO_SLP_IN	= 0x02,
+	S3C64XX_GPIO_SLP_RETAIN	= 0x03,
+};
+
+/**
  * s3c_gpio_slp_cfgpin() - Change the sleep state configuration of a GPIO pin
  * @pin: The pin number to configure.
  * @to: The configuration for the pin's function.
  *
  * Configure pin behavior when sleep mode controller is activated.
  *
- * The @to parameter is chip specific.
+ * The @to parameter is chip specific and for s3c64xx-compatible GPIO
+ * controllers it will be one of values defined by s3c64xx_slp_cfg enum.
+ *
+ * @sa enum s3c64xx_slp_cfg
  */
 extern int s3c_gpio_slp_cfgpin(unsigned int pin, int to);
 

@@ -536,3 +536,65 @@ int s5p_gpio_set_drvstr(unsigned int pin, s5p_gpio_drvstr_t drvstr)
 }
 EXPORT_SYMBOL(s5p_gpio_set_drvstr);
 #endif	/* CONFIG_S5P_GPIO_DRVSTR */
+
+#ifdef CONFIG_S3C_GPIO_SLP_S3C64XX
+int s3c_gpio_slp_setpull_s3c64xx(struct s3c_gpio_chip *chip,
+			    unsigned int off, s3c_gpio_pull_t pull)
+{
+	void __iomem *reg = chip->base + 0x10;
+	int shift = off * 2;
+	u32 pup;
+
+	pup = __raw_readl(reg);
+	pup &= ~(3 << shift);
+	pup |= pull << shift;
+	__raw_writel(pup, reg);
+
+	return 0;
+}
+
+s3c_gpio_pull_t s3c_gpio_slp_getpull_s3c64xx(struct s3c_gpio_chip *chip,
+					unsigned int off)
+{
+	void __iomem *reg = chip->base + 0x10;
+	int shift = off * 2;
+	u32 pup = __raw_readl(reg);
+
+	pup >>= shift;
+	pup &= 0x3;
+	return (__force s3c_gpio_pull_t)pup;
+}
+
+int s3c_gpio_slp_setcfg_s3c64xx(struct s3c_gpio_chip *chip,
+				unsigned int off, int cfg)
+{
+	void __iomem *reg = chip->base + 0x0c;
+	unsigned int shift = off * 2;
+	u32 con;
+
+	cfg &= 0xf;
+	if (cfg > 3)
+		return -EINVAL;
+
+	cfg <<= shift;
+
+	con = __raw_readl(reg);
+	con &= ~(0x3 << shift);
+	con |= cfg;
+	__raw_writel(con, reg);
+
+	return 0;
+}
+
+int s3c_gpio_slp_getcfg_s3c64xx(struct s3c_gpio_chip *chip,
+				unsigned int off)
+{
+	u32 con;
+
+	con = __raw_readl(chip->base + 0x0c);
+	con >>= off * 2;
+	con &= 3;
+
+	return con;
+}
+#endif

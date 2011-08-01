@@ -118,6 +118,12 @@ config S5P_GPIO_DRVSTR
 	  Internal configuration to get and set correct GPIO driver strength
 	  helper
 
+config S3C_GPIO_SLP_S3C64XX
+	bool
+	help
+	  Internal configuration to enable S3C64XX GPIO sleep mode state
+	  configuration functions.
+
 config SAMSUNG_GPIO_EXTRA
 	int "Number of additional GPIO pins"
 	default 0

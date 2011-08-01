@@ -279,5 +279,66 @@ extern int s3c_gpio_setpull_s3c2443(struct s3c_gpio_chip *chip,
 extern s3c_gpio_pull_t s3c_gpio_getpull_s3c2443(struct s3c_gpio_chip *chip,
 						unsigned int off);
 
+/* Sleep mode GPIO state configuration */
+
+/**
+ * s3c_gpio_slp_setcfg_s3c64xx - Set sleep state config
+ * of s3c64xx-compatible alive GPIO pin
+ * @chip: The gpio chip that is being configured.
+ * @off: The offset for the GPIO being configured.
+ * @cfg: The configuration value to set.
+ *
+ * This helper deal with the GPIO cases where the control register has 2 bits
+ * of control per GPIO, generally in the form of:
+ *	00 = Output 0
+ *	01 = Output 1
+ *	10 = Input
+ *	11 = Retain last state
+ */
+extern int s3c_gpio_slp_setcfg_s3c64xx(struct s3c_gpio_chip *chip,
+				       unsigned int off, int cfg);
+
+/**
+ * s3c_gpio_slp_getcfg_s3c64xx - Get sleep state config
+ * of s3c64xx-compatible alive GPIO pin.
+ * @chip: The gpio chip that is being configured.
+ * @off: The offset for the GPIO being configured.
+ *
+ * The reverse of s3c_gpio_setcfg_s3c64xx_4bit(), turning a gpio configuration
+ * register setting into a value the software can use, such as could be passed
+ * to s3c_gpio_slp_setcfg_s3c64xx().
+ */
+extern int s3c_gpio_slp_getcfg_s3c64xx(struct s3c_gpio_chip *chip,
+				       unsigned int off);
+
+/**
+ * s3c_gpio_slp_setpull_s3c64xx() - Set sleep state pull configuration
+ * of s3c64xx-compatible alive GPIO pin.
+ * @chip: The gpio chip that is being configured.
+ * @off: The offset for the GPIO being configured.
+ * @param: pull: The pull mode being requested.
+ *
+ * This is a helper function for the case where we have GPIOs with two
+ * bits configuring the presence of a pull resistor, in the following
+ * order:
+ *	00 = No pull resistor connected
+ *	01 = Pull-up resistor connected
+ *	10 = Pull-down resistor connected
+ */
+extern int s3c_gpio_slp_setpull_s3c64xx(struct s3c_gpio_chip *chip,
+					unsigned int off, s3c_gpio_pull_t pull);
+
+/**
+ * s3c_gpio_slp_getpull_s3c64xx() - Get sleep state pull configuration
+ * of s3c64xx-compatible alive GPIO pin.
+ * @chip: The gpio chip that the GPIO pin belongs to
+ * @off: The offset to the pin to get the configuration of.
+ *
+ * This helper function reads the sleep state of the pull-{up,down} resistor for
+ * the given GPIO in the same case as s3c_gpio_slp_setpull_s3c64xx.
+ */
+extern s3c_gpio_pull_t s3c_gpio_slp_getpull_s3c64xx(struct s3c_gpio_chip *chip,
+						    unsigned int off);
+
 #endif /* __PLAT_GPIO_CFG_HELPERS_H */
 
