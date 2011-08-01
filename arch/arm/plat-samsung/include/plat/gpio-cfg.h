@@ -37,6 +37,10 @@ struct s3c_gpio_chip;
  * @set_pull: Set the current pull configuraiton for the GPIO
  * @set_config: Set the current configuration for the GPIO
  * @get_config: Read the current configuration for the GPIO
+ * @slp_get_pull: Read the sleep state pull configuration for the GPIO
+ * @slp_set_pull: Set the sleep state pull configuration for the GPIO
+ * @slp_get_config: Read the sleep state configuration for the GPIO
+ * @slp_set_config: Set the sleep state configuration for the GPIO
  *
  * Each chip can have more than one type of GPIO bank available and some
  * have different capabilites even when they have the same control register
@@ -59,6 +63,15 @@ struct s3c_gpio_cfg {
 	unsigned (*get_config)(struct s3c_gpio_chip *chip, unsigned offs);
 	int	 (*set_config)(struct s3c_gpio_chip *chip, unsigned offs,
 			       unsigned config);
+
+	s3c_gpio_pull_t	(*slp_get_pull)(struct s3c_gpio_chip *chip,
+					unsigned offs);
+	int		(*slp_set_pull)(struct s3c_gpio_chip *chip,
+					unsigned offs, s3c_gpio_pull_t pull);
+
+	int (*slp_get_config)(struct s3c_gpio_chip *chip, unsigned offs);
+	int (*slp_set_config)(struct s3c_gpio_chip *chip, unsigned offs,
+			      int config);
 };
 
 #define S3C_GPIO_SPECIAL_MARK	(0xfffffff0)
@@ -176,6 +189,91 @@ static inline int s3c_gpio_cfgrange_nopull(unsigned int pin, unsigned int size,
 					   unsigned int cfg)
 {
 	return s3c_gpio_cfgall_range(pin, size, cfg, S3C_GPIO_PULL_NONE);
+}
+
+/* Sleep mode GPIO configuration */
+
+/**
+ * s3c_gpio_slp_cfgpin() - Change the sleep state configuration of a GPIO pin
+ * @pin: The pin number to configure.
+ * @to: The configuration for the pin's function.
+ *
+ * Configure pin behavior when sleep mode controller is activated.
+ *
+ * The @to parameter is chip specific.
+ */
+extern int s3c_gpio_slp_cfgpin(unsigned int pin, int to);
+
+/**
+ * s3c_gpio_slp_getcfg - Read the sleep state configuration of a GPIO pin
+ * @pin: The pin to read the configuration value for.
+ *
+ * Read the sleep state configuration of the given @pin, returning a value that
+ * could be passed back to s3c_gpio_slp_cfgpin().
+ *
+ * @sa s3c_gpio_slp_cfgpin
+ */
+extern int s3c_gpio_slp_getcfg(unsigned int pin);
+
+/**
+ * s3c_gpio_slp_cfgpin_range() - Change sleep mode state configuration for
+ * a range of GPIO pins
+ * @start: The pin number to start at
+ * @nr: The number of pins to configure from @start.
+ * @cfg: The configuration for the pin's function
+ *
+ * Call s3c_gpio_slp_cfgpin() for the @nr pins starting at @start.
+ *
+ * @sa s3c_gpio_slp_cfgpin
+ */
+extern int s3c_gpio_slp_cfgpin_range(unsigned int start, unsigned int nr,
+				     int cfg);
+
+/**
+ * s3c_gpio_slp_setpull() - set the sleep state of a gpio pin pull resistor
+ * @pin: The pin number to configure the pull resistor.
+ * @pull: The configuration for the pull resistor.
+ *
+ * This function sets the sleep state of the pull-{up,down} resistor for the
+ * specified pin. It will return 0 if successful, or a negative error
+ * code if the pin cannot support the requested pull setting.
+ *
+ * @pull is one of S3C_GPIO_PULL_NONE, S3C_GPIO_PULL_DOWN or S3C_GPIO_PULL_UP.
+*/
+extern int s3c_gpio_slp_setpull(unsigned int pin, s3c_gpio_pull_t pull);
+
+/**
+ * s3c_gpio_slp_getpull() - get the pull resistor sleep state of a gpio pin
+ * @pin: The pin number to get the settings for
+ *
+ * Read the pull resistor value for the specified pin.
+*/
+extern s3c_gpio_pull_t s3c_gpio_slp_getpull(unsigned int pin);
+
+/* configure `all` aspects of an gpio */
+
+/**
+ * s3c_gpio_slp_cfgall_range() - set sleep state configuration and pull setting
+ * for a range of GPIO pins
+ * @start: The gpio number to start at.
+ * @nr: The number of gpio to configure from @start.
+ * @cfg: The configuration to use
+ * @pull: The pull setting to use.
+ *
+ * Run s3c_gpio_slp_cfgpin() and s3c_gpio_slp_setpull() over the gpio range
+ * starting from @gpio and running for @size.
+ *
+ * @sa s3c_gpio_slp_cfgpin
+ * @sa s3c_gpio_slp_setpull
+ * @sa s3c_gpio_slp_cfgpin_range
+ */
+extern int s3c_gpio_slp_cfgall_range(unsigned int start, unsigned int nr,
+				     int cfg, s3c_gpio_pull_t pull);
+
+static inline int s3c_gpio_slp_cfgrange_nopull(unsigned int pin,
+					       unsigned int size, int cfg)
+{
+	return s3c_gpio_slp_cfgall_range(pin, size, cfg, S3C_GPIO_PULL_NONE);
 }
 
 /* Define values for the drvstr available for each gpio pin.

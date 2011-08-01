@@ -130,6 +130,113 @@ s3c_gpio_pull_t s3c_gpio_getpull(unsigned int pin)
 }
 EXPORT_SYMBOL(s3c_gpio_getpull);
 
+int s3c_gpio_slp_cfgpin(unsigned int pin, int config)
+{
+	struct s3c_gpio_chip *chip = s3c_gpiolib_getchip(pin);
+	unsigned long flags;
+	int offset;
+	int ret;
+
+	if (!chip)
+		return -EINVAL;
+
+	offset = pin - chip->chip.base;
+
+	s3c_gpio_lock(chip, flags);
+	ret = s3c_gpio_do_slp_setcfg(chip, offset, config);
+	s3c_gpio_unlock(chip, flags);
+
+	return ret;
+}
+EXPORT_SYMBOL(s3c_gpio_slp_cfgpin);
+
+int s3c_gpio_slp_cfgpin_range(unsigned int start, unsigned int nr, int cfg)
+{
+	int ret;
+
+	for (; nr > 0; nr--, start++) {
+		ret = s3c_gpio_slp_cfgpin(start, cfg);
+		if (ret != 0)
+			return ret;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(s3c_gpio_slp_cfgpin_range);
+
+int s3c_gpio_slp_cfgall_range(unsigned int start, unsigned int nr,
+			      int cfg, s3c_gpio_pull_t pull)
+{
+	int ret;
+
+	for (; nr > 0; nr--, start++) {
+		s3c_gpio_slp_setpull(start, pull);
+		ret = s3c_gpio_slp_cfgpin(start, cfg);
+		if (ret != 0)
+			return ret;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(s3c_gpio_slp_cfgall_range);
+
+int s3c_gpio_slp_getcfg(unsigned int pin)
+{
+	struct s3c_gpio_chip *chip = s3c_gpiolib_getchip(pin);
+	unsigned long flags;
+	int ret = 0;
+	int offset;
+
+	if (chip) {
+		offset = pin - chip->chip.base;
+
+		s3c_gpio_lock(chip, flags);
+		ret = s3c_gpio_do_slp_getcfg(chip, offset);
+		s3c_gpio_unlock(chip, flags);
+	}
+
+	return ret;
+}
+EXPORT_SYMBOL(s3c_gpio_slp_getcfg);
+
+int s3c_gpio_slp_setpull(unsigned int pin, s3c_gpio_pull_t pull)
+{
+	struct s3c_gpio_chip *chip = s3c_gpiolib_getchip(pin);
+	unsigned long flags;
+	int offset, ret;
+
+	if (!chip)
+		return -EINVAL;
+
+	offset = pin - chip->chip.base;
+
+	s3c_gpio_lock(chip, flags);
+	ret = s3c_gpio_do_slp_setpull(chip, offset, pull);
+	s3c_gpio_unlock(chip, flags);
+
+	return ret;
+}
+EXPORT_SYMBOL(s3c_gpio_slp_setpull);
+
+s3c_gpio_pull_t s3c_gpio_slp_getpull(unsigned int pin)
+{
+	struct s3c_gpio_chip *chip = s3c_gpiolib_getchip(pin);
+	unsigned long flags;
+	int offset;
+	u32 pup = 0;
+
+	if (chip) {
+		offset = pin - chip->chip.base;
+
+		s3c_gpio_lock(chip, flags);
+		pup = s3c_gpio_do_slp_getpull(chip, offset);
+		s3c_gpio_unlock(chip, flags);
+	}
+
+	return (__force s3c_gpio_pull_t)pup;
+}
+EXPORT_SYMBOL(s3c_gpio_slp_getpull);
+
 #ifdef CONFIG_S3C_GPIO_CFG_S3C24XX
 int s3c_gpio_setcfg_s3c24xx_a(struct s3c_gpio_chip *chip,
 			      unsigned int off, unsigned int cfg)

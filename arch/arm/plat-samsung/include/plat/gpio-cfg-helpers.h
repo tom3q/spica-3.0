@@ -48,6 +48,38 @@ static inline s3c_gpio_pull_t s3c_gpio_do_getpull(struct s3c_gpio_chip *chip,
 	return chip->config->get_pull(chip, off);
 }
 
+static inline int s3c_gpio_do_slp_setcfg(struct s3c_gpio_chip *chip,
+					 unsigned int off, int config)
+{
+	if (!chip->config->slp_set_config)
+		return -EINVAL;
+	return (chip->config->slp_set_config)(chip, off, config);
+}
+
+static inline int s3c_gpio_do_slp_getcfg(struct s3c_gpio_chip *chip,
+					      unsigned int off)
+{
+	if (!chip->config->slp_get_config)
+		return -EINVAL;
+	return (chip->config->slp_get_config)(chip, off);
+}
+
+static inline int s3c_gpio_do_slp_setpull(struct s3c_gpio_chip *chip,
+					  unsigned int off, s3c_gpio_pull_t pull)
+{
+	if (!chip->config->slp_set_pull)
+		return -EINVAL;
+	return (chip->config->slp_set_pull)(chip, off, pull);
+}
+
+static inline s3c_gpio_pull_t s3c_gpio_do_slp_getpull(struct s3c_gpio_chip *chip,
+						      unsigned int off)
+{
+	if (!chip->config->slp_get_pull)
+		return S3C_GPIO_PULL_NONE;
+	return chip->config->slp_get_pull(chip, off);
+}
+
 /**
  * s3c_gpio_setcfg_s3c24xx - S3C24XX style GPIO configuration.
  * @chip: The gpio chip that is being configured.
