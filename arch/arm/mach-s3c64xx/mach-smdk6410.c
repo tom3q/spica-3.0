@@ -750,5 +750,5 @@ MACHINE_START(SMDK6410, "SMDK6410")
 	.init_irq	= s3c6410_init_irq,
 	.map_io		= smdk6410_map_io,
 	.init_machine	= smdk6410_machine_init,
-	.timer		= &s3c24xx_timer,
+	.timer		= &s3c64xx_timer,
 MACHINE_END
