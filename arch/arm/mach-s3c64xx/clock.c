@@ -1022,6 +1022,12 @@ static struct clk s3c6410_clocks[] = {
 
 static struct clk s3c6410_clocks_off[] = {
 	{
+		.name		= "3dse",
+		.id		= -1,
+		.parent		= &clk_h,
+		.enable		= s3c64xx_hclk_ctrl,
+		.ctrlbit	= S3C_CLKCON_HCLK_3DSE,
+	}, {
 		.name		= "iis",
 		.id		= -1,  /* There's only one IISv4 port */
 		.parent		= &clk_p,
