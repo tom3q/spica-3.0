@@ -62,6 +62,7 @@ void __init s3c6400_map_io(void)
 void __init s3c6400_init_clocks(int xtal)
 {
 	s3c64xx_register_clocks(xtal, S3C6400_CLKDIV0_ARM_MASK);
+	s3c6400_register_clocks();
 	s3c6400_setup_clocks();
 }
 

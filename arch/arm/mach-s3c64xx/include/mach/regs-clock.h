@@ -146,6 +146,13 @@
 #define S3C_CLKCON_SCLK_CAM		(1<<2)
 #define S3C_CLKCON_SCLK_JPEG		(1<<1)
 
+/* MEM0 GATE Registers */
+#define S3C_CLKCON_MEM0_CFCON		(1<<5)
+#define S3C_CLKCON_MEM0_ONENAND1	(1<<4)
+#define S3C_CLKCON_MEM0_ONENAND0	(1<<3)
+#define S3C_CLKCON_MEM0_NFCON		(1<<2)
+#define S3C_CLKCON_MEM0_SROM		(1<<1)
+
 /* CLKSRC */
 
 #define S3C6400_CLKSRC_APLL_MOUT	(1 << 0)

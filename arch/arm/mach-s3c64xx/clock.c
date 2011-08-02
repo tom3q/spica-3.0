@@ -127,12 +127,13 @@ int s3c64xx_sclk_ctrl(struct clk *clk, int enable)
 	return s3c64xx_gate(S3C_SCLK_GATE, clk, enable);
 }
 
+static int s3c64xx_mem0_ctrl(struct clk *clk, int enable)
+{
+	return s3c64xx_gate(S3C_MEM0_GATE, clk, enable);
+}
+
 static struct clk init_clocks_off[] = {
 	{
-		.name		= "nand",
-		.id		= -1,
-		.parent		= &clk_h,
-	}, {
 		.name		= "rtc",
 		.id		= -1,
 		.parent		= &clk_p,
@@ -962,7 +963,62 @@ static struct clk lcd_clocks[] = {
 	},
 };
 
+/* S3C6400 specific clocks */
+
+static struct clk s3c6400_clocks[] = {
+	{
+		.name		= "onenand",
+		.id		= 1,
+		.parent		= &clk_h,
+	}, {
+		.name		= "onenand",
+		.id		= 0,
+		.parent		= &clk_h,
+	}, {
+		.name		= "nand",
+		.id		= -1,
+		.parent		= &clk_h,
+	}, {
+		.name		= "srom",
+		.id		= -1,
+		.parent		= &clk_h,
+	}
+};
+
+void s3c6400_register_clocks(void)
+{
+	s3c_register_clocks(s3c6400_clocks, ARRAY_SIZE(s3c6400_clocks));
+}
+
 /* S3C6410 specific clocks */
+
+static struct clk s3c6410_clocks[] = {
+	{
+		.name		= "onenand",
+		.id		= 1,
+		.parent		= &clk_h,
+		.enable		= s3c64xx_mem0_ctrl,
+		.ctrlbit	= S3C_CLKCON_MEM0_ONENAND1,
+	}, {
+		.name		= "onenand",
+		.id		= 0,
+		.parent		= &clk_h,
+		.enable		= s3c64xx_mem0_ctrl,
+		.ctrlbit	= S3C_CLKCON_MEM0_ONENAND0,
+	}, {
+		.name		= "nand",
+		.id		= -1,
+		.parent		= &clk_h,
+		.enable		= s3c64xx_mem0_ctrl,
+		.ctrlbit	= S3C_CLKCON_MEM0_NFCON,
+	}, {
+		.name		= "srom",
+		.id		= -1,
+		.parent		= &clk_h,
+		.enable		= s3c64xx_mem0_ctrl,
+		.ctrlbit	= S3C_CLKCON_MEM0_SROM,
+	}
+};
 
 static struct clk s3c6410_clocks_off[] = {
 	{
@@ -1009,6 +1065,7 @@ static struct clksrc_clk s3c6410_clksrcs[] = {
 
 void s3c6410_register_clocks(void)
 {
+	s3c_register_clocks(s3c6410_clocks, ARRAY_SIZE(s3c6410_clocks));
 	s3c_register_clocks(s3c6410_clocks_off, ARRAY_SIZE(s3c6410_clocks_off));
 	s3c_disable_clocks(s3c6410_clocks_off, ARRAY_SIZE(s3c6410_clocks_off));
 	s3c_register_clksrc(s3c6410_clksrcs, ARRAY_SIZE(s3c6410_clksrcs));
