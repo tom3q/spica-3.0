@@ -151,12 +151,6 @@ static struct clk init_clocks_off[] = {
 		.enable		= s3c64xx_pclk_ctrl,
 		.ctrlbit	= S3C_CLKCON_PCLK_IIC,
 	}, {
-		.name		= "i2c",
-		.id		= 1,
-		.parent		= &clk_p,
-		.enable		= s3c64xx_pclk_ctrl,
-		.ctrlbit	= S3C6410_CLKCON_PCLK_I2C1,
-	}, {
 		.name		= "iis",
 		.id		= 0,
 		.parent		= &clk_p,
@@ -169,14 +163,6 @@ static struct clk init_clocks_off[] = {
 		.enable		= s3c64xx_pclk_ctrl,
 		.ctrlbit	= S3C_CLKCON_PCLK_IIS1,
 	}, {
-#ifdef CONFIG_CPU_S3C6410
-		.name		= "iis",
-		.id		= -1,  /* There's only one IISv4 port */
-		.parent		= &clk_p,
-		.enable		= s3c64xx_pclk_ctrl,
-		.ctrlbit	= S3C6410_CLKCON_PCLK_IIS2,
-	}, {
-#endif
 		.name		= "keypad",
 		.id		= -1,
 		.parent		= &clk_p,
@@ -749,19 +735,6 @@ static struct clksrc_sources clkset_audio1 = {
 	.nr_sources	= ARRAY_SIZE(clkset_audio1_list),
 };
 
-static struct clk *clkset_audio2_list[] = {
-	[0] = &clk_mout_epll.clk,
-	[1] = &clk_dout_mpll,
-	[2] = &clk_fin_epll,
-	[3] = &clk_iisv4_cd,
-	[4] = &clk_pcm_cd,
-};
-
-static struct clksrc_sources clkset_audio2 = {
-	.sources	= clkset_audio2_list,
-	.nr_sources	= ARRAY_SIZE(clkset_audio2_list),
-};
-
 static struct clk *clkset_scaler_lcd_list[] = {
 	[0] = &clk_mout_epll.clk,
 	[1] = &clk_dout_mpll,
@@ -887,16 +860,6 @@ static struct clksrc_clk clksrcs[] = {
 		.sources	= &clkset_audio1,
 	}, {
 		.clk	= {
-			.name		= "audio-bus",
-			.id		= 2,
-			.ctrlbit        = S3C6410_CLKCON_SCLK_AUDIO2,
-			.enable		= s3c64xx_sclk_ctrl,
-		},
-		.reg_src	= { .reg = S3C6410_CLK_SRC2, .shift = 0, .size = 3  },
-		.reg_div	= { .reg = S3C_CLK_DIV2, .shift = 24, .size = 4  },
-		.sources	= &clkset_audio2,
-	}, {
-		.clk	= {
 			.name		= "irda-bus",
 			.id		= 0,
 			.ctrlbit        = S3C_CLKCON_SCLK_IRDA,
@@ -998,6 +961,58 @@ static struct clk lcd_clocks[] = {
 		.parent		= &lcd_clksrc.clk,
 	},
 };
+
+/* S3C6410 specific clocks */
+
+static struct clk s3c6410_clocks_off[] = {
+	{
+		.name		= "iis",
+		.id		= -1,  /* There's only one IISv4 port */
+		.parent		= &clk_p,
+		.enable		= s3c64xx_pclk_ctrl,
+		.ctrlbit	= S3C6410_CLKCON_PCLK_IIS2,
+	}, {
+		.name		= "i2c",
+		.id		= 1,
+		.parent		= &clk_p,
+		.enable		= s3c64xx_pclk_ctrl,
+		.ctrlbit	= S3C6410_CLKCON_PCLK_I2C1,
+	}
+};
+
+static struct clk *clkset_audio2_list[] = {
+	[0] = &clk_mout_epll.clk,
+	[1] = &clk_dout_mpll,
+	[2] = &clk_fin_epll,
+	[3] = &clk_iisv4_cd,
+	[4] = &clk_pcm_cd,
+};
+
+static struct clksrc_sources clkset_audio2 = {
+	.sources	= clkset_audio2_list,
+	.nr_sources	= ARRAY_SIZE(clkset_audio2_list),
+};
+
+static struct clksrc_clk s3c6410_clksrcs[] = {
+	{
+		.clk	= {
+			.name		= "audio-bus",
+			.id		= 2,
+			.ctrlbit        = S3C6410_CLKCON_SCLK_AUDIO2,
+			.enable		= s3c64xx_sclk_ctrl,
+		},
+		.reg_src	= { .reg = S3C6410_CLK_SRC2, .shift = 0, .size = 3  },
+		.reg_div	= { .reg = S3C_CLK_DIV2, .shift = 24, .size = 4  },
+		.sources	= &clkset_audio2,
+	}
+};
+
+void s3c6410_register_clocks(void)
+{
+	s3c_register_clocks(s3c6410_clocks_off, ARRAY_SIZE(s3c6410_clocks_off));
+	s3c_disable_clocks(s3c6410_clocks_off, ARRAY_SIZE(s3c6410_clocks_off));
+	s3c_register_clksrc(s3c6410_clksrcs, ARRAY_SIZE(s3c6410_clksrcs));
+}
 
 /* Clock initialisation code */
 

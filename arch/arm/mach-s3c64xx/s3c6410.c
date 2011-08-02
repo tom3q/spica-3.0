@@ -68,6 +68,7 @@ void __init s3c6410_init_clocks(int xtal)
 {
 	printk(KERN_DEBUG "%s: initialising clocks\n", __func__);
 	s3c64xx_register_clocks(xtal, S3C6410_CLKDIV0_ARM_MASK);
+	s3c6410_register_clocks();
 	s3c6400_setup_clocks();
 }
 
