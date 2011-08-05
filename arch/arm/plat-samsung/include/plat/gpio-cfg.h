@@ -357,4 +357,32 @@ extern int s5p_register_gpioint_bank(int chain_irq, int start, int nr_groups);
 #define s5p_register_gpioint_bank(chain_irq, start, nr_groups) do { } while (0)
 #endif
 
+/* Pin config interface */
+
+enum s3c_pin_cfg_entry_type {
+	S3C_PIN_ENTRY_NUM = 0,
+	S3C_PIN_ENTRY_CFG,
+	S3C_PIN_ENTRY_IN,
+	S3C_PIN_ENTRY_OUT,
+	S3C_PIN_ENTRY_PULL
+};
+
+struct s3c_pin_cfg_entry {
+	enum s3c_pin_cfg_entry_type	type;
+	unsigned int			val;
+};
+
+extern void s3c_pin_config(const struct s3c_pin_cfg_entry *cfg, u32 count);
+extern void s3c_pin_slp_config(const struct s3c_pin_cfg_entry *cfg, u32 count);
+
+/* For use with s3c_pin_config() */
+#define S3C_PIN(num)		{ S3C_PIN_ENTRY_NUM, num }
+#define S3C_PIN_CFG(cfg)	{ S3C_PIN_ENTRY_CFG, S3C_GPIO_SFN(cfg) }
+#define S3C_PIN_IN		{ S3C_PIN_ENTRY_IN, 0 }
+#define S3C_PIN_OUT(val)	{ S3C_PIN_ENTRY_OUT, val }
+#define S3C_PIN_PULL(pull)	{ S3C_PIN_ENTRY_PULL, S3C_GPIO_PULL_ ## pull }
+
+/* Convenience macro for pin-specific special functions */
+#define S3C_PIN_NUM_CFG(num, cfg)	S3C_PIN(num), S3C_PIN_CFG(cfg)
+
 #endif /* __PLAT_GPIO_CFG_H */

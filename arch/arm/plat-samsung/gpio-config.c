@@ -598,3 +598,63 @@ int s3c_gpio_slp_getcfg_s3c64xx(struct s3c_gpio_chip *chip,
 	return con;
 }
 #endif
+
+void s3c_pin_config(const struct s3c_pin_cfg_entry *cfg, u32 count)
+{
+	unsigned int gpio = 0;
+
+	if (!count || cfg->type != S3C_PIN_ENTRY_NUM) {
+		printk(KERN_ERR "Pin configuration table must start with S3C_PIN entry.\n");
+		return;
+	}
+
+	while (count--) {
+		switch (cfg->type) {
+		case S3C_PIN_ENTRY_NUM:
+			gpio = cfg->val;
+			break;
+		case S3C_PIN_ENTRY_CFG:
+			s3c_gpio_cfgpin(gpio, cfg->val);
+			break;
+		case S3C_PIN_ENTRY_OUT:
+			gpio_direction_output(gpio, cfg->val);
+			break;
+		case S3C_PIN_ENTRY_IN:
+			gpio_direction_input(gpio);
+			break;
+		case S3C_PIN_ENTRY_PULL:
+			s3c_gpio_setpull(gpio, cfg->val);
+			break;
+		default:
+			BUG();
+		}
+		++cfg;
+	}
+}
+
+void s3c_pin_slp_config(const struct s3c_pin_cfg_entry *cfg, u32 count)
+{
+	unsigned int gpio = 0;
+
+	if (!count || cfg->type != S3C_PIN_ENTRY_NUM) {
+		printk(KERN_ERR "Pin configuration table must start with S3C_PIN entry.\n");
+		return;
+	}
+
+	while (count--) {
+		switch (cfg->type) {
+		case S3C_PIN_ENTRY_NUM:
+			gpio = cfg->val;
+			break;
+		case S3C_PIN_ENTRY_CFG:
+			s3c_gpio_slp_cfgpin(gpio, cfg->val);
+			break;
+		case S3C_PIN_ENTRY_PULL:
+			s3c_gpio_slp_setpull(gpio, cfg->val);
+			break;
+		default:
+			BUG();
+		}
+		++cfg;
+	}
+}
