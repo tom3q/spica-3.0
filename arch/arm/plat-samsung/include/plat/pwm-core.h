@@ -16,6 +16,10 @@
  * the cpu specific initialisation code
  */
 
+#ifdef CONFIG_SAMSUNG_DEV_PWM
 extern void s3c_pwm_setname(const char *name);
+#else
+static inline void s3c_pwm_setname(const char *name) {}
+#endif
 
 #endif /* __ASM_ARCH_PWM_H */
