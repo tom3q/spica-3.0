@@ -179,6 +179,13 @@ config BATTERY_S3C_ADC
 	help
 	  Say Y here to enable support for iPAQ h1930/h1940/rx1950 battery
 
+config BATTERY_SPICA
+	tristate "Samsung Galaxy Spica battery driver"
+	depends on S3C_ADC
+	help
+	  Say Y here to enable support for generic battery monitoring through
+	  Samsung ADC found in most of Samsung SoCs.
+
 config CHARGER_PCF50633
 	tristate "NXP PCF50633 MBC"
 	depends on MFD_PCF50633
