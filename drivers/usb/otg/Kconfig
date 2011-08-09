@@ -138,4 +138,14 @@ config FSL_USB2_OTG
 	help
 	  Enable this to support Freescale USB OTG transceiver.
 
+config USB_SWITCH_FSA9480
+	tristate "FSA9480 USB Switch/Transceiver Driver"
+	depends on I2C
+	select USB_OTG_UTILS
+	help
+	  The FSA9480 is a USB port accessory detector and switch.
+	  It is fully controlled using I2C and enables USB data,
+	  stereo and mono audio, video, microphone and UART data to use
+	  a common connector port.
+
 endif # USB || OTG
