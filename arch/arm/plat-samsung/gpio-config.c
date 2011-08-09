@@ -617,10 +617,11 @@ void s3c_pin_config(const struct s3c_pin_cfg_entry *cfg, u32 count)
 			s3c_gpio_cfgpin(gpio, cfg->val);
 			break;
 		case S3C_PIN_ENTRY_OUT:
-			gpio_direction_output(gpio, cfg->val);
+			s3c_gpio_cfgpin(gpio, S3C_GPIO_OUTPUT);
+			gpio_set_value(gpio, cfg->val);
 			break;
 		case S3C_PIN_ENTRY_IN:
-			gpio_direction_input(gpio);
+			s3c_gpio_cfgpin(gpio, S3C_GPIO_INPUT);
 			break;
 		case S3C_PIN_ENTRY_PULL:
 			s3c_gpio_setpull(gpio, cfg->val);
