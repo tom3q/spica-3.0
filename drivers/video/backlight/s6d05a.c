@@ -273,10 +273,6 @@ static struct backlight_ops s6d05a_bl_ops = {
 	.check_fb	= s6d05a_bl_check_fb,
 };
 
-static struct backlight_properties s6d05a_bl_props = {
-	.max_brightness	= 255,
-};
-
 /*
  * Platform driver
  */
@@ -364,15 +360,17 @@ static int __devinit s6d05a_probe(struct platform_device *pdev)
 	pm_runtime_no_callbacks(data->dev);
 
 	data->bl = backlight_device_register(dev_driver_string(&pdev->dev),
-			&pdev->dev, data, &s6d05a_bl_ops, &s6d05a_bl_props);
+			&pdev->dev, data, &s6d05a_bl_ops, NULL);
 	if (IS_ERR(data->bl)) {
 		dev_err(&pdev->dev, "Failed to register backlight device\n");
 		ret = PTR_ERR(data->bl);
 		goto err_vdd3;
 	}
 
-	data->bl->props.power = FB_BLANK_UNBLANK;
-	data->bl->props.brightness = 128;
+	data->bl->props.max_brightness	= 255;
+	data->bl->props.brightness	= 128;
+	data->bl->props.type		= BACKLIGHT_RAW;
+	data->bl->props.power		= FB_BLANK_UNBLANK;
 	backlight_update_status(data->bl);
 
 	return 0;
