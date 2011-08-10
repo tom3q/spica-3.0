@@ -274,10 +274,11 @@ struct wl_iscan_ctrl {
 };
 
 /* association inform */
+#define MAX_REQ_LINE 1024
 struct wl_connect_info {
-	u8 *req_ie;
+	u8 req_ie[MAX_REQ_LINE];
 	s32 req_ie_len;
-	u8 *resp_ie;
+	u8 resp_ie[MAX_REQ_LINE];
 	s32 resp_ie_len;
 };
 
@@ -347,7 +348,6 @@ struct wl_priv {
 	struct ether_addr bssid;	/* bssid of currently engaged network */
 
 	/* for synchronization of main event thread */
-	struct semaphore event_sync;
 	struct wl_profile *profile;	/* holding dongle profile */
 	struct wl_iscan_ctrl *iscan;	/* iscan controller */
 
@@ -357,7 +357,7 @@ struct wl_priv {
 	/* control firwmare and nvram paramter downloading */
 	struct wl_fw_ctrl *fw;
 	struct wl_pmk_list *pmk_list;	/* wpa2 pmk list */
-	struct task_struct *event_tsk;	/* task of main event handler thread */
+	tsk_ctl_t event_tsk;		/* task of main event handler thread */
 	unsigned long status;		/* current dongle status */
 	void *pub;
 	u32 channel;		/* current channel */
@@ -499,7 +499,8 @@ extern void wl_cfg80211_set_sdio_func(void *func);	/* set sdio function info */
 extern struct sdio_func *wl_cfg80211_get_sdio_func(void);	/* set sdio function info */
 extern s32 wl_cfg80211_up(void);	/* dongle up */
 extern s32 wl_cfg80211_down(void);	/* dongle down */
-extern s32 wl_cfg80211_notify_ifadd(struct net_device *net);
+extern s32 wl_cfg80211_notify_ifadd(struct net_device *net, s32 idx, s32 bssidx,
+int (*_net_attach)(dhd_pub_t *dhdp, int ifidx));
 extern s32 wl_cfg80211_ifdel_ops(struct net_device *net);
 extern s32 wl_cfg80211_notify_ifdel(struct net_device *net);
 extern s32 wl_cfg80211_is_progress_ifadd(void);

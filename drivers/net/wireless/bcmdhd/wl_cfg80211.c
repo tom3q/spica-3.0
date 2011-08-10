@@ -83,7 +83,7 @@ u32 wl_dbg_level = WL_DBG_ERR;
 #define WL_TRACE(a) printk("%s ", __FUNCTION__); printk a
 #define MAC2STR(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
 #define MACSTR "%02x:%02x:%02x:%02x:%02x:%02x"
-#define MAX_WAIT_TIME 3000
+#define MAX_WAIT_TIME 1500
 static s8 ioctlbuf[WLC_IOCTL_MAXLEN];
 
 #if defined(DHD_P2P_DEV_ADDR_FROM_SYSFS) && defined(CONFIG_SYSCTL)
@@ -213,10 +213,6 @@ static s32 wl_cfg80211_get_station(struct wiphy *wiphy,
 static s32 wl_cfg80211_set_power_mgmt(struct wiphy *wiphy,
 	struct net_device *dev, bool enabled,
 	s32 timeout);
-static s32 wl_cfg80211_set_bitrate_mask(struct wiphy *wiphy,
-	struct net_device *dev,
-	const u8 *addr,
-	const struct cfg80211_bitrate_mask *mask);
 static int wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 	struct cfg80211_connect_params *sme);
 static s32 wl_cfg80211_disconnect(struct wiphy *wiphy, struct net_device *dev,
@@ -883,6 +879,7 @@ wl_cfg80211_add_virtual_iface(struct wiphy *wiphy, char *name,
 	struct wl_priv *wl = WL_PRIV_GET();
 	struct net_device *_ndev;
 	dhd_pub_t *dhd = (dhd_pub_t *)(wl->pub);
+	int (*net_attach)(dhd_pub_t *dhdp, int ifidx);
 
 	WL_DBG(("if name: %s, type: %d\n", name, type));
 	switch (type) {
@@ -985,6 +982,16 @@ wl_cfg80211_add_virtual_iface(struct wiphy *wiphy, char *name,
 			wl->p2p->vif_created = true;
 			set_mode_by_netdev(wl, _ndev, mode);
 			wl = wdev_to_wl(vwdev);
+			net_attach =  wl_to_p2p_bss_private(wl, P2PAPI_BSSCFG_CONNECTION);
+			rtnl_unlock();
+			if (net_attach && !net_attach(dhd, _ndev->ifindex))
+				WL_DBG((" virtual interface(%s) is "
+					"created\n", wl->p2p->vir_ifname));
+			else {
+				rtnl_lock();
+				goto fail;
+			}
+			rtnl_lock();
 			return _ndev;
 
 		} else {
@@ -994,6 +1001,7 @@ wl_cfg80211_add_virtual_iface(struct wiphy *wiphy, char *name,
 			wl->p2p->vif_created = false;
 		}
 	}
+fail:
 	return ERR_PTR(-ENODEV);
 }
 
@@ -1110,11 +1118,12 @@ wl_cfg80211_change_virtual_iface(struct wiphy *wiphy, struct net_device *ndev,
 }
 
 s32
-wl_cfg80211_notify_ifadd(struct net_device *net)
+wl_cfg80211_notify_ifadd(struct net_device *net, s32 idx, s32 bssidx,
+int (*_net_attach)(dhd_pub_t *dhdp, int ifidx))
 {
 	struct wl_priv *wl = WL_PRIV_GET();
 	s32 ret = BCME_OK;
-	if (!net || !net->name) {
+	if (!net) {
 		WL_ERR(("net is NULL\n"));
 		return 0;
 	}
@@ -1124,9 +1133,11 @@ wl_cfg80211_notify_ifadd(struct net_device *net)
 		/* Assign the net device to CONNECT BSSCFG */
 		strncpy(net->name, wl->p2p->vir_ifname, IFNAMSIZ - 1);
 		wl_to_p2p_bss_ndev(wl, P2PAPI_BSSCFG_CONNECTION) = net;
-		wl_to_p2p_bss_bssidx(wl, P2PAPI_BSSCFG_CONNECTION) =
-			P2PAPI_BSSCFG_CONNECTION;
+		wl_to_p2p_bss_bssidx(wl, P2PAPI_BSSCFG_CONNECTION) = bssidx;
+		wl_to_p2p_bss_private(wl, P2PAPI_BSSCFG_CONNECTION) = _net_attach;
+		net->ifindex = idx;
 		wl_clr_p2p_status(wl, IF_ADD);
+
 		wake_up_interruptible(&wl->dongle_event_wait);
 	}
 	return ret;
@@ -2142,7 +2153,10 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 	memcpy(&join_params.ssid.SSID, sme->ssid, join_params.ssid.SSID_len);
 	join_params.ssid.SSID_len = htod32(join_params.ssid.SSID_len);
 	wl_update_prof(wl, NULL, &join_params.ssid, WL_PROF_SSID);
-	memcpy(&join_params.params.bssid, &ether_bcast, ETHER_ADDR_LEN);
+	if (sme->bssid)
+		memcpy(&join_params.params.bssid, sme->bssid, ETH_ALEN);
+	else
+		memcpy(&join_params.params.bssid, &ether_bcast, ETH_ALEN);
 
 	wl_ch_to_chanspec(wl->channel, &join_params, &join_params_size);
 	WL_DBG(("join_param_size %d\n", join_params_size));
@@ -2704,62 +2718,6 @@ static __used u32 wl_find_msb(u16 bit16)
 	return ret;
 }
 
-static s32
-wl_cfg80211_set_bitrate_mask(struct wiphy *wiphy, struct net_device *dev,
-	const u8 *addr,
-	const struct cfg80211_bitrate_mask *mask)
-{
-	struct wl_rateset rateset;
-	s32 rate;
-	s32 val;
-	s32 err_bg;
-	s32 err_a;
-	u32 legacy;
-	s32 err = 0;
-
-	CHECK_SYS_UP();
-	/* addr param is always NULL. ignore it */
-	/* Get current rateset */
-	err = wldev_ioctl(dev, WLC_GET_CURR_RATESET, &rateset,
-		sizeof(rateset), false);
-	if (unlikely(err)) {
-		WL_ERR(("could not get current rateset (%d)\n", err));
-		return err;
-	}
-
-	rateset.count = dtoh32(rateset.count);
-
-	legacy = wl_find_msb(mask->control[IEEE80211_BAND_2GHZ].legacy);
-	if (!legacy)
-		legacy = wl_find_msb(mask->control[IEEE80211_BAND_5GHZ].legacy);
-
-	val = wl_g_rates[legacy - 1].bitrate * 100000;
-
-	if (val < rateset.count) {
-		/* Select rate by rateset index */
-		rate = rateset.rates[val] & 0x7f;
-	} else {
-		/* Specified rate in bps */
-		rate = val / 500000;
-	}
-
-	WL_DBG(("rate %d mbps\n", (rate / 2)));
-
-	/*
-	 *
-	 *      Set rate override,
-	 *      Since the is a/b/g-blind, both a/bg_rate are enforced.
-	 */
-	err_bg = wl_dev_intvar_set(dev, "bg_rate", rate);
-	err_a = wl_dev_intvar_set(dev, "a_rate", rate);
-	if (unlikely(err_bg && err_a)) {
-		WL_ERR(("could not set fixed rate (%d) (%d)\n", err_bg, err_a));
-		return err_bg | err_a;
-	}
-
-	return err;
-}
-
 static s32 wl_cfg80211_resume(struct wiphy *wiphy)
 {
 	struct wl_priv *wl = WL_PRIV_GET();
@@ -3021,12 +2979,12 @@ wl_cfg80211_remain_on_channel(struct wiphy *wiphy, struct net_device *dev,
 		 * without turning on P2P
 		 */
 
+		p2p_on(wl) = true;
 		err = wl_cfgp2p_enable_discovery(wl, dev, NULL, 0);
 
 		if (unlikely(err)) {
 			goto exit;
 		}
-		p2p_on(wl) = true;
 	}
 	if (p2p_on(wl))
 		wl_cfgp2p_discover_listen(wl, target_channel, duration);
@@ -3837,7 +3795,6 @@ static struct cfg80211_ops wl_cfg80211_ops = {
 	.set_default_key = wl_cfg80211_config_default_key,
 	.set_default_mgmt_key = wl_cfg80211_config_default_mgmt_key,
 	.set_power_mgmt = wl_cfg80211_set_power_mgmt,
-	.set_bitrate_mask = wl_cfg80211_set_bitrate_mask,
 	.connect = wl_cfg80211_connect,
 	.disconnect = wl_cfg80211_disconnect,
 	.suspend = wl_cfg80211_suspend,
@@ -3959,9 +3916,9 @@ static void wl_free_wdev(struct wl_priv *wl)
 		}
 	}
 	wiphy_unregister(wdev->wiphy);
+	wdev->wiphy->dev.parent = NULL;
 	wiphy_free(wdev->wiphy);
 	kfree(wdev);
-	wl_to_wdev(wl) = NULL;
 }
 
 static s32 wl_inform_bss(struct wl_priv *wl)
@@ -3972,13 +3929,6 @@ static s32 wl_inform_bss(struct wl_priv *wl)
 	s32 i;
 
 	bss_list = wl->bss_list;
-#if 0
-	if (unlikely(bss_list->version != WL_BSS_INFO_VERSION)) {
-		WL_ERR(("Version %d != WL_BSS_INFO_VERSION\n",
-			bss_list->version));
-		return -EOPNOTSUPP;
-	}
-#endif
 	WL_DBG(("scanned AP count (%d)\n", bss_list->count));
 	bi = next_bss(bss_list, bi);
 	for_each_bss(bss_list, bi, i) {
@@ -4325,6 +4275,14 @@ static s32 wl_get_assoc_ies(struct wl_priv *wl, struct net_device *ndev)
 	assoc_info.req_len = htod32(assoc_info.req_len);
 	assoc_info.resp_len = htod32(assoc_info.resp_len);
 	assoc_info.flags = htod32(assoc_info.flags);
+	if (conn_info->req_ie_len) {
+		conn_info->req_ie_len = 0;
+		bzero(conn_info->req_ie, sizeof(conn_info->req_ie));
+	}
+	if (conn_info->resp_ie_len) {
+		conn_info->resp_ie_len = 0;
+		bzero(conn_info->resp_ie, sizeof(conn_info->resp_ie));
+	}
 	if (assoc_info.req_len) {
 		err = wl_dev_bufvar_get(ndev, "assoc_req_ies", wl->extra_buf,
 			WL_ASSOC_INFO_MAX);
@@ -4336,11 +4294,15 @@ static s32 wl_get_assoc_ies(struct wl_priv *wl, struct net_device *ndev)
 		if (assoc_info.flags & WLC_ASSOC_REQ_IS_REASSOC) {
 			conn_info->req_ie_len -= ETHER_ADDR_LEN;
 		}
-		conn_info->req_ie =
-		    kmemdup(wl->extra_buf, conn_info->req_ie_len, GFP_KERNEL);
+		if (conn_info->req_ie_len <= MAX_REQ_LINE)
+			memcpy(conn_info->req_ie, wl->extra_buf, conn_info->req_ie_len);
+		else {
+			WL_ERR(("%s IE size %d above max %d size \n",
+				__FUNCTION__, conn_info->req_ie_len, MAX_REQ_LINE));
+			return err;
+		}
 	} else {
 		conn_info->req_ie_len = 0;
-		conn_info->req_ie = NULL;
 	}
 	if (assoc_info.resp_len) {
 		err = wl_dev_bufvar_get(ndev, "assoc_resp_ies", wl->extra_buf,
@@ -4350,11 +4312,15 @@ static s32 wl_get_assoc_ies(struct wl_priv *wl, struct net_device *ndev)
 			return err;
 		}
 		conn_info->resp_ie_len = assoc_info.resp_len -sizeof(struct dot11_assoc_resp);
-		conn_info->resp_ie =
-		    kmemdup(wl->extra_buf, conn_info->resp_ie_len, GFP_KERNEL);
+		if (conn_info->resp_ie_len <= MAX_REQ_LINE)
+			memcpy(conn_info->resp_ie, wl->extra_buf, conn_info->resp_ie_len);
+		else {
+			WL_ERR(("%s IE size %d above max %d size \n",
+				__FUNCTION__, conn_info->resp_ie_len, MAX_REQ_LINE));
+			return err;
+		}
 	} else {
 		conn_info->resp_ie_len = 0;
-		conn_info->resp_ie = NULL;
 	}
 	WL_DBG(("req len (%d) resp len (%d)\n", conn_info->req_ie_len,
 		conn_info->resp_ie_len));
@@ -4505,11 +4471,14 @@ wl_bss_connect_done(struct wl_priv *wl, struct net_device *ndev,
 	s32 err = 0;
 
 	WL_DBG((" enter\n"));
-	wl_get_assoc_ies(wl, ndev);
-	memcpy(&wl->bssid, &e->addr, ETHER_ADDR_LEN);
-	wl_update_bss_info(wl, ndev);
+
 	if (wl_get_drv_status(wl, CONNECTING)) {
 		wl_clr_drv_status(wl, CONNECTING);
+		if (completed) {
+			wl_get_assoc_ies(wl, ndev);
+			memcpy(&wl->bssid, &e->addr, ETHER_ADDR_LEN);
+			wl_update_bss_info(wl, ndev);
+		}
 		cfg80211_connect_result(ndev,
 			(u8 *)&wl->bssid,
 			conn_info->req_ie,
@@ -4786,7 +4755,7 @@ static s32 wl_init_priv_mem(struct wl_priv *wl)
 		WL_ERR(("Ioctl buf alloc failed\n"));
 		goto init_priv_mem_out;
 	}
-	wl->escan_ioctl_buf = (void *)kzalloc(WL_IOCTL_LEN_MAX, GFP_KERNEL);
+	wl->escan_ioctl_buf = (void *)kzalloc(WLC_IOCTL_MAXLEN, GFP_KERNEL);
 	if (unlikely(!wl->escan_ioctl_buf)) {
 		WL_ERR(("Ioctl buf alloc failed\n"));
 		goto init_priv_mem_out;
@@ -4855,24 +4824,20 @@ static void wl_deinit_priv_mem(struct wl_priv *wl)
 
 static s32 wl_create_event_handler(struct wl_priv *wl)
 {
+	int ret = 0;
 	WL_DBG(("Enter \n"));
-	sema_init(&wl->event_sync, 0);
-	wl->event_tsk = kthread_run(wl_event_handler, wl, "wl_event_handler");
-	if (IS_ERR(wl->event_tsk)) {
-		wl->event_tsk = NULL;
-		WL_ERR(("failed to create event thread\n"));
-		return -ENOMEM;
-	}
-	return 0;
+
+	wl->event_tsk.thr_pid = DHD_PID_KT_INVALID;
+	PROC_START(wl_event_handler, wl, &wl->event_tsk, 0);
+	if (wl->event_tsk.thr_pid < 0)
+		ret = -ENOMEM;
+	return ret;
 }
 
 static void wl_destroy_event_handler(struct wl_priv *wl)
 {
-	if (wl->event_tsk) {
-		send_sig(SIGTERM, wl->event_tsk, 1);
-		kthread_stop(wl->event_tsk);
-		wl->event_tsk = NULL;
-	}
+	if (wl->event_tsk.thr_pid >= 0)
+		PROC_STOP(&wl->event_tsk);
 }
 
 static void wl_term_iscan(struct wl_priv *wl)
@@ -5413,29 +5378,32 @@ void wl_cfg80211_detach(void)
 	if (wl->p2p_supported)
 		wl_cfgp2p_deinit_priv(wl);
 	wl_deinit_priv(wl);
-	wl_free_wdev(wl);
 	wl_set_drvdata(wl_cfg80211_dev, NULL);
 	kfree(wl_cfg80211_dev);
 	wl_cfg80211_dev = NULL;
 	wl_clear_sdio_func();
+	wl_free_wdev(wl);
 }
 
 static void wl_wakeup_event(struct wl_priv *wl)
 {
-	up(&wl->event_sync);
+	if (wl->event_tsk.thr_pid >= 0)
+		up(&wl->event_tsk.sema);
 }
 
 static s32 wl_event_handler(void *data)
 {
 	struct net_device *netdev;
-	struct wl_priv *wl = (struct wl_priv *)data;
-	struct sched_param param = {.sched_priority = MAX_RT_PRIO - 1 };
+	struct wl_priv *wl = NULL;
 	struct wl_event_q *e;
+	tsk_ctl_t *tsk = (tsk_ctl_t *)data;
 
-	sched_setscheduler(current, SCHED_FIFO, &param);
-	allow_signal(SIGTERM);
-	while (likely(!down_interruptible(&wl->event_sync))) {
-		if (kthread_should_stop())
+	wl = (struct wl_priv *)tsk->parent;
+	complete(&tsk->completed);
+
+	while (down_interruptible (&tsk->sema) == 0) {
+		SMP_RD_BARRIER_DEPENDS();
+		if (tsk->terminated)
 			break;
 		e = wl_deq_event(wl);
 		if (unlikely(!e)) {
@@ -5446,14 +5414,16 @@ static s32 wl_event_handler(void *data)
 		netdev = dhd_idx2net((struct dhd_pub *)(wl->pub), e->emsg.ifidx);
 		if (!netdev)
 			netdev = wl_to_prmry_ndev(wl);
-		if (wl->evt_handler[e->etype]) {
+		if (e->etype < WLC_E_LAST && wl->evt_handler[e->etype]) {
 			wl->evt_handler[e->etype] (wl, netdev, &e->emsg, e->edata);
 		} else {
 			WL_DBG(("Unknown Event (%d): ignoring\n", e->etype));
 		}
 		wl_put_event(e);
 	}
+
 	WL_DBG(("%s was terminated\n", __func__));
+	complete_and_exit(&tsk->completed, 0);
 	return 0;
 }
 
@@ -6312,11 +6282,7 @@ static void wl_link_down(struct wl_priv *wl)
 
 	WL_DBG(("In\n"));
 	wl->link_up = false;
-	kfree(conn_info->req_ie);
-	conn_info->req_ie = NULL;
 	conn_info->req_ie_len = 0;
-	kfree(conn_info->resp_ie);
-	conn_info->resp_ie = NULL;
 	conn_info->resp_ie_len = 0;
 }
 

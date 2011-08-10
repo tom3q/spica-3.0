@@ -219,7 +219,7 @@ static int wl_android_set_pno_setup(struct net_device *dev, char *command, int t
 	int pno_repeat = 0;
 	int pno_freq_expo_max = 0;
 
-	DHD_ERROR(("%s: command=%s, len=%d\n", __FUNCTION__, command, total_len));
+	DHD_INFO(("%s: command=%s, len=%d\n", __FUNCTION__, command, total_len));
 
 	if (total_len < (strlen(CMD_PNOSETUP_SET) + sizeof(cmd_tlv_t))) {
 		DHD_ERROR(("%s argument=%d less min size\n", __FUNCTION__, total_len));
@@ -338,10 +338,10 @@ int wl_android_wifi_off(struct net_device *dev)
 	dhd_net_if_lock(dev);
 	if (g_wifi_on) {
 		dhd_dev_reset(dev, 1);
-		dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
 		sdioh_stop(NULL);
 		/* clean up dtim_skip setting */
 		net_os_set_dtim_skip(dev, TRUE);
+		dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
 		g_wifi_on = 0;
 	}
 	dhd_net_if_unlock(dev);

@@ -190,6 +190,7 @@ typedef struct wlc_ssid {
 #define WL_SCANFLAGS_RESERVED 0x02      
 #define WL_SCANFLAGS_PROHIBITED 0x04    
 
+#define WL_SCAN_PARAMS_SSID_MAX 	10
 typedef struct wl_scan_params {
 	wlc_ssid_t ssid;        
 	struct ether_addr bssid;    
@@ -1747,7 +1748,18 @@ struct wl_msglevel2 {
 	uint32 high;
 };
 
+typedef struct wl_mkeep_alive_pkt {
+	uint16	version;
+	uint16	length;
+	uint32	period_msec;
+	uint16	len_bytes;
+	uint8	keep_alive_id;
+	uint8	data[1];
+} wl_mkeep_alive_pkt_t;
 
+#define WL_MKEEP_ALIVE_VERSION          1
+#define WL_MKEEP_ALIVE_FIXED_LEN        OFFSETOF(wl_mkeep_alive_pkt_t, data)
+#define WL_MKEEP_ALIVE_PRECISION        500
 
 #define WLC_ROAM_TRIGGER_DEFAULT    0 
 #define WLC_ROAM_TRIGGER_BANDWIDTH  1 
