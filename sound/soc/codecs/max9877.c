@@ -1,183 +1,46 @@
 /*
- * max9877.c  --  amp driver for max9877
+ * max9877.c
+ * MAX9877 dailess amplifier driver
  *
+ * Copyright (C) 2011 Tomasz Figa <tomasz.figa at gmail.com>
+ *
+ * Original max9877 driver:
  * Copyright (C) 2009 Samsung Electronics Co.Ltd
  * Author: Joonyoung Shim <jy0922.shim@samsung.com>
  *
- *  This program is free software; you can redistribute  it and/or modify it
- *  under  the terms of  the GNU General  Public License as published by the
- *  Free Software Foundation;  either version 2 of the  License, or (at your
- *  option) any later version.
+ * This program is free software; you can redistribute  it and/or modify it
+ * under  the terms of  the GNU General  Public License as published by the
+ * Free Software Foundation;  either version 2 of the  License, or (at your
+ * option) any later version.
  *
  */
 
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/i2c.h>
+#include <linux/slab.h>
 #include <sound/soc.h>
 #include <sound/tlv.h>
+#include <sound/soc-dapm.h>
 
 #include "max9877.h"
 
-static struct i2c_client *i2c;
+/* codec private data */
+struct max9877_priv {
+	enum snd_soc_control_type control_type;
+	void *control_data;
+	unsigned int mux_power;
+	unsigned int mux_mode;
+};
 
-static u8 max9877_regs[5] = { 0x40, 0x00, 0x00, 0x00, 0x49 };
-
-static void max9877_write_regs(void)
-{
-	unsigned int i;
-	u8 data[6];
-
-	data[0] = MAX9877_INPUT_MODE;
-	for (i = 0; i < ARRAY_SIZE(max9877_regs); i++)
-		data[i + 1] = max9877_regs[i];
-
-	if (i2c_master_send(i2c, data, 6) != 6)
-		dev_err(&i2c->dev, "i2c write failed\n");
-}
-
-static int max9877_get_reg(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct soc_mixer_control *mc =
-		(struct soc_mixer_control *)kcontrol->private_value;
-	unsigned int reg = mc->reg;
-	unsigned int shift = mc->shift;
-	unsigned int mask = mc->max;
-	unsigned int invert = mc->invert;
-
-	ucontrol->value.integer.value[0] = (max9877_regs[reg] >> shift) & mask;
-
-	if (invert)
-		ucontrol->value.integer.value[0] =
-			mask - ucontrol->value.integer.value[0];
-
-	return 0;
-}
-
-static int max9877_set_reg(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct soc_mixer_control *mc =
-		(struct soc_mixer_control *)kcontrol->private_value;
-	unsigned int reg = mc->reg;
-	unsigned int shift = mc->shift;
-	unsigned int mask = mc->max;
-	unsigned int invert = mc->invert;
-	unsigned int val = (ucontrol->value.integer.value[0] & mask);
-
-	if (invert)
-		val = mask - val;
-
-	if (((max9877_regs[reg] >> shift) & mask) == val)
-		return 0;
-
-	max9877_regs[reg] &= ~(mask << shift);
-	max9877_regs[reg] |= val << shift;
-	max9877_write_regs();
-
-	return 1;
-}
-
-static int max9877_get_2reg(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct soc_mixer_control *mc =
-		(struct soc_mixer_control *)kcontrol->private_value;
-	unsigned int reg = mc->reg;
-	unsigned int reg2 = mc->rreg;
-	unsigned int shift = mc->shift;
-	unsigned int mask = mc->max;
-
-	ucontrol->value.integer.value[0] = (max9877_regs[reg] >> shift) & mask;
-	ucontrol->value.integer.value[1] = (max9877_regs[reg2] >> shift) & mask;
-
-	return 0;
-}
-
-static int max9877_set_2reg(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct soc_mixer_control *mc =
-		(struct soc_mixer_control *)kcontrol->private_value;
-	unsigned int reg = mc->reg;
-	unsigned int reg2 = mc->rreg;
-	unsigned int shift = mc->shift;
-	unsigned int mask = mc->max;
-	unsigned int val = (ucontrol->value.integer.value[0] & mask);
-	unsigned int val2 = (ucontrol->value.integer.value[1] & mask);
-	unsigned int change = 1;
-
-	if (((max9877_regs[reg] >> shift) & mask) == val)
-		change = 0;
-
-	if (((max9877_regs[reg2] >> shift) & mask) == val2)
-		change = 0;
-
-	if (change) {
-		max9877_regs[reg] &= ~(mask << shift);
-		max9877_regs[reg] |= val << shift;
-		max9877_regs[reg2] &= ~(mask << shift);
-		max9877_regs[reg2] |= val2 << shift;
-		max9877_write_regs();
-	}
-
-	return change;
-}
-
-static int max9877_get_out_mode(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	u8 value = max9877_regs[MAX9877_OUTPUT_MODE] & MAX9877_OUTMODE_MASK;
-
-	if (value)
-		value -= 1;
-
-	ucontrol->value.integer.value[0] = value;
-	return 0;
-}
-
-static int max9877_set_out_mode(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	u8 value = ucontrol->value.integer.value[0];
-
-	value += 1;
-
-	if ((max9877_regs[MAX9877_OUTPUT_MODE] & MAX9877_OUTMODE_MASK) == value)
-		return 0;
-
-	max9877_regs[MAX9877_OUTPUT_MODE] &= ~MAX9877_OUTMODE_MASK;
-	max9877_regs[MAX9877_OUTPUT_MODE] |= value;
-	max9877_write_regs();
-	return 1;
-}
-
-static int max9877_get_osc_mode(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	u8 value = (max9877_regs[MAX9877_OUTPUT_MODE] & MAX9877_OSC_MASK);
-
-	value = value >> MAX9877_OSC_OFFSET;
-
-	ucontrol->value.integer.value[0] = value;
-	return 0;
-}
-
-static int max9877_set_osc_mode(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	u8 value = ucontrol->value.integer.value[0];
-
-	value = value << MAX9877_OSC_OFFSET;
-	if ((max9877_regs[MAX9877_OUTPUT_MODE] & MAX9877_OSC_MASK) == value)
-		return 0;
-
-	max9877_regs[MAX9877_OUTPUT_MODE] &= ~MAX9877_OSC_MASK;
-	max9877_regs[MAX9877_OUTPUT_MODE] |= value;
-	max9877_write_regs();
-	return 1;
-}
+/* default register values */
+static u8 max9877_regs[MAX9877_CACHEREGNUM] = {
+	0x40, /* MAX9877_INPUT_MODE	(0x00) */
+	0x00, /* MAX9877_SPK_VOLUME	(0x01) */
+	0x00, /* MAX9877_HPL_VOLUME	(0x02) */
+	0x00, /* MAX9877_HPR_VOLUME	(0x03) */
+	0x49, /* MAX9877_OUTPUT_MODE	(0x04) */
+};
 
 static const unsigned int max9877_pgain_tlv[] = {
 	TLV_DB_RANGE_HEAD(2),
@@ -193,85 +56,272 @@ static const unsigned int max9877_output_tlv[] = {
 	24, 31, TLV_DB_SCALE_ITEM(-700, 100, 0),
 };
 
-static const char *max9877_out_mode[] = {
-	"INA -> SPK",
-	"INA -> HP",
-	"INA -> SPK and HP",
-	"INB -> SPK",
-	"INB -> HP",
-	"INB -> SPK and HP",
-	"INA + INB -> SPK",
-	"INA + INB -> HP",
-	"INA + INB -> SPK and HP",
-};
-
 static const char *max9877_osc_mode[] = {
 	"1176KHz",
 	"1100KHz",
 	"700KHz",
 };
-
-static const struct soc_enum max9877_enum[] = {
-	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(max9877_out_mode), max9877_out_mode),
-	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(max9877_osc_mode), max9877_osc_mode),
-};
+SOC_ENUM_SINGLE_DECL(max9877_osc_mode_enum, MAX9877_OUTPUT_MODE,
+					MAX9877_OSC_SHIFT, max9877_osc_mode);
 
 static const struct snd_kcontrol_new max9877_controls[] = {
-	SOC_SINGLE_EXT_TLV("MAX9877 PGAINA Playback Volume",
-			MAX9877_INPUT_MODE, 0, 2, 0,
-			max9877_get_reg, max9877_set_reg, max9877_pgain_tlv),
-	SOC_SINGLE_EXT_TLV("MAX9877 PGAINB Playback Volume",
-			MAX9877_INPUT_MODE, 2, 2, 0,
-			max9877_get_reg, max9877_set_reg, max9877_pgain_tlv),
-	SOC_SINGLE_EXT_TLV("MAX9877 Amp Speaker Playback Volume",
-			MAX9877_SPK_VOLUME, 0, 31, 0,
-			max9877_get_reg, max9877_set_reg, max9877_output_tlv),
-	SOC_DOUBLE_R_EXT_TLV("MAX9877 Amp HP Playback Volume",
+	SOC_SINGLE_TLV("MAX9877 PGAINA Playback Volume",
+			MAX9877_INPUT_MODE, 0, 2, 0, max9877_pgain_tlv),
+	SOC_SINGLE_TLV("MAX9877 PGAINB Playback Volume",
+			MAX9877_INPUT_MODE, 2, 2, 0, max9877_pgain_tlv),
+	SOC_SINGLE_TLV("MAX9877 Amp Speaker Playback Volume",
+			MAX9877_SPK_VOLUME, 0, 31, 0, max9877_output_tlv),
+	SOC_DOUBLE_R_TLV("MAX9877 Amp HP Playback Volume",
 			MAX9877_HPL_VOLUME, MAX9877_HPR_VOLUME, 0, 31, 0,
-			max9877_get_2reg, max9877_set_2reg, max9877_output_tlv),
-	SOC_SINGLE_EXT("MAX9877 INB Stereo Switch",
-			MAX9877_INPUT_MODE, 4, 1, 1,
-			max9877_get_reg, max9877_set_reg),
-	SOC_SINGLE_EXT("MAX9877 INA Stereo Switch",
-			MAX9877_INPUT_MODE, 5, 1, 1,
-			max9877_get_reg, max9877_set_reg),
-	SOC_SINGLE_EXT("MAX9877 Zero-crossing detection Switch",
-			MAX9877_INPUT_MODE, 6, 1, 0,
-			max9877_get_reg, max9877_set_reg),
-	SOC_SINGLE_EXT("MAX9877 Bypass Mode Switch",
-			MAX9877_OUTPUT_MODE, 6, 1, 0,
-			max9877_get_reg, max9877_set_reg),
-	SOC_SINGLE_EXT("MAX9877 Shutdown Mode Switch",
-			MAX9877_OUTPUT_MODE, 7, 1, 1,
-			max9877_get_reg, max9877_set_reg),
-	SOC_ENUM_EXT("MAX9877 Output Mode", max9877_enum[0],
-			max9877_get_out_mode, max9877_set_out_mode),
-	SOC_ENUM_EXT("MAX9877 Oscillator Mode", max9877_enum[1],
-			max9877_get_osc_mode, max9877_set_osc_mode),
+			max9877_output_tlv),
+	SOC_SINGLE("MAX9877 INB Stereo Switch",
+			MAX9877_INPUT_MODE, MAX9877_INB, 1, 1),
+	SOC_SINGLE("MAX9877 INA Stereo Switch",
+			MAX9877_INPUT_MODE, MAX9877_INA, 1, 1),
+	SOC_SINGLE("MAX9877 Zero-crossing detection Switch",
+			MAX9877_INPUT_MODE, MAX9877_ZCD, 1, 0),
+	SOC_ENUM("MAX9877 Oscillator Mode", max9877_osc_mode_enum),
 };
 
-/* This function is called from ASoC machine driver */
-int max9877_add_controls(struct snd_soc_codec *codec)
+/* Output MUX */
+
+static const char *max9877_mux_texts[] = {"INA", "INB", "IN Mix"};
+static const struct soc_enum max9877_mux_enum =
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(max9877_mux_texts),
+			max9877_mux_texts);
+static struct snd_kcontrol_new max9877_mux_control =
+	SOC_DAPM_ENUM_VIRT("Route", max9877_mux_enum);
+
+#define MUX_OUT_POWER	1
+#define MUX_HP_POWER	2
+
+/* TODO: This should be called with some lock held */
+static void max9877_update_mux(struct snd_soc_codec *codec)
 {
-	return snd_soc_add_controls(codec, max9877_controls,
-			ARRAY_SIZE(max9877_controls));
+	struct max9877_priv *max9877 = snd_soc_codec_get_drvdata(codec);
+	unsigned int mode = max9877->mux_mode;
+	unsigned int power = max9877->mux_power;
+	u8 reg;
+
+	printk("%s: mode = %u, power = %u\n", __func__,
+					max9877->mux_mode, max9877->mux_power);
+
+	if (!power) {
+		reg = snd_soc_read(codec, MAX9877_OUTPUT_MODE);
+		reg &= ~MAX9877_SHDN;
+		snd_soc_write(codec, MAX9877_OUTPUT_MODE, reg);
+		return;
+	}
+
+	reg = snd_soc_read(codec, MAX9877_OUTPUT_MODE);
+	reg &= ~MAX9877_OUTMODE_MASK;
+	reg |= 3*mode | power | MAX9877_SHDN;
+	snd_soc_write(codec, MAX9877_OUTPUT_MODE, reg);
 }
-EXPORT_SYMBOL_GPL(max9877_add_controls);
 
-static int __devinit max9877_i2c_probe(struct i2c_client *client,
-		const struct i2c_device_id *id)
+static int max9877_mux_put(struct snd_kcontrol *kcontrol,
+			       struct snd_ctl_elem_value *ucontrol)
 {
-	i2c = client;
+	int value = ucontrol->value.enumerated.item[0];
+	struct snd_soc_dapm_widget *widget = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = widget->codec;
+	struct max9877_priv *max9877 = snd_soc_codec_get_drvdata(codec);
 
-	max9877_write_regs();
+	/* TODO: This needs synchronization. */
+
+	max9877->mux_mode = value;
+	max9877_update_mux(codec);
+
+	return snd_soc_dapm_put_enum_virt(kcontrol, ucontrol);
+}
+
+static int max9877_hp_amp_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = w->codec;
+	struct max9877_priv *max9877 = snd_soc_codec_get_drvdata(codec);
+
+	/* TODO: This needs synchronization. */
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMD:
+		max9877->mux_power &= ~MUX_HP_POWER;
+		max9877_update_mux(codec);
+		break;
+	case SND_SOC_DAPM_POST_PMU:
+		max9877->mux_power |= MUX_HP_POWER;
+		max9877_update_mux(codec);
+		break;
+	}
 
 	return 0;
 }
 
+static int max9877_out_amp_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = w->codec;
+	struct max9877_priv *max9877 = snd_soc_codec_get_drvdata(codec);
+
+	/* TODO: This needs synchronization. */
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMD:
+		max9877->mux_power &= ~MUX_OUT_POWER;
+		max9877_update_mux(codec);
+		break;
+	case SND_SOC_DAPM_POST_PMU:
+		max9877->mux_power |= MUX_OUT_POWER;
+		max9877_update_mux(codec);
+		break;
+	}
+
+	return 0;
+}
+
+/* OUT bypass */
+
+static const char *max9877_out_bypass_texts[] = {"OUT Amp", "RXIN"};
+SOC_ENUM_SINGLE_DECL(max9877_out_bypass_enum, MAX9877_OUTPUT_MODE,
+				MAX9877_BYPASS_SHIFT, max9877_out_bypass_texts);
+static const struct snd_kcontrol_new max9877_out_bypass_control =
+				SOC_DAPM_ENUM("Route", max9877_out_bypass_enum);
+
+/* DAPM widgets */
+
+static const struct snd_soc_dapm_widget max9877_dapm_widgets[] = {
+	/* INPUTS */
+	SND_SOC_DAPM_INPUT("INA"),
+	SND_SOC_DAPM_INPUT("INB"),
+	SND_SOC_DAPM_INPUT("RXIN"),
+
+	/* OUTPUTS */
+	SND_SOC_DAPM_OUTPUT("HP"),
+	SND_SOC_DAPM_OUTPUT("OUT"),
+
+	/* MUXES */
+	SND_SOC_DAPM_MUX("Internal Mux", SND_SOC_NOPM, 0, 0,
+				&max9877_mux_control),
+	SND_SOC_DAPM_MUX("OUT Bypass", SND_SOC_NOPM, 0, 0,
+				&max9877_out_bypass_control),
+
+	/* MIXERS */
+	SND_SOC_DAPM_MIXER("IN Mix", SND_SOC_NOPM, 0, 0, NULL, 0),
+
+	/* PGAs */
+	SND_SOC_DAPM_PGA_E("HP Amp", SND_SOC_NOPM, 0, 0, NULL, 0,
+			max9877_hp_amp_event,
+			SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
+	SND_SOC_DAPM_PGA_E("OUT Amp", SND_SOC_NOPM, 0, 0, NULL, 0,
+			max9877_out_amp_event,
+			SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
+};
+
+static const struct snd_soc_dapm_route intercon[] = {
+	{"IN Mix", NULL, "INA"},
+	{"IN Mix", NULL, "INB"},
+
+	{"Internal Mux", "INA", "INA"},
+	{"Internal Mux", "INB", "INB"},
+	{"Internal Mux", "IN Mix", "IN Mix"},
+
+	{"OUT Amp", NULL, "Internal Mux"},
+	{"HP Amp", NULL, "Internal Mux"},
+
+	{"OUT Bypass", "OUT Amp", "OUT Amp"},
+	{"OUT Bypass", "RXIN", "RXIN"},
+
+	{"HP", NULL, "HP Amp"},
+	{"OUT", NULL, "OUT Bypass"},
+};
+
+static int max9877_add_controls(struct snd_soc_codec *codec)
+{
+	return snd_soc_add_controls(codec, max9877_controls,
+			ARRAY_SIZE(max9877_controls));
+}
+
+static int max9877_add_widgets(struct snd_soc_dapm_context *dapm)
+{
+	int ret = 0;
+
+	ret = snd_soc_dapm_new_controls(dapm, max9877_dapm_widgets,
+			ARRAY_SIZE(max9877_dapm_widgets));
+	if (ret < 0)
+		return ret;
+
+	return snd_soc_dapm_add_routes(dapm, intercon, ARRAY_SIZE(intercon));
+}
+
+static int max9877_probe(struct snd_soc_codec *codec)
+{
+	struct max9877_priv *max9877 = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_dapm_context *dapm = &codec->dapm;
+	int ret;
+
+	codec->hw_write = (hw_write_t)i2c_master_send;
+
+	ret = snd_soc_codec_set_cache_io(codec, 8, 8, max9877->control_type);
+	if (ret < 0) {
+		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
+		return ret;
+	}
+
+	ret = max9877_add_controls(codec);
+	if (ret < 0) {
+		dev_err(codec->dev, "Failed to add controls: %d\n", ret);
+		return ret;
+	}
+
+	ret = max9877_add_widgets(dapm);
+	if (ret < 0) {
+		dev_err(codec->dev, "Failed to add widgets: %d\n", ret);
+		return ret;
+	}
+
+	return ret;
+}
+
+static int max9877_remove(struct snd_soc_codec *codec)
+{
+	return 0;
+}
+
+static struct snd_soc_codec_driver soc_codec_dev_max9877 = {
+	.probe = max9877_probe,
+	.remove = max9877_remove,
+	.reg_cache_size = MAX9877_CACHEREGNUM,
+	.reg_word_size = sizeof(u8),
+	.reg_cache_default = max9877_regs,
+};
+
+static int __devinit max9877_i2c_probe(struct i2c_client *client,
+		const struct i2c_device_id *id)
+{
+	struct max9877_priv *max9877;
+	int ret;
+
+	max9877 = kzalloc(sizeof(struct max9877_priv), GFP_KERNEL);
+	if (max9877 == NULL)
+		return -ENOMEM;
+
+	i2c_set_clientdata(client, max9877);
+	max9877->control_data = client;
+	max9877->control_type = SND_SOC_I2C;
+	max9877->mux_power = 3;
+	max9877->mux_mode = 9;
+
+	ret = snd_soc_register_codec(&client->dev,
+					&soc_codec_dev_max9877, NULL, 0);
+	if (ret < 0)
+		kfree(max9877);
+	return ret;
+}
+
 static __devexit int max9877_i2c_remove(struct i2c_client *client)
 {
-	i2c = NULL;
-
+	snd_soc_unregister_codec(&client->dev);
+	kfree(i2c_get_clientdata(client));
 	return 0;
 }
 
@@ -293,6 +343,8 @@ static struct i2c_driver max9877_i2c_driver = {
 
 static int __init max9877_init(void)
 {
+	/* FIXME: This should be done in a more appropriate way... */
+	max9877_mux_control.put = max9877_mux_put;
 	return i2c_add_driver(&max9877_i2c_driver);
 }
 module_init(max9877_init);
@@ -304,5 +356,5 @@ static void __exit max9877_exit(void)
 module_exit(max9877_exit);
 
 MODULE_DESCRIPTION("ASoC MAX9877 amp driver");
-MODULE_AUTHOR("Joonyoung Shim <jy0922.shim@samsung.com>");
+MODULE_AUTHOR("Tomasz Figa <tomasz.figa at gmail.com>");
 MODULE_LICENSE("GPL");
