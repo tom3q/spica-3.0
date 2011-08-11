@@ -35,6 +35,7 @@
 
 #include <linux/usb.h>
 #include <linux/usb/ch9.h>
+#include <linux/usb/android_composite.h>
 #include <linux/usb/f_accessory.h>
 
 #define BULK_BUFFER_SIZE    16384
@@ -248,11 +249,12 @@ static void acc_complete_out(struct usb_ep *ep, struct usb_request *req)
 static void acc_complete_set_string(struct usb_ep *ep, struct usb_request *req)
 {
 	struct acc_dev	*dev = ep->driver_data;
+	struct usb_composite_dev *cdev = dev->cdev;
 	char *string_dest = NULL;
 	int length = req->actual;
 
 	if (req->status != 0) {
-		pr_err("acc_complete_set_string, err %d\n", req->status);
+		DBG(cdev, "acc_complete_set_string, err %d\n", req->status);
 		return;
 	}
 
@@ -283,12 +285,12 @@ static void acc_complete_set_string(struct usb_ep *ep, struct usb_request *req)
 			length = ACC_STRING_SIZE - 1;
 
 		spin_lock_irqsave(&dev->lock, flags);
-		memcpy(string_dest, req->buf, length);
+		memcpy(string_dest, cdev->req->buf, length);
 		/* ensure zero termination */
 		string_dest[length] = 0;
 		spin_unlock_irqrestore(&dev->lock, flags);
 	} else {
-		pr_err("unknown accessory string index %d\n",
+		DBG(cdev, "unknown accessory string index %d\n",
 			dev->string_index);
 	}
 }
@@ -362,11 +364,12 @@ static ssize_t acc_read(struct file *fp, char __user *buf,
 	size_t count, loff_t *pos)
 {
 	struct acc_dev *dev = fp->private_data;
+	struct usb_composite_dev *cdev = dev->cdev;
 	struct usb_request *req;
 	int r = count, xfer;
 	int ret = 0;
 
-	pr_debug("acc_read(%d)\n", count);
+	DBG(cdev, "acc_read(%d)\n", count);
 
 	if (dev->disconnected)
 		return -ENODEV;
@@ -375,7 +378,7 @@ static ssize_t acc_read(struct file *fp, char __user *buf,
 		count = BULK_BUFFER_SIZE;
 
 	/* we will block until we're online */
-	pr_debug("acc_read: waiting for online\n");
+	DBG(cdev, "acc_read: waiting for online\n");
 	ret = wait_event_interruptible(dev->read_wq, dev->online);
 	if (ret < 0) {
 		r = ret;
@@ -392,7 +395,7 @@ requeue_req:
 		r = -EIO;
 		goto done;
 	} else {
-		pr_debug("rx %p queue\n", req);
+		DBG(cdev, "rx %p queue\n", req);
 	}
 
 	/* wait for a request to complete */
@@ -407,7 +410,7 @@ requeue_req:
 		if (req->actual == 0)
 			goto requeue_req;
 
-		pr_debug("rx %p %d\n", req, req->actual);
+		DBG(cdev, "rx %p %d\n", req, req->actual);
 		xfer = (req->actual < count) ? req->actual : count;
 		r = xfer;
 		if (copy_to_user(buf, req->buf, xfer))
@@ -416,7 +419,7 @@ requeue_req:
 		r = -EIO;
 
 done:
-	pr_debug("acc_read returning %d\n", r);
+	DBG(cdev, "acc_read returning %d\n", r);
 	return r;
 }
 
@@ -424,18 +427,19 @@ static ssize_t acc_write(struct file *fp, const char __user *buf,
 	size_t count, loff_t *pos)
 {
 	struct acc_dev *dev = fp->private_data;
+	struct usb_composite_dev *cdev = dev->cdev;
 	struct usb_request *req = 0;
 	int r = count, xfer;
 	int ret;
 
-	pr_debug("acc_write(%d)\n", count);
+	DBG(cdev, "acc_write(%d)\n", count);
 
 	if (!dev->online || dev->disconnected)
 		return -ENODEV;
 
 	while (count > 0) {
 		if (!dev->online) {
-			pr_debug("acc_write dev->error\n");
+			DBG(cdev, "acc_write dev->error\n");
 			r = -EIO;
 			break;
 		}
@@ -461,7 +465,7 @@ static ssize_t acc_write(struct file *fp, const char __user *buf,
 		req->length = xfer;
 		ret = usb_ep_queue(dev->ep_in, req, GFP_KERNEL);
 		if (ret < 0) {
-			pr_debug("acc_write: xfer error %d\n", ret);
+			DBG(cdev, "acc_write: xfer error %d\n", ret);
 			r = -EIO;
 			break;
 		}
@@ -476,7 +480,7 @@ static ssize_t acc_write(struct file *fp, const char __user *buf,
 	if (req)
 		req_put(dev, &dev->tx_idle, req);
 
-	pr_debug("acc_write returning %d\n", r);
+	DBG(cdev, "acc_write returning %d\n", r);
 	return r;
 }
 
@@ -485,6 +489,9 @@ static long acc_ioctl(struct file *fp, unsigned code, unsigned long value)
 	struct acc_dev *dev = fp->private_data;
 	char *src = NULL;
 	int ret;
+
+	if (dev->function.disabled)
+		return -ENODEV;
 
 	switch (code) {
 	case ACCESSORY_GET_STRING_MANUFACTURER:
@@ -551,69 +558,6 @@ static struct miscdevice acc_device = {
 	.fops = &acc_fops,
 };
 
-
-static int acc_ctrlrequest(struct usb_composite_dev *cdev,
-				const struct usb_ctrlrequest *ctrl)
-{
-	struct acc_dev	*dev = _acc_dev;
-	int	value = -EOPNOTSUPP;
-	u8 b_requestType = ctrl->bRequestType;
-	u8 b_request = ctrl->bRequest;
-	u16	w_index = le16_to_cpu(ctrl->wIndex);
-	u16	w_value = le16_to_cpu(ctrl->wValue);
-	u16	w_length = le16_to_cpu(ctrl->wLength);
-
-/*
-	printk(KERN_INFO "acc_ctrlrequest "
-			"%02x.%02x v%04x i%04x l%u\n",
-			b_requestType, b_request,
-			w_value, w_index, w_length);
-*/
-
-	if (b_requestType == (USB_DIR_OUT | USB_TYPE_VENDOR)) {
-		if (b_request == ACCESSORY_START) {
-			schedule_delayed_work(
-				&dev->work, msecs_to_jiffies(10));
-			value = 0;
-		} else if (b_request == ACCESSORY_SEND_STRING) {
-			dev->string_index = w_index;
-			cdev->gadget->ep0->driver_data = dev;
-			cdev->req->complete = acc_complete_set_string;
-			value = w_length;
-		}
-	} else if (b_requestType == (USB_DIR_IN | USB_TYPE_VENDOR)) {
-		if (b_request == ACCESSORY_GET_PROTOCOL) {
-			*((u16 *)cdev->req->buf) = PROTOCOL_VERSION;
-			value = sizeof(u16);
-
-			/* clear any strings left over from a previous session */
-			memset(dev->manufacturer, 0, sizeof(dev->manufacturer));
-			memset(dev->model, 0, sizeof(dev->model));
-			memset(dev->description, 0, sizeof(dev->description));
-			memset(dev->version, 0, sizeof(dev->version));
-			memset(dev->uri, 0, sizeof(dev->uri));
-			memset(dev->serial, 0, sizeof(dev->serial));
-		}
-	}
-
-	if (value >= 0) {
-		cdev->req->zero = 0;
-		cdev->req->length = value;
-		value = usb_ep_queue(cdev->gadget->ep0, cdev->req, GFP_ATOMIC);
-		if (value < 0)
-			ERROR(cdev, "%s setup response queue error\n",
-				__func__);
-	}
-
-	if (value == -EOPNOTSUPP)
-		VDBG(cdev,
-			"unknown class-specific control req "
-			"%02x.%02x v%04x i%04x l%u\n",
-			ctrl->bRequestType, ctrl->bRequest,
-			w_value, w_index, w_length);
-	return value;
-}
-
 static int
 acc_function_bind(struct usb_configuration *c, struct usb_function *f)
 {
@@ -622,6 +566,7 @@ acc_function_bind(struct usb_configuration *c, struct usb_function *f)
 	int			id;
 	int			ret;
 
+	dev->cdev = cdev;
 	DBG(cdev, "acc_function_bind dev: %p\n", dev);
 
 	/* allocate interface ID(s) */
@@ -657,16 +602,90 @@ acc_function_unbind(struct usb_configuration *c, struct usb_function *f)
 	struct usb_request *req;
 	int i;
 
+	spin_lock_irq(&dev->lock);
 	while ((req = req_get(dev, &dev->tx_idle)))
 		acc_request_free(req, dev->ep_in);
 	for (i = 0; i < RX_REQ_MAX; i++)
 		acc_request_free(dev->rx_req[i], dev->ep_out);
+	dev->online = 0;
+	spin_unlock_irq(&dev->lock);
+
+	misc_deregister(&acc_device);
+	kfree(_acc_dev);
+	_acc_dev = NULL;
 }
 
 static void acc_work(struct work_struct *data)
 {
-	char *envp[2] = { "ACCESSORY=START", NULL };
-	kobject_uevent_env(&acc_device.this_device->kobj, KOBJ_CHANGE, envp);
+	struct delayed_work *delayed = to_delayed_work(data);
+	struct acc_dev	*dev =
+		container_of(delayed, struct acc_dev, work);
+	android_enable_function(&dev->function, 1);
+}
+
+static int acc_function_setup(struct usb_function *f,
+					const struct usb_ctrlrequest *ctrl)
+{
+	struct acc_dev	*dev = func_to_dev(f);
+	struct usb_composite_dev *cdev = dev->cdev;
+	int	value = -EOPNOTSUPP;
+	u8 b_requestType = ctrl->bRequestType;
+	u8 b_request = ctrl->bRequest;
+	u16	w_index = le16_to_cpu(ctrl->wIndex);
+	u16	w_value = le16_to_cpu(ctrl->wValue);
+	u16	w_length = le16_to_cpu(ctrl->wLength);
+
+/*
+	printk(KERN_INFO "acc_function_setup "
+			"%02x.%02x v%04x i%04x l%u\n",
+			b_requestType, b_request,
+			w_value, w_index, w_length);
+*/
+
+	if (dev->function.disabled) {
+		if (b_requestType == (USB_DIR_OUT | USB_TYPE_VENDOR)) {
+			if (b_request == ACCESSORY_START) {
+				schedule_delayed_work(
+					&dev->work, msecs_to_jiffies(10));
+				value = 0;
+			} else if (b_request == ACCESSORY_SEND_STRING) {
+				dev->string_index = w_index;
+				cdev->gadget->ep0->driver_data = dev;
+				cdev->req->complete = acc_complete_set_string;
+				value = w_length;
+			}
+		} else if (b_requestType == (USB_DIR_IN | USB_TYPE_VENDOR)) {
+			if (b_request == ACCESSORY_GET_PROTOCOL) {
+				*((u16 *)cdev->req->buf) = PROTOCOL_VERSION;
+				value = sizeof(u16);
+
+				/* clear any strings left over from a previous session */
+				memset(dev->manufacturer, 0, sizeof(dev->manufacturer));
+				memset(dev->model, 0, sizeof(dev->model));
+				memset(dev->description, 0, sizeof(dev->description));
+				memset(dev->version, 0, sizeof(dev->version));
+				memset(dev->uri, 0, sizeof(dev->uri));
+				memset(dev->serial, 0, sizeof(dev->serial));
+			}
+		}
+	}
+
+	if (value >= 0) {
+		cdev->req->zero = 0;
+		cdev->req->length = value;
+		value = usb_ep_queue(cdev->gadget->ep0, cdev->req, GFP_ATOMIC);
+		if (value < 0)
+			ERROR(cdev, "%s setup response queue error\n",
+				__func__);
+	}
+
+	if (value == -EOPNOTSUPP)
+		VDBG(cdev,
+			"unknown class-specific control req "
+			"%02x.%02x v%04x i%04x l%u\n",
+			ctrl->bRequestType, ctrl->bRequest,
+			w_value, w_index, w_length);
+	return value;
 }
 
 static int acc_function_set_alt(struct usb_function *f,
@@ -691,8 +710,8 @@ static int acc_function_set_alt(struct usb_function *f,
 		usb_ep_disable(dev->ep_in);
 		return ret;
 	}
-
-	dev->online = 1;
+	if (!dev->function.disabled)
+		dev->online = 1;
 
 	/* readers may be blocked waiting for us to go online */
 	wake_up(&dev->read_wq);
@@ -717,10 +736,14 @@ static void acc_function_disable(struct usb_function *f)
 
 static int acc_bind_config(struct usb_configuration *c)
 {
-	struct acc_dev *dev = _acc_dev;
+	struct acc_dev *dev;
 	int ret;
 
 	printk(KERN_INFO "acc_bind_config\n");
+
+	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
+	if (!dev)
+		return -ENOMEM;
 
 	/* allocate a string ID for our interface */
 	if (acc_string_defs[INTERFACE_STRING_INDEX].id == 0) {
@@ -731,28 +754,6 @@ static int acc_bind_config(struct usb_configuration *c)
 		acc_interface_desc.iInterface = ret;
 	}
 
-	dev->cdev = c->cdev;
-	dev->function.name = "accessory";
-	dev->function.strings = acc_strings,
-	dev->function.descriptors = fs_acc_descs;
-	dev->function.hs_descriptors = hs_acc_descs;
-	dev->function.bind = acc_function_bind;
-	dev->function.unbind = acc_function_unbind;
-	dev->function.set_alt = acc_function_set_alt;
-	dev->function.disable = acc_function_disable;
-
-	return usb_add_function(c, &dev->function);
-}
-
-static int acc_setup(void)
-{
-	struct acc_dev *dev;
-	int ret;
-
-	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
-	if (!dev)
-		return -ENOMEM;
-
 	spin_lock_init(&dev->lock);
 	init_waitqueue_head(&dev->read_wq);
 	init_waitqueue_head(&dev->write_wq);
@@ -760,24 +761,48 @@ static int acc_setup(void)
 	INIT_LIST_HEAD(&dev->tx_idle);
 	INIT_DELAYED_WORK(&dev->work, acc_work);
 
+	dev->cdev = c->cdev;
+	dev->function.name = "accessory";
+	dev->function.strings = acc_strings,
+	dev->function.descriptors = fs_acc_descs;
+	dev->function.hs_descriptors = hs_acc_descs;
+	dev->function.bind = acc_function_bind;
+	dev->function.unbind = acc_function_unbind;
+	dev->function.setup = acc_function_setup;
+	dev->function.set_alt = acc_function_set_alt;
+	dev->function.disable = acc_function_disable;
+	dev->function.disabled = 1;
+
 	/* _acc_dev must be set before calling usb_gadget_register_driver */
 	_acc_dev = dev;
 
 	ret = misc_register(&acc_device);
 	if (ret)
-		goto err;
+		goto err1;
+
+	ret = usb_add_function(c, &dev->function);
+	if (ret)
+		goto err2;
 
 	return 0;
 
-err:
+err2:
+	misc_deregister(&acc_device);
+err1:
 	kfree(dev);
 	printk(KERN_ERR "USB accessory gadget driver failed to initialize\n");
 	return ret;
 }
 
-static void acc_cleanup(void)
+static struct android_usb_function acc_function = {
+	.name = "accessory",
+	.bind_config = acc_bind_config,
+};
+
+static int __init init(void)
 {
-	misc_deregister(&acc_device);
-	kfree(_acc_dev);
-	_acc_dev = NULL;
+	printk(KERN_INFO "f_accessory init\n");
+	android_register_function(&acc_function);
+	return 0;
 }
+module_init(init);
