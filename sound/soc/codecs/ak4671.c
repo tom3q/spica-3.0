@@ -162,6 +162,20 @@ static const struct snd_kcontrol_new ak4671_snd_controls[] = {
 	/* Common capture gain controls */
 	SOC_DOUBLE_TLV("Mic Amp Capture Volume",
 			AK4671_MIC_AMP_GAIN, 0, 4, 0xf, 0, mic_amp_tlv),
+
+	/* Stereo/Differential switches */
+	SOC_SINGLE("Line Input 1 Differential",
+			AK4671_MIC_SIGNAL_SELECT, 4, 1, 0),
+	SOC_SINGLE("Line Input 2 Differential",
+			AK4671_MIC_SIGNAL_SELECT, 5, 1, 0),
+	SOC_SINGLE("Line Input 3 Differential",
+			AK4671_MIC_SIGNAL_SELECT, 6, 1, 0),
+	SOC_SINGLE("Line Input 4 Differential",
+			AK4671_MIC_SIGNAL_SELECT, 7, 1, 0),
+	SOC_SINGLE("Line Output 1 Differential",
+			AK4671_LOUT1_POWER_MANAGERMENT, 5, 1, 0),
+	SOC_SINGLE("Line Output 3 Differential",
+			AK4671_LOUT3_POWER_MANAGERMENT, 5, 1, 0),
 };
 
 /* event handlers */
