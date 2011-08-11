@@ -26,9 +26,9 @@
 #include <plat/adc.h>
 
 /* Time between samples (in milliseconds) */
-#define BAT_POLL_INTERVAL		4000
-#define BAT_POLL_INTERVAL_CHG		1000
-#define BAT_POLL_INTERVAL_FAULT		500
+#define BAT_POLL_INTERVAL		8000
+#define BAT_POLL_INTERVAL_CHG		2000
+#define BAT_POLL_INTERVAL_FAULT		1000
 
 /* Number of samples for averaging (a power of two!) */
 #define NUM_SAMPLES		4
