@@ -494,4 +494,14 @@ config INPUT_XEN_KBDDEV_FRONTEND
 	  To compile this driver as a module, choose M here: the
 	  module will be called xen-kbdfront.
 
+config INPUT_BMA023
+	tristate "BMA023/SMB380 Triaxial acceleration sensor"
+	depends on I2C
+	help
+	  Say Y here if you want to support Bosch BMA023/SMB380
+	  connected via an I2C bus.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called bma023.
+
 endif
