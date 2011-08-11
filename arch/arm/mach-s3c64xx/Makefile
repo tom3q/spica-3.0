@@ -58,6 +58,7 @@ obj-$(CONFIG_MACH_HMT)		+= mach-hmt.o
 obj-$(CONFIG_MACH_SMARTQ)	+= mach-smartq.o
 obj-$(CONFIG_MACH_SMARTQ5)	+= mach-smartq5.o
 obj-$(CONFIG_MACH_SMARTQ7)	+= mach-smartq7.o
+obj-$(CONFIG_MACH_GT_I5700)	+= mach-gt_i5700.o
 
 # device support
 

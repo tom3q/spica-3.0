@@ -283,3 +283,28 @@ config MACH_SMARTQ7
 	select MACH_SMARTQ
 	help
 	    Machine support for the SmartQ 7
+
+config MACH_GT_I5700
+	bool "Samsung GT-i5700 (Spica)"
+	select CPU_S3C6410
+	select SAMSUNG_DEV_KEYPAD
+	select SAMSUNG_DEV_PWM
+	select SAMSUNG_DEV_ADC
+	select S3C_DEV_HSMMC
+	select S3C_DEV_HSMMC2
+	select S3C_DEV_I2C1
+	select S3C_DEV_FB
+	select S3C_DEV_USB_HSOTG
+	select S3C_DEV_WDT
+	select S3C_DEV_HWMON
+	select S3C_DEV_RTC
+	select S3C_DEV_ONENAND
+	select S3C64XX_SETUP_I2C1
+	select S3C64XX_SETUP_SDHCI
+	select S3C64XX_SETUP_KEYPAD
+	select S3C64XX_DEV_PD
+	select I2C_GPIO
+	select HAVE_S3C2410_WATCHDOG if WATCHDOG
+
+	help
+	  Machine support for the Samsung Galaxy Spica GT-i5700 phone.
