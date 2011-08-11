@@ -757,6 +757,7 @@ end:
 	fput(file);
 	return -1;
 }
+EXPORT_SYMBOL(get_pmem_file);
 
 void put_pmem_file(struct file *file)
 {
@@ -779,6 +780,7 @@ void put_pmem_file(struct file *file)
 #endif
 	fput(file);
 }
+EXPORT_SYMBOL(put_pmem_file);
 
 void flush_pmem_file(struct file *file, unsigned long offset, unsigned long len)
 {
@@ -820,6 +822,7 @@ void flush_pmem_file(struct file *file, unsigned long offset, unsigned long len)
 end:
 	up_read(&data->sem);
 }
+EXPORT_SYMBOL(flush_pmem_file);
 
 static int pmem_connect(unsigned long connect, struct file *file)
 {
