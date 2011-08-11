@@ -35,6 +35,7 @@ static struct s3c64xx_dvfs s3c64xx_dvfs_table[] = {
 };
 
 static struct cpufreq_frequency_table s3c64xx_freq_table[] = {
+#ifndef CONFIG_CPU_S3C6410_800MHZ_SYNC
 	{ 0,  66000 },
 	{ 0, 100000 },
 	{ 0, 133000 },
@@ -47,6 +48,12 @@ static struct cpufreq_frequency_table s3c64xx_freq_table[] = {
 	{ 2, 533000 },
 	{ 3, 667000 },
 	{ 4, 800000 },
+#else
+	{ 0, 133333 },
+	{ 1, 266666 },
+	{ 2, 400000 },
+	{ 4, 800000 },
+#endif
 	{ 0, CPUFREQ_TABLE_END },
 };
 #endif

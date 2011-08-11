@@ -58,6 +58,11 @@ config S3C64XX_DEV_PD
 	help
 	  Compile in platform device definitions for Power Domain
 
+config CPU_S3C6410_800MHZ_SYNC
+	bool
+	help
+	  Allow only frequencies compatible with 800MHz sync mode.
+
 # platform specific device setup
 
 config S3C64XX_SETUP_I2C0
@@ -287,6 +292,7 @@ config MACH_SMARTQ7
 config MACH_GT_I5700
 	bool "Samsung GT-i5700 (Spica)"
 	select CPU_S3C6410
+	select CPU_S3C6410_800MHZ_SYNC
 	select SAMSUNG_DEV_KEYPAD
 	select SAMSUNG_DEV_PWM
 	select SAMSUNG_DEV_ADC
