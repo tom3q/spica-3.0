@@ -955,6 +955,12 @@ config USB_ANDROID_ADB
 	help
 	  Provides adb function for android gadget driver.
 
+config USB_ANDROID_ADB_ENABLED
+	boolean "Enable ADB by default"
+	depends on USB_ANDROID_ADB
+	help
+	  Makes ADB enabled by default. Useful for debugging.
+
 config USB_ANDROID_MASS_STORAGE
 	boolean "Android gadget mass storage function"
 	depends on USB_ANDROID && SWITCH

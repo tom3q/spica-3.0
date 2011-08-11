@@ -614,7 +614,9 @@ static int adb_bind_config(struct usb_configuration *c)
 	dev->function.disable = adb_function_disable;
 
 	/* start disabled */
+#ifndef CONFIG_USB_ANDROID_ADB_ENABLED
 	dev->function.disabled = 1;
+#endif
 
 	/* _adb_dev must be set before calling usb_gadget_register_driver */
 	_adb_dev = dev;
