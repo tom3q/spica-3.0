@@ -219,8 +219,8 @@ static void spica_battery_poll(struct work_struct *work)
 	if (temp_value >= pdata->high_temp_enter)
 		health = POWER_SUPPLY_HEALTH_OVERHEAT;
 
-	if (temp_value > pdata->low_temp_enter
-	    && temp_value < pdata->high_temp_exit)
+	if (temp_value >= pdata->low_temp_exit
+	    && temp_value <= pdata->high_temp_exit)
 		health = POWER_SUPPLY_HEALTH_GOOD;
 
 	if (bat->health != health) {
