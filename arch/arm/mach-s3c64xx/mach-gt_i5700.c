@@ -48,6 +48,7 @@
 #include <linux/akm8973.h>
 #include <linux/i2c/bma023.h>
 #include <linux/skbuff.h>
+#include <linux/spica_bt.h>
 
 #include <video/s6d05a.h>
 
@@ -158,6 +159,8 @@
 #define ULCON S3C2410_LCON_CS8 | S3C2410_LCON_PNONE
 #define UFCON S3C2410_UFCON_RXTRIG8 | S3C2410_UFCON_FIFOMODE
 
+static void spica_bt_uart_wake_peer(struct uart_port *port);
+
 static struct s3c2410_uartcfg spica_uartcfgs[] __initdata = {
 	[0] = {	/* Phone */
 		.hwport	     = 0,
@@ -172,6 +175,7 @@ static struct s3c2410_uartcfg spica_uartcfgs[] __initdata = {
 		.ucon	     = UCON,
 		.ulcon	     = ULCON,
 		.ufcon	     = UFCON,
+		.wake_peer	= spica_bt_uart_wake_peer,
 	},
 	[2] = {	/* Serial */
 		.hwport	     = 2,
@@ -1179,22 +1183,127 @@ static struct platform_device spica_battery = {
 };
 
 /*
- * WLAN (using BCMDHD driver)
+ * Common WLAN/Bluetooth power switch
  */
+
+static int spica_wifi_bt_pwr_cnt = 0;
+static DEFINE_MUTEX(spica_wifi_bt_pwr_lock);
+
+static void spica_wifi_bt_power_inc(void)
+{
+	mutex_lock(&spica_wifi_bt_pwr_lock);
+
+	if (!(spica_wifi_bt_pwr_cnt++)) {
+		gpio_set_value(GPIO_BT_WLAN_REG_ON, 1);
+		msleep(100);
+	}
+
+	mutex_unlock(&spica_wifi_bt_pwr_lock);
+}
+
+static void spica_wifi_bt_power_dec(void)
+{
+	mutex_lock(&spica_wifi_bt_pwr_lock);
+
+	if (!(--spica_wifi_bt_pwr_cnt))
+		gpio_set_value(GPIO_BT_WLAN_REG_ON, 0);
+
+	mutex_unlock(&spica_wifi_bt_pwr_lock);
+}
+
+/*
+ * Bluetooth
+ */
+
+static int spica_bt_power = 0;
+
+static void spica_bt_set_power(int val)
+{
+	if (val == spica_bt_power)
+		return;
+
+	if (val) {
+		gpio_direction_output(GPIO_BT_RST_N, 0);
+		spica_wifi_bt_power_inc();
+		msleep(50);
+		gpio_set_value(GPIO_BT_RST_N, 1);
+		s3c_gpio_slp_cfgpin(GPIO_BT_RST_N, S3C64XX_GPIO_SLP_HIGH);
+	} else {
+		gpio_set_value(GPIO_BT_RST_N, 0);
+		s3c_gpio_slp_cfgpin(GPIO_BT_RST_N, S3C64XX_GPIO_SLP_LOW);
+		spica_wifi_bt_power_dec();
+	}
+
+	spica_bt_power = val;
+}
+
+static struct spica_bt_pdata spica_bt_pdata = {
+	.gpio_host_wake	= GPIO_BT_HOST_WAKE,
+	.set_power	= spica_bt_set_power,
+};
+
+static struct platform_device spica_bt_device = {
+	.name	= "spica_bt",
+	.dev	= {
+		.platform_data = &spica_bt_pdata,
+	},
+};
+
+static struct hrtimer spica_bt_lpm_timer;
+static ktime_t spica_bt_lpm_delay;
+
+static enum hrtimer_restart spica_bt_enter_lpm(struct hrtimer *timer)
+{
+	gpio_set_value(GPIO_BT_WAKE, 0);
+
+	return HRTIMER_NORESTART;
+}
+
+static void spica_bt_uart_wake_peer(struct uart_port *port)
+{
+	hrtimer_try_to_cancel(&spica_bt_lpm_timer);
+	gpio_set_value(GPIO_BT_WAKE, 1);
+	hrtimer_start(&spica_bt_lpm_timer,
+					spica_bt_lpm_delay, HRTIMER_MODE_REL);
+}
+
+static void __init spica_bt_lpm_init(void)
+{
+	WARN_ON(gpio_request(GPIO_BT_WAKE, "gpio_bt_wake") < 0);
+
+	gpio_direction_output(GPIO_BT_WAKE, 0);
+
+	hrtimer_init(&spica_bt_lpm_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	spica_bt_lpm_timer.function = spica_bt_enter_lpm;
+	spica_bt_lpm_delay = ktime_set(1, 0);	/* 1 sec */
+}
+
+/*
+ * WLAN (using BCM4329 driver)
+ */
+
+static int spica_wlan_power = 0;
 
 static int spica_wlan_set_power(int val)
 {
 	printk("%s = %d\n", __func__, val);
 
+	if (val == spica_wlan_power)
+		return 0;
+
 	if (val) {
 		gpio_set_value(GPIO_WLAN_RST_N, 0);
-		gpio_set_value(GPIO_BT_WLAN_REG_ON, 1);
-		msleep(150);
+		spica_wifi_bt_power_inc();
+		msleep(50);
 		gpio_set_value(GPIO_WLAN_RST_N, 1);
+		s3c_gpio_slp_cfgpin(GPIO_WLAN_RST_N, S3C64XX_GPIO_SLP_HIGH);
 	} else {
 		gpio_set_value(GPIO_WLAN_RST_N, 0);
-		gpio_set_value(GPIO_BT_WLAN_REG_ON, 0);
+		spica_wifi_bt_power_dec();
+		s3c_gpio_slp_cfgpin(GPIO_WLAN_RST_N, S3C64XX_GPIO_SLP_LOW);
 	}
+
+	spica_wlan_power = val;
 
 	return 0;
 }
@@ -1498,6 +1607,7 @@ static struct platform_device *spica_devices[] __initdata = {
 	&s3c64xx_device_iis0,
 	&s3c_device_timer[1],
 	&spica_wlan_device,
+	&spica_bt_device,
 };
 
 /*
@@ -2042,8 +2152,11 @@ static void __init spica_machine_init(void)
 	s3c_pin_config(spica_pin_config, ARRAY_SIZE(spica_pin_config));
 	s3c_pin_slp_config(spica_slp_config, ARRAY_SIZE(spica_slp_config));
 
-	gpio_request(GPIO_BT_WLAN_REG_ON, "WLAN power");
+	spica_bt_lpm_init();
+
+	gpio_request(GPIO_BT_WLAN_REG_ON, "WLAN/BT power");
 	gpio_request(GPIO_WLAN_RST_N, "WLAN reset");
+	gpio_request(GPIO_BT_RST_N, "BT reset");
 	gpio_request(GPIO_PDA_PS_HOLD, "Power hold");
 
 	pm_power_off = spica_poweroff;
