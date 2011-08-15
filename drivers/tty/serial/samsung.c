@@ -1231,6 +1231,8 @@ static int s3c24xx_serial_resume(struct platform_device *dev)
 	if (port) {
 		clk_enable(ourport->clk);
 		s3c24xx_serial_resetport(port, s3c24xx_port_to_cfg(port));
+		if (ourport->clksrc)
+			s3c24xx_serial_setsource(port, ourport->clksrc);
 		clk_disable(ourport->clk);
 
 		uart_resume_port(&s3c24xx_uart_drv, port);
