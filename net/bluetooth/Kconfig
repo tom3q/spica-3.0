@@ -35,6 +35,12 @@ menuconfig BT
 
 if BT != n
 
+config BT_NO_RFKILL
+	bool "Do not add software RF switch to HCI devices"
+	help
+	  This option bypasses implicit adding software RF switch
+	  per HCI device.
+
 config BT_L2CAP
 	bool "L2CAP protocol support"
 	select CRC16
