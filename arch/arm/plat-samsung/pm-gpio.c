@@ -224,7 +224,7 @@ static u32 s3c_gpio_pm_4bit_mask(u32 old_gpcon, u32 gps_gpcon)
 	u32 change_mask = 0x0;
 	int nr;
 
-	for (nr = 0, mask = 0x0f; nr < 16; nr += 4, mask <<= 4) {
+	for (nr = 0, mask = 0x0f; nr < 32; nr += 4, mask <<= 4) {
 		old = (old_gpcon & mask) >> nr;
 		new = (gps_gpcon & mask) >> nr;
 
