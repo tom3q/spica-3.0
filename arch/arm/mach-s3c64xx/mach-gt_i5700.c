@@ -161,6 +161,15 @@
 
 static void spica_bt_uart_wake_peer(struct uart_port *port);
 
+static struct s3c24xx_uart_clksrc spica_uart_clksrcs[] = {
+	{
+		.name		= "uclk1",
+		.min_baud	= 0,
+		.max_baud	= 0,
+		.divisor	= 1,
+	},
+};
+
 static struct s3c2410_uartcfg spica_uartcfgs[] __initdata = {
 	[0] = {	/* Phone */
 		.hwport		= 0,
@@ -168,6 +177,8 @@ static struct s3c2410_uartcfg spica_uartcfgs[] __initdata = {
 		.ucon		= UCON,
 		.ulcon		= ULCON,
 		.ufcon		= UFCON,
+		.clocks		= spica_uart_clksrcs,
+		.clocks_size	= ARRAY_SIZE(spica_uart_clksrcs),
 	},
 	[1] = {	/* Bluetooth */
 		.hwport		= 1,
@@ -175,6 +186,8 @@ static struct s3c2410_uartcfg spica_uartcfgs[] __initdata = {
 		.ucon		= UCON,
 		.ulcon		= ULCON,
 		.ufcon		= UFCON,
+		.clocks		= spica_uart_clksrcs,
+		.clocks_size	= ARRAY_SIZE(spica_uart_clksrcs),
 		.wake_peer	= spica_bt_uart_wake_peer,
 	},
 	[2] = {	/* Serial */
@@ -183,6 +196,8 @@ static struct s3c2410_uartcfg spica_uartcfgs[] __initdata = {
 		.ucon		= UCON,
 		.ulcon		= ULCON,
 		.ufcon		= UFCON,
+		.clocks		= spica_uart_clksrcs,
+		.clocks_size	= ARRAY_SIZE(spica_uart_clksrcs),
 	},
 };
 
@@ -2149,6 +2164,14 @@ static void spica_poweroff(void)
 
 static void __init spica_machine_init(void)
 {
+	struct clk *uclk1;
+
+	/* Setup UCLK1 frequency */
+	uclk1 = clk_get(NULL, "uclk1");
+	clk_set_parent(uclk1, clk_get(NULL, "dout_mpll"));
+	clk_set_rate(uclk1, 133000000);
+	clk_put(uclk1);
+
 	/* Configure GPIO pins */
 	s3c_pin_config(spica_pin_config, ARRAY_SIZE(spica_pin_config));
 	s3c_pin_slp_config(spica_slp_config, ARRAY_SIZE(spica_slp_config));
