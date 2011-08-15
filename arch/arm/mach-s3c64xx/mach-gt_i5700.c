@@ -1238,14 +1238,12 @@ static void spica_bt_set_power(int val)
 		return;
 
 	if (val) {
-		gpio_direction_output(GPIO_BT_RST_N, 0);
+		gpio_set_value(GPIO_BT_RST_N, 0);
 		spica_wifi_bt_power_inc();
 		msleep(50);
 		gpio_set_value(GPIO_BT_RST_N, 1);
-		s3c_gpio_slp_cfgpin(GPIO_BT_RST_N, S3C64XX_GPIO_SLP_HIGH);
 	} else {
 		gpio_set_value(GPIO_BT_RST_N, 0);
-		s3c_gpio_slp_cfgpin(GPIO_BT_RST_N, S3C64XX_GPIO_SLP_LOW);
 		spica_wifi_bt_power_dec();
 	}
 
@@ -1311,11 +1309,9 @@ static int spica_wlan_set_power(int val)
 		spica_wifi_bt_power_inc();
 		msleep(50);
 		gpio_set_value(GPIO_WLAN_RST_N, 1);
-		s3c_gpio_slp_cfgpin(GPIO_WLAN_RST_N, S3C64XX_GPIO_SLP_HIGH);
 	} else {
 		gpio_set_value(GPIO_WLAN_RST_N, 0);
 		spica_wifi_bt_power_dec();
-		s3c_gpio_slp_cfgpin(GPIO_WLAN_RST_N, S3C64XX_GPIO_SLP_LOW);
 	}
 
 	spica_wlan_power = val;
