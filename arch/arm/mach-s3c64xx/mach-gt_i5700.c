@@ -163,26 +163,26 @@ static void spica_bt_uart_wake_peer(struct uart_port *port);
 
 static struct s3c2410_uartcfg spica_uartcfgs[] __initdata = {
 	[0] = {	/* Phone */
-		.hwport	     = 0,
-		.flags	     = 0,
-		.ucon	     = UCON,
-		.ulcon	     = ULCON,
-		.ufcon	     = UFCON,
+		.hwport		= 0,
+		.flags		= 0,
+		.ucon		= UCON,
+		.ulcon		= ULCON,
+		.ufcon		= UFCON,
 	},
 	[1] = {	/* Bluetooth */
-		.hwport	     = 1,
-		.flags	     = 0,
-		.ucon	     = UCON,
-		.ulcon	     = ULCON,
-		.ufcon	     = UFCON,
+		.hwport		= 1,
+		.flags		= 0,
+		.ucon		= UCON,
+		.ulcon		= ULCON,
+		.ufcon		= UFCON,
 		.wake_peer	= spica_bt_uart_wake_peer,
 	},
 	[2] = {	/* Serial */
-		.hwport	     = 2,
-		.flags	     = 0,
-		.ucon	     = UCON,
-		.ulcon	     = ULCON,
-		.ufcon	     = UFCON,
+		.hwport		= 2,
+		.flags		= 0,
+		.ucon		= UCON,
+		.ulcon		= ULCON,
+		.ufcon		= UFCON,
 	},
 };
 
@@ -2149,16 +2149,18 @@ static void spica_poweroff(void)
 
 static void __init spica_machine_init(void)
 {
+	/* Configure GPIO pins */
 	s3c_pin_config(spica_pin_config, ARRAY_SIZE(spica_pin_config));
 	s3c_pin_slp_config(spica_slp_config, ARRAY_SIZE(spica_slp_config));
 
+	/* Setup Bluetooth and WLAN */
 	spica_bt_lpm_init();
-
 	gpio_request(GPIO_BT_WLAN_REG_ON, "WLAN/BT power");
 	gpio_request(GPIO_WLAN_RST_N, "WLAN reset");
 	gpio_request(GPIO_BT_RST_N, "BT reset");
-	gpio_request(GPIO_PDA_PS_HOLD, "Power hold");
 
+	/* Setup power management */
+	gpio_request(GPIO_PDA_PS_HOLD, "Power hold");
 	pm_power_off = spica_poweroff;
 	s3c_pm_init();
 
@@ -2176,13 +2178,17 @@ static void __init spica_machine_init(void)
 	i2c_register_board_info(spica_touch_i2c.id, spica_touch_i2c_devs,
 					ARRAY_SIZE(spica_touch_i2c_devs));
 
+	/* Setup framebuffer */
 	s3c_fb_set_platdata(&spica_lcd_pdata);
 
+	/* Setup SDHCI */
 	s3c_sdhci0_set_platdata(&spica_hsmmc0_pdata);
 	s3c_sdhci2_set_platdata(&spica_hsmmc2_pdata);
 
+	/* Setup keypad */
 	samsung_keypad_set_platdata(&spica_keypad_pdata);
 
+	/* Setup OneNAND */
 	s3c_set_platdata(&spica_onenand_pdata, sizeof(spica_onenand_pdata),
 							&s3c_device_onenand);
 
@@ -2200,6 +2206,7 @@ static void __init spica_machine_init(void)
 	/* Register PMEM devices */
 	spica_add_mem_devices();
 
+	/* Indicate full regulator constraints */
 	regulator_has_full_constraints();
 }
 
