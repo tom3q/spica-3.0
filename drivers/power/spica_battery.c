@@ -230,11 +230,13 @@ static void spica_battery_poll(struct work_struct *work)
 	mutex_unlock(&bat->mutex);
 
 	/* Schedule next poll */
-	if (update)
+	if (update) {
 		schedule_work(&bat->work);
-	else
+	} else {
 		schedule_delayed_work(&bat->poll_work,
 					msecs_to_jiffies(bat->interval));
+		power_supply_changed(&bat->bat);
+	}
 }
 
 static void spica_battery_work(struct work_struct *work)
