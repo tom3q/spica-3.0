@@ -8,6 +8,8 @@
  *
  */
 
+/* TODO: RTC timer in suspend mode */
+
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/power_supply.h>
@@ -743,6 +745,8 @@ static int spica_battery_suspend(struct platform_device *pdev,
 		disable_irq(bat->irq_chg);
 		gpio_set_value(pdata->gpio_en, pdata->gpio_en_inverted);
 	}
+
+	/* TODO: Schedule RTC timer here with slow poll rate */
 
 	return 0;
 }
