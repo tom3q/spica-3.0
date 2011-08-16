@@ -868,9 +868,10 @@ static struct regulator_init_data mmc2_fixed_voltage_init_data = {
 };
 
 static struct fixed_voltage_config mmc2_fixed_voltage_config = {
-	.supply_name		= "WLAN_EN",
+	.supply_name		= "WLAN_REG",
 	.microvolts		= 2800000,
 	.init_data		= &mmc2_fixed_voltage_init_data,
+	.gpio			= -EINVAL,
 };
 
 static struct platform_device mmc2_fixed_voltage = {
