@@ -26,9 +26,8 @@
 #include <plat/adc.h>
 
 /* Time between samples (in milliseconds) */
-#define BAT_POLL_INTERVAL		8000
-#define BAT_POLL_INTERVAL_CHG		2000
-#define BAT_POLL_INTERVAL_FAULT		1000
+#define BAT_POLL_INTERVAL_SLOW		60000
+#define BAT_POLL_INTERVAL_FAST		10000
 
 /* Number of samples for averaging (a power of two!) */
 #define NUM_SAMPLES		4
@@ -264,7 +263,6 @@ static void spica_battery_work(struct work_struct *work)
 		bat->online[i] = (type == i);
 
 	/* Default polling interval if not overheated nor charging */
-	bat->interval = BAT_POLL_INTERVAL;
 	bat->status = POWER_SUPPLY_STATUS_DISCHARGING;
 
 	is_healthy = (bat->health == POWER_SUPPLY_HEALTH_GOOD);
@@ -276,16 +274,12 @@ static void spica_battery_work(struct work_struct *work)
 		if (bat->health == POWER_SUPPLY_HEALTH_COLD);
 			dev_warn(bat->dev,
 				 "Battery temperature too low, disabling charger.\n");
-
-		/* Poll the status more frequently if overheated */
-		bat->interval = BAT_POLL_INTERVAL_FAULT;
 	}
 
 	/* Update charging status and polling interval */
 	chg_enable = is_plugged && is_healthy;
 	if (chg_enable) {
 		bat->status = POWER_SUPPLY_STATUS_FULL;
-		bat->interval = BAT_POLL_INTERVAL_CHG;
 
 		/* Enable the charger */
 		gpio_set_value(pdata->gpio_en, !pdata->gpio_en_inverted);
@@ -561,6 +555,7 @@ static int spica_battery_probe(struct platform_device *pdev)
 	bat->status = POWER_SUPPLY_STATUS_DISCHARGING;
 	bat->health = POWER_SUPPLY_HEALTH_GOOD;
 	bat->supply = SPICA_BATTERY_NONE;
+	bat->interval = BAT_POLL_INTERVAL_FAST;
 
 	ret = create_lookup_table(pdata->percent_lut,
 				pdata->percent_lut_cnt, &bat->percent_lookup);
