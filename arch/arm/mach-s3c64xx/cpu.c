@@ -23,6 +23,10 @@
 
 #include <mach/hardware.h>
 #include <mach/map.h>
+#include <mach/regs-sys.h>
+#include <mach/regs-syscon-power.h>
+
+#include <asm/proc-fns.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
@@ -129,6 +133,16 @@ static struct sys_device s3c64xx_sysdev = {
 	.cls	= &s3c64xx_sysclass,
 };
 
+/* cpu idle function */
+
+static void s3c64xx_idle(void)
+{
+	if (!need_resched())
+		cpu_do_idle();
+
+	local_irq_enable();
+}
+
 /* uart registration process */
 
 void __init s3c6400_common_init_uarts(struct s3c2410_uartcfg *cfg, int no)
@@ -141,6 +155,7 @@ void __init s3c6400_common_init_uarts(struct s3c2410_uartcfg *cfg, int no)
 void __init s3c64xx_init_io(struct map_desc *mach_desc, int size)
 {
 	unsigned long idcode;
+	unsigned long tmp;
 
 	/* initialise the io descriptors we need for initialisation */
 	iotable_init(s3c_iodesc, ARRAY_SIZE(s3c_iodesc));
@@ -154,6 +169,15 @@ void __init s3c64xx_init_io(struct map_desc *mach_desc, int size)
 		__raw_writel(0x0, S3C_VA_SYS + 0xA1C);
 		idcode = __raw_readl(S3C_VA_SYS + 0xA1C);
 	}
+
+	/* Setup PWRCFG to enter idle mode */
+	tmp = __raw_readl(S3C64XX_PWR_CFG);
+	tmp &= ~S3C64XX_PWRCFG_CFG_WFI_MASK;
+	tmp |= S3C64XX_PWRCFG_CFG_WFI_IDLE;
+	__raw_writel(tmp, S3C64XX_PWR_CFG);
+
+	/* set idle function */
+	pm_idle = s3c64xx_idle;
 
 	s3c_init_cpu(idcode, cpu_ids, ARRAY_SIZE(cpu_ids));
 }

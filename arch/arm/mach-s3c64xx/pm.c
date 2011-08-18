@@ -129,6 +129,12 @@ void s3c_pm_restore_core(void)
 	udelay(10);
 
 	__raw_writel(pclkgate, S3C_PCLK_GATE);
+
+	/* Setup PWRCFG to enter idle mode (for cpuidle) */
+	tmp = __raw_readl(S3C64XX_PWR_CFG);
+	tmp &= ~S3C64XX_PWRCFG_CFG_WFI_MASK;
+	tmp |= S3C64XX_PWRCFG_CFG_WFI_IDLE;
+	__raw_writel(tmp, S3C64XX_PWR_CFG);
 }
 
 void s3c_pm_save_core(void)
