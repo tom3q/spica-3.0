@@ -778,6 +778,7 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_src	= { .reg = S3C_CLK_SRC, .shift = 18, .size = 2  },
 		.reg_div	= { .reg = S3C_CLK_DIV1, .shift = 0, .size = 4  },
 		.sources	= &clkset_spi_mmc,
+		.disable	= 1,
 	}, {
 		.clk	= {
 			.name		= "mmc_bus",
@@ -788,6 +789,7 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_src	= { .reg = S3C_CLK_SRC, .shift = 20, .size = 2  },
 		.reg_div	= { .reg = S3C_CLK_DIV1, .shift = 4, .size = 4  },
 		.sources	= &clkset_spi_mmc,
+		.disable	= 1,
 	}, {
 		.clk	= {
 			.name		= "mmc_bus",
@@ -798,6 +800,7 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_src	= { .reg = S3C_CLK_SRC, .shift = 22, .size = 2  },
 		.reg_div 	= { .reg = S3C_CLK_DIV1, .shift = 8, .size = 4  },
 		.sources	= &clkset_spi_mmc,
+		.disable	= 1,
 	}, {
 		.clk	= {
 			.name		= "usb-bus-host",
@@ -808,6 +811,7 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_src 	= { .reg = S3C_CLK_SRC, .shift = 5, .size = 2  },
 		.reg_div	= { .reg = S3C_CLK_DIV1, .shift = 20, .size = 4  },
 		.sources	= &clkset_uhost,
+		.disable	= 1,
 	}, {
 		.clk	= {
 			.name		= "uclk1",
@@ -829,6 +833,7 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_src	= { .reg = S3C_CLK_SRC, .shift = 14, .size = 2  },
 		.reg_div	= { .reg = S3C_CLK_DIV2, .shift = 0, .size = 4  },
 		.sources	= &clkset_spi_mmc,
+		.disable	= 1,
 	}, {
 		.clk	= {
 			.name		= "spi-bus",
@@ -839,6 +844,7 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_src	= { .reg = S3C_CLK_SRC, .shift = 16, .size = 2  },
 		.reg_div	= { .reg = S3C_CLK_DIV2, .shift = 4, .size = 4  },
 		.sources	= &clkset_spi_mmc,
+		.disable	= 1,
 	}, {
 		.clk	= {
 			.name		= "audio-bus",
@@ -849,6 +855,7 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_src	= { .reg = S3C_CLK_SRC, .shift = 7, .size = 3  },
 		.reg_div	= { .reg = S3C_CLK_DIV2, .shift = 8, .size = 4  },
 		.sources	= &clkset_audio0,
+		.disable	= 1,
 	}, {
 		.clk	= {
 			.name		= "audio-bus",
@@ -859,6 +866,7 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_src	= { .reg = S3C_CLK_SRC, .shift = 10, .size = 3  },
 		.reg_div	= { .reg = S3C_CLK_DIV2, .shift = 12, .size = 4  },
 		.sources	= &clkset_audio1,
+		.disable	= 1,
 	}, {
 		.clk	= {
 			.name		= "irda-bus",
@@ -869,6 +877,7 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_src	= { .reg = S3C_CLK_SRC, .shift = 24, .size = 2  },
 		.reg_div	= { .reg = S3C_CLK_DIV2, .shift = 20, .size = 4  },
 		.sources	= &clkset_irda,
+		.disable	= 1,
 	}, {
 		.clk	= {
 			.name		= "camera",
@@ -878,6 +887,7 @@ static struct clksrc_clk clksrcs[] = {
 			.parent		= &clk_h2,
 		},
 		.reg_div	= { .reg = S3C_CLK_DIV0, .shift = 20, .size = 4  },
+		.disable	= 1,
 	}, {
 		.clk	= {
 			.name		= "tv_27m",
@@ -887,6 +897,7 @@ static struct clksrc_clk clksrcs[] = {
 		},
 		.reg_src	= { .reg = S3C_CLK_SRC, .shift = 31, .size = 1 },
 		.sources	= &clkset_tv27_dac27,
+		.disable	= 1,
 	}, {
 		.clk	= {
 			.name		= "dac_27m",
@@ -896,6 +907,7 @@ static struct clksrc_clk clksrcs[] = {
 		},
 		.reg_src	= { .reg = S3C_CLK_SRC, .shift = 30, .size = 1 },
 		.sources	= &clkset_tv27_dac27,
+		.disable	= 1,
 	}, {
 		.clk	= {
 			.name		= "scaler_sclk",
@@ -906,6 +918,7 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_src	= { .reg = S3C_CLK_SRC, .shift = 28, .size = 2 },
 		.reg_div	= { .reg = S3C_CLK_DIV1, .shift = 16, .size = 4 },
 		.sources	= &clkset_scaler_lcd,
+		.disable	= 1,
 	}, {
 		.clk	= {
 			.name		= "mfc_sclk",
@@ -916,6 +929,7 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_src	= { .reg = S3C_CLK_SRC, .shift = 4, .size = 2 },
 		.reg_div	= { .reg = S3C_CLK_DIV0, .shift = 28, .size = 4 },
 		.sources	= &clkset_mfc,
+		.disable	= 1,
 	}, {
 		.clk	= {
 			.name		= "jpeg_sclk",
@@ -925,6 +939,7 @@ static struct clksrc_clk clksrcs[] = {
 			.parent		= &clk_h2,
 		},
 		.reg_div	= { .reg = S3C_CLK_DIV0, .shift = 24, .size = 4 },
+		.disable	= 1,
 	}, {
 		.clk	= {
 			.name		= "secur_sclk",
@@ -934,6 +949,7 @@ static struct clksrc_clk clksrcs[] = {
 			.parent		= &clk_h2,
 		},
 		.reg_div	= { .reg = S3C_CLK_DIV0, .shift = 18, .size = 2 },
+		.disable	= 1,
 	}
 };
 
@@ -1066,6 +1082,7 @@ static struct clksrc_clk s3c6410_clksrcs[] = {
 		.reg_src	= { .reg = S3C6410_CLK_SRC2, .shift = 0, .size = 3  },
 		.reg_div	= { .reg = S3C_CLK_DIV2, .shift = 24, .size = 4  },
 		.sources	= &clkset_audio2,
+		.disable	= 1,
 	}
 };
 
