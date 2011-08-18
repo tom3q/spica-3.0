@@ -334,6 +334,13 @@ config BACKLIGHT_S6D05A
 	  If you have a LCD screen driven by a Samsung S6D05A controller, say Y
 	  here to enable its driver.
 
+config BACKLIGHT_TINY6410
+	tristate "Backlight driver for Tiny6410 board LCD module"
+	depends on BACKLIGHT_CLASS_DEVICE && TINY6410_1WIRE
+	help
+	  If you have a Tiny6410 board equipped with an LCD module, say Y here
+	  to enable backlight control of the screen.
+
 endif # BACKLIGHT_CLASS_DEVICE
 
 endif # BACKLIGHT_LCD_SUPPORT
