@@ -18,6 +18,13 @@
 
 #include <plat/pd.h>
 
+void samsung_pd_set_persistent(struct platform_device *pdev)
+{
+	struct samsung_pd_info *pdata = pdev->dev.platform_data;
+
+	pdata->persistent = true;
+}
+
 static int samsung_pd_probe(struct platform_device *pdev)
 {
 	struct samsung_pd_info *pdata = pdev->dev.platform_data;
@@ -29,10 +36,14 @@ static int samsung_pd_probe(struct platform_device *pdev)
 		return -ENOENT;
 	}
 
-	if (pdata->enable)
+	if (!pdata->persistent && pdata->enable)
 		ret = pdata->enable(dev);
 
-	pm_runtime_set_active(dev);
+	if (pdata->persistent)
+		pm_runtime_set_suspended(dev);
+	else
+		pm_runtime_set_active(dev);
+
 	pm_runtime_enable(dev);
 
 	if (!ret)

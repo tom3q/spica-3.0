@@ -15,6 +15,7 @@ struct samsung_pd_info {
 	int (*enable)(struct device *dev);
 	int (*disable)(struct device *dev);
 	void __iomem *base;
+	bool persistent;
 };
 
 enum exynos4_pd_block {
@@ -26,5 +27,7 @@ enum exynos4_pd_block {
 	PD_CAM,
 	PD_GPS
 };
+
+extern void samsung_pd_set_persistent(struct platform_device *pdev);
 
 #endif /* __ASM_PLAT_SAMSUNG_PD_H */
