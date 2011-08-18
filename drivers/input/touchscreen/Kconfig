@@ -744,4 +744,11 @@ config TOUCHSCREEN_TPS6507X
 	  To compile this driver as a module, choose M here: the
 	  module will be called tps6507x_ts.
 
+config TOUCHSCREEN_TINY6410
+	tristate "Tiny6410 1-wire Touchscreen"
+	depends on TINY6410_1WIRE
+	help
+	  Say Y here if you have a Tiny6410 board equipped with
+	  a 1-wire touchscreen module.
+
 endif
