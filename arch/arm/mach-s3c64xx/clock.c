@@ -218,6 +218,11 @@ static struct clk init_clocks_off[] = {
 		.enable		= s3c64xx_pclk_ctrl,
 		.ctrlbit	= S3C_CLKCON_PCLK_MFC,
 	}, {
+		.name		= "ac97",
+		.id		= -1,
+		.parent		= &clk_p,
+		.ctrlbit	= S3C_CLKCON_PCLK_AC97,
+	}, {
 		.name		= "spi_48m",
 		.id		= 0,
 		.parent		= &clk_48m,
@@ -355,22 +360,6 @@ static struct clk init_clocks_off[] = {
 		.parent		= &clk_h,
 		.enable		= s3c64xx_hclk_ctrl,
 		.ctrlbit	= S3C_CLKCON_HCLK_MFC,
-	}
-};
-
-static struct clk init_clocks[] = {
-	{
-		.name		= "lcd",
-		.id		= -1,
-		.parent		= &clk_h,
-		.enable		= s3c64xx_hclk_ctrl,
-		.ctrlbit	= S3C_CLKCON_HCLK_LCD,
-	}, {
-		.name		= "gpio",
-		.id		= -1,
-		.parent		= &clk_p,
-		.enable		= s3c64xx_pclk_ctrl,
-		.ctrlbit	= S3C_CLKCON_PCLK_GPIO,
 	}, {
 		.name		= "usb-host",
 		.id		= -1,
@@ -401,6 +390,22 @@ static struct clk init_clocks[] = {
 		.parent		= &clk_h,
 		.enable		= s3c64xx_hclk_ctrl,
 		.ctrlbit	= S3C_CLKCON_HCLK_USB,
+	}
+};
+
+static struct clk init_clocks[] = {
+	{
+		.name		= "lcd",
+		.id		= -1,
+		.parent		= &clk_h,
+		.enable		= s3c64xx_hclk_ctrl,
+		.ctrlbit	= S3C_CLKCON_HCLK_LCD,
+	}, {
+		.name		= "gpio",
+		.id		= -1,
+		.parent		= &clk_p,
+		.enable		= s3c64xx_pclk_ctrl,
+		.ctrlbit	= S3C_CLKCON_PCLK_GPIO,
 	}, {
 		.name		= "timers",
 		.id		= -1,
@@ -436,11 +441,6 @@ static struct clk init_clocks[] = {
 		.id		= -1,
 		.parent		= &clk_p,
 		.ctrlbit	= S3C_CLKCON_PCLK_WDT,
-	}, {
-		.name		= "ac97",
-		.id		= -1,
-		.parent		= &clk_p,
-		.ctrlbit	= S3C_CLKCON_PCLK_AC97,
 	}, {
 		.name		= "cfcon",
 		.id		= -1,
