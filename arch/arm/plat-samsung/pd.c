@@ -85,6 +85,8 @@ static int samsung_pd_runtime_resume(struct device *dev)
 }
 
 static const struct dev_pm_ops samsung_pd_pm_ops = {
+	.suspend		= samsung_pd_runtime_suspend,
+	.resume			= samsung_pd_runtime_resume,
 	.runtime_suspend	= samsung_pd_runtime_suspend,
 	.runtime_resume		= samsung_pd_runtime_resume,
 };
