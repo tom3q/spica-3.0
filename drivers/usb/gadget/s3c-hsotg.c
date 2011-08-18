@@ -1939,8 +1939,12 @@ static void s3c_hsotg_epint(struct s3c_hsotg *hsotg, unsigned int idx,
 
 		/* this probably means something bad is happening */
 		if (ints & S3C_DIEPMSK_INTknEPMisMsk) {
-			dev_warn(hsotg->dev, "%s: ep%d: INTknEP\n",
-				 __func__, idx);
+			static int printed = 0;
+			if (!printed) {
+				dev_warn(hsotg->dev, "%s: ep%d: INTknEP\n",
+								__func__, idx);
+				printed = 1;
+			}
 		}
 
 		/* FIFO has space or is empty (see GAHBCFG) */
