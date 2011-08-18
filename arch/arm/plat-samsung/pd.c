@@ -22,17 +22,23 @@ static int samsung_pd_probe(struct platform_device *pdev)
 {
 	struct samsung_pd_info *pdata = pdev->dev.platform_data;
 	struct device *dev = &pdev->dev;
+	int ret = 0;
 
 	if (!pdata) {
 		dev_err(dev, "no device data specified\n");
 		return -ENOENT;
 	}
 
+	if (pdata->enable)
+		ret = pdata->enable(dev);
+
 	pm_runtime_set_active(dev);
 	pm_runtime_enable(dev);
 
-	dev_info(dev, "power domain registered\n");
-	return 0;
+	if (!ret)
+		dev_info(dev, "power domain registered\n");
+
+	return ret;
 }
 
 static int __devexit samsung_pd_remove(struct platform_device *pdev)
