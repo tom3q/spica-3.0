@@ -617,6 +617,15 @@ config MFD_CS5535
 	  This is the core driver for CS5535/CS5536 MFD functions.  This is
           necessary for using the board's GPIO and MFGPT functionality.
 
+config TINY6410_1WIRE
+	tristate "Support for Tiny6410 proprietary 1-wire bus virtual host"
+	select MFD_CORE
+	depends on MACH_TINY6410
+	---help---
+	  This is the core driver for the virtual, proprietary 1-wire bus
+	  bitbanged host using a GPIO pin. It is currently used to communicate
+	  with touchscreen and backlights controllers.
+
 config MFD_TIMBERDALE
 	tristate "Support for the Timberdale FPGA"
 	select MFD_CORE
