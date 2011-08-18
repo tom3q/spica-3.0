@@ -2212,12 +2212,13 @@ static void __init spica_machine_init(void)
 
 	/* Setup power domains */
 	s3c_device_fb.dev.parent = &s3c64xx_device_pd[S3C64XX_DOMAIN_F].dev;
+	samsung_pd_set_persistent(&s3c64xx_device_pd[S3C64XX_DOMAIN_F]);
+	s3c64xx_add_pd_devices();
 
 	/* Init wifi memory */
 	spica_init_wifi_mem();
 
 	/* Register platform devices */
-	s3c64xx_add_pd_devices();
 	platform_add_devices(spica_devices, ARRAY_SIZE(spica_devices));
 	platform_add_devices(spica_mod_devices, ARRAY_SIZE(spica_mod_devices));
 
