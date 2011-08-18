@@ -53,11 +53,6 @@ config S3C64XX_DEV_ONENAND1
 	help
 	  Compile in platform device definition for OneNAND1 controller
 
-config S3C64XX_DEV_PD
-	bool
-	help
-	  Compile in platform device definitions for Power Domain
-
 config CPU_S3C6410_800MHZ_SYNC
 	bool
 	help
@@ -324,7 +319,6 @@ config MACH_GT_I5700
 	select S3C64XX_SETUP_I2C1
 	select S3C64XX_SETUP_SDHCI
 	select S3C64XX_SETUP_KEYPAD
-	select S3C64XX_DEV_PD
 	select I2C_GPIO
 	select HAVE_S3C2410_WATCHDOG if WATCHDOG
 
