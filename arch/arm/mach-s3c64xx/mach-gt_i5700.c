@@ -329,7 +329,6 @@ static struct regulator_init_data spica_ldo3_data = {
 		.apply_uV		= 0,
 		.valid_ops_mask 	= REGULATOR_CHANGE_STATUS,
 		.valid_modes_mask	= REGULATOR_MODE_NORMAL,
-		.always_on		= 1,
 		.state_mem		= {
 			.disabled = 1,
 		},
@@ -425,7 +424,6 @@ static struct regulator_init_data spica_ldo8_data = {
 		.apply_uV		= 0,
 		.valid_ops_mask		= REGULATOR_CHANGE_STATUS,
 		.valid_modes_mask	= REGULATOR_MODE_NORMAL,
-		.always_on		= 1,
 		.state_mem		= {
 			.disabled = 1,
 		},
