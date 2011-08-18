@@ -34,6 +34,7 @@ struct spica_bt {
 	struct device		*dev;
 	struct wake_lock	wake_lock;
 	unsigned int		irq;
+	bool			blocked;
 };
 
 irqreturn_t spica_bt_host_wake_irq(int irq, void *dev_id)
@@ -52,6 +53,9 @@ static int spica_bt_set_block(void *data, bool blocked)
 {
 	struct spica_bt *bt = data;
 	struct spica_bt_pdata *pdata = bt->pdata;
+
+	if (bt->blocked == blocked)
+		return 0;
 
 	if (blocked) {
 		dev_dbg(bt->dev, "power off\n");
@@ -114,6 +118,7 @@ static int spica_bt_probe(struct platform_device *pdev)
 		goto err_gpio_irq;
 	}
 	bt->irq = ret;
+	bt->blocked = true;
 
 	ret = request_irq(bt->irq, spica_bt_host_wake_irq,
 				IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
