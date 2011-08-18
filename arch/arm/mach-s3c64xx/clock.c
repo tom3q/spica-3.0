@@ -1083,6 +1083,16 @@ static struct clksrc_clk s3c6410_clksrcs[] = {
 		.reg_div	= { .reg = S3C_CLK_DIV2, .shift = 24, .size = 4  },
 		.sources	= &clkset_audio2,
 		.disable	= 1,
+	}, {
+		.clk	= {
+			.name		= "fimc",
+			.id		= -1,
+			.ctrlbit	= S3C6410_CLKCON_FIMC,
+			.enable		= s3c64xx_sclk_ctrl,
+			.parent		= &clk_h,
+		},
+		.reg_div	= { .reg = S3C_CLK_DIV1, .shift = 24, .size = 4 },
+		.disable	= 1,
 	}
 };
 
