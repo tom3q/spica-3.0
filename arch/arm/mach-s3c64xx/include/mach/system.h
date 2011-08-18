@@ -12,20 +12,10 @@
 #define __ASM_ARCH_SYSTEM_H __FILE__
 
 #include <plat/watchdog-reset.h>
-#include <mach/map.h>
-#include <mach/regs-sys.h>
-#include <mach/regs-syscon-power.h>
 
 static void arch_idle(void)
 {
-	/* Setup PWRCFG to enter idle mode */
-	unsigned long tmp = __raw_readl(S3C64XX_PWR_CFG);
-	tmp &= ~S3C64XX_PWRCFG_CFG_WFI_MASK;
-	tmp |= S3C64XX_PWRCFG_CFG_WFI_IDLE;
-	__raw_writel(tmp, S3C64XX_PWR_CFG);
-
-	/* Enter idle mode */
-	cpu_do_idle();
+	/* nothing here yet */
 }
 
 static void arch_reset(char mode, const char *cmd)
