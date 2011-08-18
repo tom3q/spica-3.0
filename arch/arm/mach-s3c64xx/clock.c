@@ -1104,6 +1104,13 @@ void s3c6410_register_clocks(void)
 	s3c_register_clksrc(s3c6410_clksrcs, ARRAY_SIZE(s3c6410_clksrcs));
 }
 
+void s3c6410_setup_clocks(void)
+{
+	unsigned int ptr;
+	for (ptr = 0; ptr < ARRAY_SIZE(s3c6410_clksrcs); ptr++)
+		s3c_set_clksrc(&s3c6410_clksrcs[ptr], true);
+}
+
 /* Clock initialisation code */
 
 static struct clksrc_clk *init_parents[] = {
