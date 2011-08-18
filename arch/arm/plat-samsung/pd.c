@@ -84,9 +84,24 @@ static int samsung_pd_runtime_resume(struct device *dev)
 	return ret;
 }
 
+static int samsung_pd_resume(struct device *dev)
+{
+	struct samsung_pd_info *pdata = dev->platform_data;
+	int ret = 0;
+
+	if (pdata->enable)
+		ret = pdata->enable(dev);
+
+	pm_runtime_disable(dev);
+	pm_runtime_set_active(dev);
+	pm_runtime_enable(dev);
+
+	dev_dbg(dev, "resumed\n");
+	return ret;
+}
+
 static const struct dev_pm_ops samsung_pd_pm_ops = {
-	.suspend		= samsung_pd_runtime_suspend,
-	.resume			= samsung_pd_runtime_resume,
+	.resume			= samsung_pd_resume,
 	.runtime_suspend	= samsung_pd_runtime_suspend,
 	.runtime_resume		= samsung_pd_runtime_resume,
 };
