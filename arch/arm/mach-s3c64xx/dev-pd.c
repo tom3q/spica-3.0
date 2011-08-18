@@ -78,7 +78,7 @@ static int s3c64xx_pd_enable(struct device *dev)
 
 	ret = s3c64xx_pd_ctrl(pd->ctrl_bit, pd->stat_bit, 1);
 	if (ret < 0) {
-		printk(KERN_ERR "failed to enable power domain\n");
+		dev_err(dev, "failed to enable power domain\n");
 		return ret;
 	}
 
@@ -93,7 +93,7 @@ static int s3c64xx_pd_disable(struct device *dev)
 
 	ret = s3c64xx_pd_ctrl(pd->ctrl_bit, pd->stat_bit, 0);
 	if (ret < 0) {
-		printk(KERN_ERR "faild to disable power domain\n");
+		dev_err(dev, "failed to disable power domain\n");
 		return ret;
 	}
 
