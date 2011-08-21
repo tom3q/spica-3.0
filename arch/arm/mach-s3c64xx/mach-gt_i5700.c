@@ -1588,6 +1588,56 @@ static struct platform_device spica_usb_rndis = {
 };
 
 /*
+ * Telephony modules
+ */
+
+struct class *sec_class;
+EXPORT_SYMBOL(sec_class);
+
+#define SPICA_DPRAM_START	0x5d000000
+#define SPICA_DPRAM_SIZE	SZ_16M
+
+static struct resource spica_dpram_resources[] = {
+	{
+		.start	= SPICA_DPRAM_START,
+		.end	= SPICA_DPRAM_START + SPICA_DPRAM_SIZE - 1,
+		.flags	= IORESOURCE_MEM,
+	}
+};
+
+struct dpram_platform_data {
+	unsigned int gpio_phone_on;
+	unsigned int gpio_phone_rst_n;
+	unsigned int gpio_phone_active;
+	unsigned int gpio_cp_boot_sel;
+	unsigned int gpio_usim_boot;
+	unsigned int gpio_pda_active;
+	unsigned int gpio_onedram_int_n;
+	unsigned int gpio_sim_detect_n;
+};
+
+static struct dpram_platform_data spica_dpram_pdata = {
+	.gpio_phone_on		= GPIO_PHONE_ON,
+	.gpio_phone_rst_n	= GPIO_PHONE_RST_N,
+	.gpio_phone_active	= GPIO_PHONE_ACTIVE,
+	.gpio_cp_boot_sel	= GPIO_CP_BOOT_SEL,
+	.gpio_usim_boot		= GPIO_USIM_BOOT,
+	.gpio_pda_active	= GPIO_PDA_ACTIVE,
+	.gpio_onedram_int_n	= GPIO_ONEDRAM_INT_N,
+	.gpio_sim_detect_n	= GPIO_SIM_DETECT_N,
+};
+
+static struct platform_device spica_dpram_device = {
+	.name		= "sec-dpram-gsm",
+	.id		= -1,
+	.num_resources	= ARRAY_SIZE(spica_dpram_resources),
+	.resource	= spica_dpram_resources,
+	.dev		= {
+		.platform_data = &spica_dpram_pdata,
+	},
+};
+
+/*
  * Platform devices
  */
 
@@ -1618,6 +1668,7 @@ static struct platform_device *spica_devices[] __initdata = {
 	&s3c_device_timer[1],
 	&spica_wlan_device,
 	&spica_bt_device,
+	&spica_dpram_device,
 };
 
 /*
@@ -2227,6 +2278,10 @@ static void __init spica_machine_init(void)
 
 	/* Indicate full regulator constraints */
 	regulator_has_full_constraints();
+
+	/* For telephony modules */
+	sec_class = class_create(THIS_MODULE, "sec");
+	WARN_ON(IS_ERR(sec_class));
 }
 
 /*
