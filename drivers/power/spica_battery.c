@@ -394,7 +394,7 @@ static enum power_supply_property spica_battery_props[] = {
 };
 
 static const struct power_supply spica_bat_template = {
-	.name			= "spica-battery",
+	.name			= "battery",
 	.type			= POWER_SUPPLY_TYPE_BATTERY,
 	.properties		= spica_battery_props,
 	.num_properties		= ARRAY_SIZE(spica_battery_props),
@@ -449,14 +449,14 @@ static const struct power_supply spica_chg_templates[SPICA_BATTERY_NUM] = {
 		.properties		= spica_charger_props,
 		.num_properties		= ARRAY_SIZE(spica_charger_props),
 		.get_property		= spica_charger_get_property,
-		.name			= "spica-usb",
+		.name			= "usb",
 		.type			= POWER_SUPPLY_TYPE_USB,
 	},
 	[SPICA_BATTERY_AC] = {
 		.properties		= spica_charger_props,
 		.num_properties		= ARRAY_SIZE(spica_charger_props),
 		.get_property		= spica_charger_get_property,
-		.name			= "spica-ac",
+		.name			= "ac",
 		.type			= POWER_SUPPLY_TYPE_MAINS,
 	}
 };
