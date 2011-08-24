@@ -1086,8 +1086,14 @@ static struct mtd_partition spica_onenand_parts[] = {
 	},
 	[12] = {
 		.name		= "reservoir",
-		.size		= SZ_8M + SZ_2M + SZ_512K + SZ_256K,
+		.size		= SZ_8M + SZ_2M + SZ_512K + SZ_128K,
 		.offset		= 0x1f540000,
+		.mask_flags	= MTD_WRITEABLE,
+	},
+	[13] = {
+		.name		= "dgs",
+		.size		= SZ_128K,
+		.offset		= 0x1ffe0000,
 		.mask_flags	= MTD_WRITEABLE,
 	},
 };
