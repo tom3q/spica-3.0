@@ -1297,7 +1297,7 @@ static void __init spica_bt_lpm_init(void)
 }
 
 /*
- * WLAN (using BCM4329 driver)
+ * WLAN (using bcmdhd driver)
  */
 
 static int spica_wlan_power = 0;
@@ -1424,7 +1424,7 @@ static struct wifi_platform_data spica_wlan_pdata = {
 };
 
 static struct platform_device spica_wlan_device = {
-	.name		= "bcm4329_wlan",
+	.name		= "bcmdhd_wlan",
 	.id		= -1,
 	.dev		= {
 		.platform_data	= &spica_wlan_pdata,
