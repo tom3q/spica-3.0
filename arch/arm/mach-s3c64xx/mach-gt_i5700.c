@@ -1643,6 +1643,11 @@ static struct platform_device spica_dpram_device = {
 	},
 };
 
+static struct platform_device spica_multipdp_device = {
+	.name	= "sec-multipdp-gsm",
+	.id	= -1,
+};
+
 /*
  * Platform devices
  */
@@ -1675,6 +1680,7 @@ static struct platform_device *spica_devices[] __initdata = {
 	&spica_wlan_device,
 	&spica_bt_device,
 	&spica_dpram_device,
+	&spica_multipdp_device,
 };
 
 /*
