@@ -52,6 +52,7 @@
 #include <sbsdio.h>
 #include <sbsdpcmdev.h>
 #include <bcmsdpcm.h>
+#include <bcmsdbus.h>
 
 #include <proto/ethernet.h>
 #include <proto/802.1d.h>
@@ -76,11 +77,7 @@
 
 #define TXRETRIES	2	/* # of retries for tx frames */
 
-#if defined(CONFIG_MACH_SANDGATE2G)
-#define DHD_RXBOUND	250	/* Default for max rx frames in one scheduling */
-#else
 #define DHD_RXBOUND	50	/* Default for max rx frames in one scheduling */
-#endif /* defined(CONFIG_MACH_SANDGATE2G) */
 
 #define DHD_TXBOUND	20	/* Default for max tx frames in one scheduling */
 
@@ -360,7 +357,7 @@ static const uint retry_limit = 2;
 static bool forcealign;
 
 /* Flag to indicate if we should download firmware on driver load */
-uint dhd_download_fw_on_driverload = TRUE;
+uint dhd_download_fw_on_driverload = FALSE;
 
 #define ALIGNMENT  4
 
@@ -1845,6 +1842,8 @@ dhdsdio_readshared(dhd_bus_t *bus, sdpcm_shared_t *sh)
 	sh->console_addr = ltoh32(sh->console_addr);
 	sh->msgtrace_addr = ltoh32(sh->msgtrace_addr);
 
+	if ((sh->flags & SDPCM_SHARED_VERSION_MASK) == 3 && SDPCM_SHARED_VERSION == 1)
+		return BCME_OK;
 	if ((sh->flags & SDPCM_SHARED_VERSION_MASK) != SDPCM_SHARED_VERSION) {
 		DHD_ERROR(("%s: sdpcm_shared version %d in dhd "
 		           "is different than sdpcm_shared version %d in dongle\n",
@@ -6221,10 +6220,13 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 
 			dhd_os_sdunlock(dhdp);
 		} else {
-			bcmerror = BCME_NOTDOWN;
-			DHD_ERROR(("%s: Set DEVRESET=FALSE invoked when device is on\n",
+			DHD_INFO(("%s called when dongle is not in reset\n",
 				__FUNCTION__));
-			bcmerror = BCME_SDIO_ERROR;
+			DHD_INFO(("Will call dhd_bus_start instead\n"));
+			sdioh_start(NULL, 1);
+			if ((bcmerror = dhd_bus_start(dhdp)) != 0)
+				DHD_ERROR(("%s: dhd_bus_start fail with %d\n",
+					__FUNCTION__, bcmerror));
 		}
 	}
 	return bcmerror;

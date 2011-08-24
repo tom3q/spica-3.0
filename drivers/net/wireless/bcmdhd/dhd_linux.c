@@ -443,11 +443,9 @@ static void dhd_htsf_addrxts(dhd_pub_t *dhdp, void *pktbuf);
 static void dhd_dump_htsfhisto(histo_t *his, char *s);
 #endif /* WLMEDIA_HTSF */
 
-extern s32 wl_cfg80211_ifdel_ops(struct net_device *net);
-
 /* Monitor interface */
-extern int dhd_monitor_init(void *dhd_pub);
-extern int dhd_monitor_uninit(void);
+int dhd_monitor_init(void *dhd_pub);
+int dhd_monitor_uninit(void);
 
 
 #if defined(CONFIG_WIRELESS_EXT)
@@ -673,7 +671,7 @@ dhd_timeout_expired(dhd_timeout_t *tmo)
 	return 0;
 }
 
-static int
+int
 dhd_net2idx(dhd_info_t *dhd, struct net_device *net)
 {
 	int i = 0;
@@ -1024,10 +1022,10 @@ dhd_op_if(dhd_if_t *ifp)
 			free_netdev(ifp->net);
 		}
 		dhd->iflist[ifp->idx] = NULL;
-		MFREE(dhd->pub.osh, ifp, sizeof(*ifp));
 #ifdef WL_CFG80211
-		if (dhd->dhd_state & DHD_ATTACH_STATE_CFG80211)
+		if (dhd->dhd_state & DHD_ATTACH_STATE_CFG80211) {
 			wl_cfg80211_notify_ifdel(ifp->net);
+		}
 #endif
 #ifdef SOFTAP
 		flags = dhd_os_spin_lock(&dhd->pub);
@@ -1035,6 +1033,7 @@ dhd_op_if(dhd_if_t *ifp)
 			ap_net_dev = NULL;   /*  NULL  SOFTAP global wl0.1 as well */
 		dhd_os_spin_unlock(&dhd->pub, flags);
 #endif /*  SOFTAP */
+	MFREE(dhd->pub.osh, ifp, sizeof(*ifp));
 	}
 }
 
