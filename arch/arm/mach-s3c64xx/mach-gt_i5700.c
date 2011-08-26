@@ -152,6 +152,12 @@
 #define GPIO_BOOT_EINT15	S3C64XX_GPN(15)
 
 /*
+ * External interrupts
+ */
+
+#define IRQ_WLAN		IRQ_EINT(1)
+
+/*
  * UART
  */
 
@@ -1423,9 +1429,20 @@ static struct wifi_platform_data spica_wlan_pdata = {
 	.mem_prealloc		= spica_mem_prealloc,
 };
 
+static struct resource spica_wlan_resources[] = {
+	{
+		.name	= "bcmdhd_wlan_irq",
+		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_LOWEDGE,
+		.start	= IRQ_WLAN,
+		.end	= IRQ_WLAN,
+	},
+};
+
 static struct platform_device spica_wlan_device = {
 	.name		= "bcmdhd_wlan",
 	.id		= -1,
+	.num_resources	= ARRAY_SIZE(spica_wlan_resources),
+	.resource	= spica_wlan_resources,
 	.dev		= {
 		.platform_data	= &spica_wlan_pdata,
 	},
