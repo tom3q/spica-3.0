@@ -8,8 +8,6 @@
  *
  */
 
-/* TODO: RTC timer in suspend mode */
-
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/power_supply.h>
@@ -22,10 +20,17 @@
 #include <linux/init.h>
 #include <linux/slab.h>
 #include <linux/mutex.h>
+#include <linux/wakelock.h>
+#include <linux/io.h>
 
 #include <linux/power/spica_battery.h>
 
 #include <plat/adc.h>
+
+#include <mach/map.h>
+#include <mach/regs-sys.h>
+#include <mach/regs-syscon-power.h>
+#include <mach/irqs.h>
 
 /* Time between samples (in milliseconds) */
 #define BAT_POLL_INTERVAL_SLOW		60000
@@ -164,7 +169,10 @@ struct spica_battery {
 	struct delayed_work		poll_work;
 	struct mutex			mutex;
 	struct device			*dev;
-
+#ifdef CONFIG_HAS_WAKELOCK
+	struct wake_lock	wakelock;
+	struct wake_lock	fault_wakelock;
+#endif
 	unsigned int irq_pok;
 	unsigned int irq_chg;
 
@@ -174,6 +182,7 @@ struct spica_battery {
 	int status;
 	int health;
 	int online[SPICA_BATTERY_NUM];
+	int fault;
 	enum spica_battery_supply supply;
 
 	unsigned int		interval;
@@ -291,6 +300,11 @@ static void spica_battery_work(struct work_struct *work)
 		/* Get charging state */
 		if (gpio_get_value(pdata->gpio_chg) ^ pdata->gpio_chg_inverted)
 			bat->status = POWER_SUPPLY_STATUS_CHARGING;
+
+		bat->fault = 0;
+#ifdef CONFIG_HAS_WAKELOCK
+		wake_unlock(&bat->fault_wakelock);
+#endif
 	} else {
 		/* Disable the charger */
 		gpio_set_value(pdata->gpio_en, pdata->gpio_en_inverted);
@@ -306,6 +320,9 @@ static void spica_battery_work(struct work_struct *work)
 	power_supply_changed(&bat->bat);
 	for (i = 0; i < SPICA_BATTERY_NUM; ++i)
 		power_supply_changed(&bat->psy[i]);
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_unlock(&bat->wakelock);
+#endif
 }
 
 static void spica_battery_supply_notify(struct platform_device *pdev,
@@ -325,6 +342,30 @@ static void spica_battery_supply_notify(struct platform_device *pdev,
 /*
  * Battery specific code
  */
+
+/* Battery fault IRQ */
+static irqreturn_t spica_battery_fault_irq(int irq, void *dev_id)
+{
+	struct spica_battery *bat = dev_id;
+	unsigned long flags;
+	u32 reg;
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock(&bat->fault_wakelock);
+#endif
+	local_irq_save(flags);
+
+	reg = readl(S3C64XX_OTHERS);
+	reg |= S3C64XX_OTHERS_CLEAR_BATF_INT;
+	writel(reg, S3C64XX_OTHERS);
+
+	bat->fault = 1;
+
+	local_irq_restore(flags);
+
+	schedule_work(&bat->work);
+
+	return IRQ_HANDLED;
+}
 
 /* Gets a property */
 static int spica_battery_get_property(struct power_supply *psy,
@@ -347,7 +388,10 @@ static int spica_battery_get_property(struct power_supply *psy,
 		val->intval = 0;
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
-		val->intval = bat->percent_value;
+		if (bat->fault)
+			val->intval = 0;
+		else
+			val->intval = bat->percent_value;
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		val->intval = bat->volt_value;
@@ -356,7 +400,10 @@ static int spica_battery_get_property(struct power_supply *psy,
 		val->intval = bat->temp_value / 100;
 		break;
 	case POWER_SUPPLY_PROP_HEALTH:
-		val->intval = bat->health;
+		if (bat->fault)
+			val->intval = POWER_SUPPLY_HEALTH_DEAD;
+		else
+			val->intval = bat->health;
 		break;
 	case POWER_SUPPLY_PROP_PRESENT:
 	case POWER_SUPPLY_PROP_ONLINE:
@@ -367,7 +414,10 @@ static int spica_battery_get_property(struct power_supply *psy,
 		val->intval = bat->pdata->technology;
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
-		val->intval = bat->percent_value / 1000;
+		if (bat->fault)
+			val->intval = 0;
+		else
+			val->intval = bat->percent_value / 1000;
 		break;
 	default:
 		ret = -EINVAL;
@@ -470,7 +520,9 @@ static int spica_battery_probe(struct platform_device *pdev)
 	struct s3c_adc_client	*client;
 	struct spica_battery_pdata *pdata = pdev->dev.platform_data;
 	struct spica_battery *bat;
+	unsigned long flags;
 	int ret, i, irq;
+	u32 reg;
 
 	/* Platform data is required */
 	if (!pdata) {
@@ -559,7 +611,7 @@ static int spica_battery_probe(struct platform_device *pdev)
 	bat->status = POWER_SUPPLY_STATUS_DISCHARGING;
 	bat->health = POWER_SUPPLY_HEALTH_GOOD;
 	bat->supply = SPICA_BATTERY_NONE;
-	bat->interval = BAT_POLL_INTERVAL_FAST;
+	bat->interval = BAT_POLL_INTERVAL;
 
 	ret = create_lookup_table(pdata->percent_lut,
 				pdata->percent_lut_cnt, &bat->percent_lookup);
@@ -585,6 +637,11 @@ static int spica_battery_probe(struct platform_device *pdev)
 	INIT_WORK(&bat->work, spica_battery_work);
 	INIT_DELAYED_WORK(&bat->poll_work, spica_battery_poll);
 	mutex_init(&bat->mutex);
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_init(&bat->wakelock, WAKE_LOCK_SUSPEND, "battery");
+	wake_lock_init(&bat->fault_wakelock,
+					WAKE_LOCK_SUSPEND, "battery fault");
+#endif
 
 	/* Get some initial data for averaging */
 	for (i = 0; i < NUM_SAMPLES; ++i) {
@@ -662,6 +719,23 @@ static int spica_battery_probe(struct platform_device *pdev)
 		goto err_pok_irq_free;
 	}
 
+	ret = request_irq(IRQ_BATF, spica_battery_fault_irq,
+						0, dev_name(&pdev->dev), bat);
+	if (ret) {
+		dev_err(&pdev->dev,
+			"Failed to request battery fault irq (%d)\n", ret);
+		goto err_chg_irq_free;
+	}
+
+	local_irq_save(flags);
+
+	reg = readl(S3C64XX_PWR_CFG);
+	reg &= ~S3C64XX_PWRCFG_CFG_BATFLT_MASK;
+	reg |= S3C64XX_PWRCFG_CFG_BATFLT_IRQ;
+	writel(reg, S3C64XX_PWR_CFG);
+
+	local_irq_restore(flags);
+
 	/* Finish */
 	dev_info(&pdev->dev, "successfully loaded\n");
 	device_init_wakeup(&pdev->dev, 1);
@@ -673,6 +747,8 @@ static int spica_battery_probe(struct platform_device *pdev)
 
 	return 0;
 
+err_chg_irq_free:
+	free_irq(bat->irq_chg, bat);
 err_pok_irq_free:
 	free_irq(bat->irq_pok, bat);
 err_bat_unreg:
@@ -705,6 +781,10 @@ static int spica_battery_remove(struct platform_device *pdev)
 	struct spica_battery_pdata *pdata = bat->pdata;
 	int i;
 
+	free_irq(IRQ_BATF, bat);
+	free_irq(bat->irq_chg, bat);
+	free_irq(bat->irq_pok, bat);
+
 	if (pdata->supply_detect_cleanup)
 		pdata->supply_detect_cleanup();
 
@@ -722,7 +802,10 @@ static int spica_battery_remove(struct platform_device *pdev)
 	kfree(bat->percent_lookup.table);
 
 	gpio_set_value(pdata->gpio_en, pdata->gpio_en_inverted);
-
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_destroy(&bat->fault_wakelock);
+	wake_lock_destroy(&bat->wakelock);
+#endif
 	kfree(bat);
 
 	return 0;
@@ -732,21 +815,13 @@ static int spica_battery_suspend(struct platform_device *pdev,
 							pm_message_t state)
 {
 	struct spica_battery *bat = platform_get_drvdata(pdev);
-	struct spica_battery_pdata *pdata = bat->pdata;
 
 	cancel_work_sync(&bat->work);
-	cancel_delayed_work(&bat->poll_work);
+	cancel_delayed_work_sync(&bat->poll_work);
 
-	if (device_may_wakeup(&pdev->dev)) {
-		enable_irq_wake(bat->irq_pok);
-		enable_irq_wake(bat->irq_chg);
-	} else {
-		disable_irq(bat->irq_pok);
-		disable_irq(bat->irq_chg);
-		gpio_set_value(pdata->gpio_en, pdata->gpio_en_inverted);
-	}
-
-	/* TODO: Schedule RTC timer here with slow poll rate */
+	enable_irq_wake(IRQ_BATF);
+	enable_irq_wake(bat->irq_pok);
+	enable_irq_wake(bat->irq_chg);
 
 	return 0;
 }
@@ -754,14 +829,12 @@ static int spica_battery_suspend(struct platform_device *pdev,
 static int spica_battery_resume(struct platform_device *pdev)
 {
 	struct spica_battery *bat = platform_get_drvdata(pdev);
-
-	if (device_may_wakeup(&pdev->dev)) {
-		disable_irq_wake(bat->irq_pok);
-		disable_irq_wake(bat->irq_chg);
-	} else {
-		enable_irq(bat->irq_pok);
-		enable_irq(bat->irq_chg);
-	}
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock(&bat->wakelock);
+#endif
+	disable_irq_wake(bat->irq_pok);
+	disable_irq_wake(bat->irq_chg);
+	disable_irq_wake(IRQ_BATF);
 
 	/* Schedule timer to check current status */
 	schedule_work(&bat->work);
