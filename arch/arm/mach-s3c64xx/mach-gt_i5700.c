@@ -597,34 +597,24 @@ static struct i2c_board_info spica_touch_i2c_devs[] __initdata = {
  * Reserved memory (FIXME: Throw this shit away!)
  */
 
-#define	PHYS_SIZE			(208 * 1024 * 1024)
+#define	PHYS_SIZE			(SZ_128M + SZ_64M + SZ_16M)
 
 #define DRAM_END_ADDR 			(PHYS_OFFSET + PHYS_SIZE)
 #define RESERVED_PMEM_END_ADDR 		(DRAM_END_ADDR)
 
-#define RESERVED_MEM_CMM		(3 * 1024 * 1024)
-#define RESERVED_MEM_MFC		(6 * 1024 * 1024)
+#define RESERVED_MEM_CMM		(SZ_2M + SZ_1M)
+#define RESERVED_MEM_MFC		(SZ_4M + SZ_2M)
 /* PMEM_PIC and MFC use share area */
-#define RESERVED_PMEM_PICTURE		(6 * 1024 * 1024)
-#define RESERVED_PMEM_JPEG		(3 * 1024 * 1024)
-#define RESERVED_PMEM_PREVIEW		(2 * 1024 * 1024)
-#define RESERVED_PMEM_RENDER	  	(2 * 1024 * 1024)
-#define RESERVED_PMEM_STREAM	  	(2 * 1024 * 1024)
+#define RESERVED_PMEM_PICTURE		(SZ_4M + SZ_2M)
+#define RESERVED_PMEM_JPEG		(SZ_2M + SZ_1M)
+#define RESERVED_PMEM_PREVIEW		(SZ_2M)
+#define RESERVED_PMEM_RENDER	  	(SZ_2M)
+#define RESERVED_PMEM_STREAM	  	(SZ_2M)
 /* G3D is shared with uppper memory areas */
-#define RESERVED_G3D			(32 * 1024 * 1024)
+#define RAM_CONSOLE_SIZE		(SZ_2M)
+#define RESERVED_G3D			(SZ_16M + SZ_8M + SZ_4M + SZ_2M)
 #define RESERVED_PMEM_GPU1		(RESERVED_G3D)
-#define RESERVED_PMEM			(8 * 1024 * 1024)
-#define RESERVED_PMEM_SKIA		(0)
-#define RESERVED_G3D_UI			(6 * 1024 * 1024)
-#define RESERVED_G3D_SHARED		(RESERVED_MEM_CMM \
-					+ RESERVED_MEM_MFC \
-					+ RESERVED_PMEM_STREAM \
-					+ RESERVED_PMEM_JPEG \
-					+ RESERVED_PMEM_PREVIEW \
-					+ RESERVED_PMEM_RENDER)
-#define RESERVED_G3D_APP		(RESERVED_G3D \
-					- RESERVED_G3D_UI \
-					- RESERVED_G3D_SHARED)
+#define RESERVED_PMEM			(SZ_8M)
 
 #define CMM_RESERVED_MEM_START		(RESERVED_PMEM_END_ADDR \
 					- RESERVED_MEM_CMM)
@@ -640,13 +630,14 @@ static struct i2c_board_info spica_touch_i2c_devs[] __initdata = {
 #define STREAM_RESERVED_PMEM_START	(RENDER_RESERVED_PMEM_START \
 					- RESERVED_PMEM_STREAM)
 /* G3D is shared with uppper memory areas */
-#define G3D_RESERVED_START		(RESERVED_PMEM_END_ADDR \
+#define RAM_CONSOLE_START		(RESERVED_PMEM_END_ADDR \
+					- RAM_CONSOLE_SIZE)
+#define G3D_RESERVED_START		(RAM_CONSOLE_START \
 					- RESERVED_G3D)
 #define GPU1_RESERVED_PMEM_START	(G3D_RESERVED_START)
 #define RESERVED_PMEM_START		(GPU1_RESERVED_PMEM_START \
 					- RESERVED_PMEM)
 #define PHYS_UNRESERVED_SIZE		(RESERVED_PMEM_START - PHYS_OFFSET)
-#define SKIA_RESERVED_PMEM_START	(0)
 
 /*
  * Android PMEM
@@ -711,14 +702,6 @@ static struct android_pmem_platform_data pmem_jpeg_pdata = {
         .size		= RESERVED_PMEM_JPEG,
 };
 
-static struct android_pmem_platform_data pmem_skia_pdata = {
-	.name		= "pmem_skia",
-	.no_allocator	= 1,
-	.cached		= 0,
-        .start		= SKIA_RESERVED_PMEM_START,
-        .size		= RESERVED_PMEM_SKIA,
-};
-
 static struct platform_device pmem_device = {
 	.name		= "android_pmem",
 	.id		= 0,
@@ -761,12 +744,6 @@ static struct platform_device pmem_jpeg_device = {
 	.dev		= { .platform_data = &pmem_jpeg_pdata },
 };
 
-static struct platform_device pmem_skia_device = {
-	.name		= "android_pmem",
-	.id		= 8,
-	.dev		= { .platform_data = &pmem_skia_pdata },
-};
-
 static struct platform_device *pmem_devices[] = {
 	&pmem_device,
 	&pmem_gpu1_device,
@@ -775,7 +752,6 @@ static struct platform_device *pmem_devices[] = {
 	&pmem_preview_device,
 	&pmem_picture_device,
 	&pmem_jpeg_device,
-	&pmem_skia_device
 };
 
 static void __init spica_add_mem_devices(void)
