@@ -882,7 +882,7 @@ static struct s3c_fb_pd_win spica_fb_win[] = {
 			.yres		= 480,
 		},
 		.max_bpp	= 24,
-		.default_bpp	= 16,
+		.default_bpp	= 24,
 		.virtual_y	= 480 * 2,
 		.virtual_x	= 320,
 	},
