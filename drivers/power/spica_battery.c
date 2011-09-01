@@ -33,8 +33,7 @@
 #include <mach/irqs.h>
 
 /* Time between samples (in milliseconds) */
-#define BAT_POLL_INTERVAL_SLOW		60000
-#define BAT_POLL_INTERVAL_FAST		10000
+#define BAT_POLL_INTERVAL	10000
 
 /* Number of samples for averaging (a power of two!) */
 #define NUM_SAMPLES		4
