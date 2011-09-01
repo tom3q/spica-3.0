@@ -659,7 +659,9 @@ static struct android_pmem_platform_data pmem_gpu1_pdata = {
 	.cached		= 1,
 	.buffered	= 1,
 	.start		= GPU1_RESERVED_PMEM_START,
+#ifndef USE_SAMSUNG_G3D
 	.size		= RESERVED_PMEM_GPU1,
+#endif
 };
 
 static struct android_pmem_platform_data pmem_render_pdata = {
@@ -1611,6 +1613,13 @@ static struct resource s3c_g3d_resource[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
+#ifdef USE_SAMSUNG_G3D
+		.start	= G3D_RESERVED_START,
+		.end	= G3D_RESERVED_START + RESERVED_G3D - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	[2] = {
+#endif
 		.start = IRQ_S3C6410_G3D,
 		.end   = IRQ_S3C6410_G3D,
 		.flags = IORESOURCE_IRQ,
