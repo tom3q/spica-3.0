@@ -528,6 +528,8 @@ static struct max8698_regulator_data spica_regulators[] = {
 static struct max8698_platform_data spica_max8698_pdata = {
 	.regulators	= spica_regulators,
 	.num_regulators	= ARRAY_SIZE(spica_regulators),
+	.lbhyst		= 0,
+	.lbth		= 6,
 };
 
 static struct i2c_board_info spica_pmic_i2c_devs[] __initdata = {
