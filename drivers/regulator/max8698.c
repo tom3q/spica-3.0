@@ -547,6 +547,9 @@ static int max8698_probe(struct i2c_client *i2c,
 		}
 	}
 
+	max8698_i2c_device_update(max8698, MAX8698_REG_LBCNFG,
+		(pdata->lbhyst & 3) << 4 | (pdata->lbth & 7) << 1, 0x3e);
+
 	return 0;
 err:
 	for (i = 0; i < max8698->num_regulators; i++)

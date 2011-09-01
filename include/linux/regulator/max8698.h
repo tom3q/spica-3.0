@@ -49,11 +49,15 @@ struct max8698_regulator_data {
  * struct max8698_board - packages regulator init data
  * @num_regulators: number of regultors used
  * @regulators: array of defined regulators
+ * @lbhyst: Low Main-Battery Comparator Hysteresis register value
+ * @lbth: Low Main-Battery threshold voltage register value
  */
 
 struct max8698_platform_data {
 	int				num_regulators;
 	struct max8698_regulator_data	*regulators;
+	unsigned int lbhyst;
+	unsigned int lbth;
 };
 
 #endif /* _MAX8698_H_ */
