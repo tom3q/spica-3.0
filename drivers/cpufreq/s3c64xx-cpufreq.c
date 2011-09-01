@@ -187,7 +187,7 @@ static void __init s3c64xx_cpufreq_config_regulator(void)
 
 	/* Guess based on having to do an I2C/SPI write; in future we
 	 * will be able to query the regulator performance here. */
-	regulator_latency = 1 * 1000 * 1000;
+	regulator_latency = 200 * 1000;
 }
 #endif
 
@@ -250,7 +250,7 @@ static int s3c64xx_cpufreq_driver_init(struct cpufreq_policy *policy)
 	 * the PLLs, which we don't currently) is ~300us worst case,
 	 * but add some fudge.
 	 */
-	policy->cpuinfo.transition_latency = (500 * 1000) + regulator_latency;
+	policy->cpuinfo.transition_latency = (100 * 1000) + regulator_latency;
 
 	ret = cpufreq_frequency_table_cpuinfo(policy, s3c64xx_freq_table);
 	if (ret != 0) {
