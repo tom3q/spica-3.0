@@ -886,6 +886,7 @@ static struct s3c_fb_pd_win spica_fb_win[] = {
 		.virtual_y	= 480 * 2,
 		.virtual_x	= 320,
 	},
+#ifdef SECOND_FB
 	[1] = {
 		.win_mode	= {
 			.left_margin	= 10,
@@ -901,7 +902,8 @@ static struct s3c_fb_pd_win spica_fb_win[] = {
 		.default_bpp	= 16,
 		.virtual_y	= 480 * 2,
 		.virtual_x	= 320,
-	}
+	},
+#endif
 };
 
 static void spica_fb_setup_gpio(void)
@@ -912,7 +914,9 @@ static void spica_fb_setup_gpio(void)
 static struct s3c_fb_platdata spica_lcd_pdata __initdata = {
 	.setup_gpio	= spica_fb_setup_gpio,
 	.win[0]		= &spica_fb_win[0],
+#ifdef SECOND_FB
 	.win[1]		= &spica_fb_win[1],
+#endif
 	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB
 			| VIDCON0_CLKSEL_LCD,
 	.vidcon1	= VIDCON1_INV_HSYNC | VIDCON1_INV_VSYNC
