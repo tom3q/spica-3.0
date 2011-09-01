@@ -52,7 +52,6 @@ struct max8698_regulator_data {
  * @lbhyst: Low Main-Battery Comparator Hysteresis register value
  * @lbth: Low Main-Battery threshold voltage register value
  */
-
 struct max8698_platform_data {
 	int				num_regulators;
 	struct max8698_regulator_data	*regulators;
