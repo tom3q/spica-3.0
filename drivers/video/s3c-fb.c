@@ -79,6 +79,7 @@ struct s3c_fb;
  * @buf_end: Offset of buffer end registers.
  * @osd: The base for the OSD registers.
  * @palette: Address of palette memory, or 0 if none.
+ * @clocks: Mapping of pixel clock sources in VIDCON0_CLKSEL, 0 if invalid.
  * @has_prtcon: Set if has PRTCON register.
  * @has_shadowcon: Set if has SHADOWCON register.
  */
@@ -95,6 +96,7 @@ struct s3c_fb_variant {
 	unsigned short	osd;
 	unsigned short	osd_stride;
 	unsigned short	palette[S3C_FB_MAX_WIN];
+	const char	*clocks[4];
 
 	unsigned int	has_prtcon:1;
 	unsigned int	has_shadowcon:1;
@@ -1318,6 +1320,7 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	struct resource *res;
 	int win;
 	int ret = 0;
+	u32 clk_src;
 
 	platid = platform_get_device_id(pdev);
 	fbdrv = (struct s3c_fb_driverdata *)platid->driver_data;
@@ -1358,23 +1361,16 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 
 	clk_enable(sfb->bus_clk);
 
-	switch (pd->vidcon0 & VIDCON0_CLKSEL_MASK) {
-	default:
-		pd->vidcon0 &= ~VIDCON0_CLKSEL_MASK;
-		pd->vidcon0 |= VIDCON0_CLKSEL_HCLK;
-		dev_warn(dev, "invalid pixel clock source specified,"
-						" defaulting to HCLK\n");
-	case VIDCON0_CLKSEL_HCLK:
-		sfb->pix_clk = clk_get(dev, "lcd");
-		break;
-	case VIDCON0_CLKSEL_LCD:
-		sfb->pix_clk = clk_get(dev, "lcd_sclk");
-		break;
-	case VIDCON0_CLKSEL_27M:
-		sfb->pix_clk = clk_get(dev, "lcd_27m");
-		break;
+	clk_src = (pd->vidcon0 & VIDCON0_CLKSEL_MASK) >> VIDCON0_CLKSEL_SHIFT;
+
+	if (!sfb->variant.clocks[clk_src]) {
+		dev_err(dev, "invalid pixel clock source specified.\n");
+		ret = -EINVAL;
+		goto err_busclk;
 	}
-	if (IS_ERR(sfb->bus_clk)) {
+
+	sfb->pix_clk = clk_get(dev, sfb->variant.clocks[clk_src]);
+	if (IS_ERR(sfb->pix_clk)) {
 		dev_err(dev, "failed to get pixel clock\n");
 		goto err_busclk;
 	}
@@ -1791,6 +1787,12 @@ static struct s3c_fb_driverdata s3c_fb_data_64xx = {
 			[4] = 0x340,
 		},
 
+		.clocks = {
+			[0] = "lcd",
+			[1] = "lcd_sclk",
+			[3] = "lcd_27m",
+		},
+
 		.has_prtcon	= 1,
 	},
 	.win[0]	= &s3c_fb_data_64xx_wins[0],
@@ -1819,6 +1821,10 @@ static struct s3c_fb_driverdata s3c_fb_data_s5pc100 = {
 			[2] = 0x2c00,
 			[3] = 0x3000,
 			[4] = 0x3400,
+		},
+
+		.clocks = {
+			[0] = "lcd",
 		},
 
 		.has_prtcon	= 1,
@@ -1851,6 +1857,10 @@ static struct s3c_fb_driverdata s3c_fb_data_s5pv210 = {
 			[4] = 0x3400,
 		},
 
+		.clocks = {
+			[0] = "lcd",
+		},
+
 		.has_shadowcon	= 1,
 	},
 	.win[0]	= &s3c_fb_data_s5p_wins[0],
@@ -1879,6 +1889,10 @@ static struct s3c_fb_driverdata s3c_fb_data_s3c2443 = {
 		.palette = {
 			[0] = 0x400,
 			[1] = 0x800,
+		},
+
+		.clocks = {
+			[0] = "lcd",
 		},
 	},
 	.win[0] = &(struct s3c_fb_win_variant) {
