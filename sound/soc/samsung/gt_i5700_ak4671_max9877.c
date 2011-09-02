@@ -109,6 +109,20 @@ static int gt_i5700_mic_event(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
+static const struct snd_kcontrol_new gt_i5700_direct_controls[] = {
+	SOC_DAPM_PIN_SWITCH("Earpiece"),
+	SOC_DAPM_PIN_SWITCH("GSM Send"),
+	SOC_DAPM_PIN_SWITCH("Main Mic"),
+	SOC_DAPM_PIN_SWITCH("Sub Mic"),
+	SOC_DAPM_PIN_SWITCH("Jack Mic"),
+	SOC_DAPM_PIN_SWITCH("GSM Receive"),
+};
+
+static const struct snd_kcontrol_new gt_i5700_amp_controls[] = {
+	SOC_DAPM_PIN_SWITCH("Headphones"),
+	SOC_DAPM_PIN_SWITCH("Speaker"),
+};
+
 static const struct snd_soc_dapm_widget gt_i5700_dapm_direct_widgets[] = {
 	SND_SOC_DAPM_LINE("Earpiece", NULL),
 	SND_SOC_DAPM_LINE("GSM Send", NULL),
@@ -172,11 +186,23 @@ static int gt_i5700_ak4671_init(struct snd_soc_pcm_runtime *rtd)
 	if (err < 0)
 		return err;
 
+	err = snd_soc_add_controls(codec, gt_i5700_direct_controls,
+					ARRAY_SIZE(gt_i5700_direct_controls));
+	if (err < 0)
+		return err;
+
 	/* set up gt_i5700 specific audio routes */
 	err = snd_soc_dapm_add_routes(dapm, dapm_direct_routes,
 				      ARRAY_SIZE(dapm_direct_routes));
 	if (err < 0)
 		return err;
+
+	snd_soc_dapm_disable_pin(dapm, "Earpiece");
+	snd_soc_dapm_disable_pin(dapm, "GSM Send");
+	snd_soc_dapm_disable_pin(dapm, "Main Mic");
+	snd_soc_dapm_disable_pin(dapm, "Sub Mic");
+	snd_soc_dapm_disable_pin(dapm, "Jack Mic");
+	snd_soc_dapm_disable_pin(dapm, "GSM Receive");
 
 	snd_soc_dapm_sync(dapm);
 	return 0;
@@ -192,11 +218,20 @@ static int gt_i5700_max9877_init(struct snd_soc_dapm_context *dapm)
 	if (err < 0)
 		return err;
 
+	err = snd_soc_add_controls(dapm->codec, gt_i5700_amp_controls,
+					ARRAY_SIZE(gt_i5700_amp_controls));
+	if (err < 0)
+		return err;
+
 	/* set up gt_i5700 specific audio routes */
 	err = snd_soc_dapm_add_routes(dapm, dapm_amp_routes,
 				      ARRAY_SIZE(dapm_amp_routes));
 	if (err < 0)
 		return err;
+
+	snd_soc_dapm_nc_pin(dapm, "RXIN");
+	snd_soc_dapm_disable_pin(dapm, "Headphones");
+	snd_soc_dapm_disable_pin(dapm, "Speaker");
 
 	snd_soc_dapm_sync(dapm);
 	return 0;
@@ -204,8 +239,8 @@ static int gt_i5700_max9877_init(struct snd_soc_dapm_context *dapm)
 
 static struct snd_soc_dai_link gt_i5700_dai[] = {
 	{ /* Hifi Playback - for similatious use with voice below */
-		.name = "AK4671",
-		.stream_name = "AK4671 HiFi",
+		.name = "ak4671",
+		.stream_name = "ak4671 HiFi",
 		.platform_name = "samsung-audio",
 		.cpu_dai_name = "samsung-i2s.0",
 		.codec_dai_name = "ak4671-hifi",
@@ -217,18 +252,18 @@ static struct snd_soc_dai_link gt_i5700_dai[] = {
 
 static struct snd_soc_aux_dev gt_i5700_aux[] = {
 	{ /* Headphone/Speaker amplifier */
-		.name = "Amplifier",
+		.name = "max9877",
 		.codec_name = "max9877.3-004d",
 		.init = gt_i5700_max9877_init,
 	},
 };
 
 static struct snd_soc_card gt_i5700 = {
-	.name = "GT-i5700",
-	.dai_link = gt_i5700_dai,
-	.num_links = ARRAY_SIZE(gt_i5700_dai),
-	.aux_dev = gt_i5700_aux,
-	.num_aux_devs = ARRAY_SIZE(gt_i5700_aux),
+	.name		= "GT-i5700",
+	.dai_link	= gt_i5700_dai,
+	.num_links	= ARRAY_SIZE(gt_i5700_dai),
+	.aux_dev	= gt_i5700_aux,
+	.num_aux_devs	= ARRAY_SIZE(gt_i5700_aux),
 };
 
 static struct platform_device *gt_i5700_snd_device;
