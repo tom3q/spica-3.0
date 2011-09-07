@@ -1557,18 +1557,13 @@ static struct dpram_platform_data spica_dpram_pdata = {
 };
 
 static struct platform_device spica_dpram_device = {
-	.name		= "sec-dpram-gsm",
+	.name		= "samsung-dpram",
 	.id		= -1,
 	.num_resources	= ARRAY_SIZE(spica_dpram_resources),
 	.resource	= spica_dpram_resources,
 	.dev		= {
 		.platform_data = &spica_dpram_pdata,
 	},
-};
-
-static struct platform_device spica_multipdp_device = {
-	.name	= "sec-multipdp-gsm",
-	.id	= -1,
 };
 
 /*
@@ -1603,7 +1598,6 @@ static struct platform_device *spica_devices[] __initdata = {
 	&spica_wlan_device,
 	&spica_bt_device,
 	&spica_dpram_device,
-	&spica_multipdp_device,
 };
 
 /*
