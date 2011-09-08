@@ -90,6 +90,7 @@ struct s3c_fb_variant {
 	unsigned short	wincon;
 	unsigned short	winmap;
 	unsigned short	keycon;
+	unsigned short	dithmode;
 	unsigned short	buf_start;
 	unsigned short	buf_end;
 	unsigned short	buf_size;
@@ -1425,6 +1426,8 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	pd->setup_gpio();
 
 	writel(pd->vidcon1, sfb->regs + VIDCON1);
+	if (sfb->variant.dithmode)
+		writel(pd->dithmode, sfb->regs + sfb->variant.dithmode);
 
 	/* zero all windows before we do anything */
 
@@ -1558,6 +1561,8 @@ static int s3c_fb_resume(struct device *dev)
 	/* setup gpio and output polarity controls */
 	pd->setup_gpio();
 	writel(pd->vidcon1, sfb->regs + VIDCON1);
+	if (sfb->variant.dithmode)
+		writel(pd->dithmode, sfb->regs + sfb->variant.dithmode);
 
 	/* zero all windows before we do anything */
 	for (win_no = 0; win_no < sfb->variant.nr_windows; win_no++)
@@ -1619,6 +1624,8 @@ static int s3c_fb_runtime_resume(struct device *dev)
 	/* setup gpio and output polarity controls */
 	pd->setup_gpio();
 	writel(pd->vidcon1, sfb->regs + VIDCON1);
+	if (sfb->variant.dithmode)
+		writel(pd->dithmode, sfb->regs + sfb->variant.dithmode);
 
 	/* zero all windows before we do anything */
 	for (win_no = 0; win_no < sfb->variant.nr_windows; win_no++)
@@ -1773,6 +1780,7 @@ static struct s3c_fb_driverdata s3c_fb_data_64xx = {
 		.wincon		= WINCON(0),
 		.winmap		= WINxMAP(0),
 		.keycon		= WKEYCON,
+		.dithmode	= DITHMODE,
 		.osd		= VIDOSD_BASE,
 		.osd_stride	= 16,
 		.buf_start	= VIDW_BUF_START(0),

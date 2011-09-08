@@ -63,6 +63,7 @@ struct s3c_fb_platdata {
 
 	u32			 vidcon0;
 	u32			 vidcon1;
+	u32			 dithmode;
 };
 
 /**
