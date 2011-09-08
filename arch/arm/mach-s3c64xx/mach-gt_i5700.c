@@ -921,6 +921,8 @@ static struct s3c_fb_platdata spica_lcd_pdata __initdata = {
 			| VIDCON0_CLKSEL_LCD,
 	.vidcon1	= VIDCON1_INV_HSYNC | VIDCON1_INV_VSYNC
 			| VIDCON1_INV_VCLK,
+	.dithmode	= DITHMODE_R_POS_8BIT | DITHMODE_G_POS_8BIT
+			| DITHMODE_B_POS_8BIT | DITHMODE_DITH_EN,
 };
 
 /*
