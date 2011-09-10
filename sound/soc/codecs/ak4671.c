@@ -649,9 +649,6 @@ static int ak4671_probe(struct snd_soc_codec *codec)
 		return ret;
 	}
 
-	snd_soc_add_controls(codec, ak4671_snd_controls,
-			     ARRAY_SIZE(ak4671_snd_controls));
-
 	ak4671_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 
 	return ret;
@@ -670,6 +667,8 @@ static struct snd_soc_codec_driver soc_codec_dev_ak4671 = {
 	.reg_cache_size = AK4671_CACHEREGNUM,
 	.reg_word_size = sizeof(u8),
 	.reg_cache_default = ak4671_reg,
+	.controls = ak4671_snd_controls,
+	.num_controls = ARRAY_SIZE(ak4671_snd_controls),
 	.dapm_widgets = ak4671_dapm_widgets,
 	.num_dapm_widgets = ARRAY_SIZE(ak4671_dapm_widgets),
 	.dapm_routes = ak4671_intercon,
