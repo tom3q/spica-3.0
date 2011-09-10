@@ -23,8 +23,7 @@
 #include <sound/soc.h>
 #include <sound/tlv.h>
 #include <sound/soc-dai.h>
-
-#include <mach/hardware.h>
+#include <sound/gt_i5700.h>
 
 #include <asm/mach-types.h>
 
@@ -34,10 +33,8 @@
 #include "../codecs/ak4671.h"
 #include "../codecs/max9877.h"
 
-#define GPIO_AUDIO_EN		S3C64XX_GPK(1)
-#define GPIO_MICBIAS_EN		S3C64XX_GPK(3)
-
 static struct snd_soc_card gt_i5700;
+static struct gt_i5700_audio_pdata *gt_i5700_pdata;
 
 static int gt_i5700_hifi_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
@@ -94,17 +91,22 @@ static int gt_i5700_mic_event(struct snd_soc_dapm_widget *w,
 {
 	static int mic_ref_cnt = 0;
 
-	if (SND_SOC_DAPM_EVENT_OFF(event))
+	if (SND_SOC_DAPM_EVENT_OFF(event)) {
 		--mic_ref_cnt;
-	else
-		++mic_ref_cnt;
 
-	if (mic_ref_cnt < 0) {
-		printk(KERN_WARNING "%s: mic_ref_cnt < 0, fixing.\n", __func__);
-		mic_ref_cnt = 0;
+		if (mic_ref_cnt == 0)
+			gt_i5700_pdata->set_micbias(0);
+
+		if (mic_ref_cnt < 0)
+			mic_ref_cnt = 0;
+
+		return 0;
 	}
 
-	gpio_set_value(GPIO_MICBIAS_EN, !!mic_ref_cnt);
+	if (mic_ref_cnt == 0)
+		gt_i5700_pdata->set_micbias(1);
+
+	++mic_ref_cnt;
 
 	return 0;
 }
@@ -267,82 +269,96 @@ static struct snd_soc_card gt_i5700 = {
 	.num_aux_devs	= ARRAY_SIZE(gt_i5700_aux),
 };
 
-static struct platform_device *gt_i5700_snd_device;
-
-static int __init gt_i5700_init(void)
+static int __init gt_i5700_probe(struct platform_device *pdev)
 {
+	struct gt_i5700_audio_pdata *pdata = pdev->dev.platform_data;
+	struct platform_device *audio_pdev;
 	int ret = 0;
 
 	if (!machine_is_gt_i5700()) {
-		pr_info("Only GT-i5700 is supported by this ASoC driver\n");
+		dev_err(&pdev->dev, "Only GT-i5700 is supported by this ASoC driver\n");
 		return -ENODEV;
 	}
 
-	gt_i5700_snd_device = platform_device_alloc("soc-audio", -1);
-	if (!gt_i5700_snd_device)
+	if (pdev->id != -1) {
+		dev_err(&pdev->dev, "Only a single instance is allowed\n");
+		return -ENODEV;
+	}
+
+	if (!pdata) {
+		dev_err(&pdev->dev, "No platform data specified\n");
+		return -EINVAL;
+	}
+
+	if (!gpio_is_valid(pdata->gpio_audio_en)) {
+		dev_err(&pdev->dev, "Invalid audio enable GPIO specified\n");
+		return -EINVAL;
+	}
+
+	if (!pdata->set_micbias) {
+		dev_err(&pdev->dev, "No micbias control function provided\n");
+		return -EINVAL;
+	}
+
+	audio_pdev = platform_device_alloc("soc-audio", -1);
+	if (!audio_pdev)
 		return -ENOMEM;
 
-	platform_set_drvdata(gt_i5700_snd_device, &gt_i5700);
-
-	ret = platform_device_add(gt_i5700_snd_device);
-	if (ret) {
-		platform_device_put(gt_i5700_snd_device);
-		return ret;
-	}
+	platform_set_drvdata(audio_pdev, &gt_i5700);
 
 	/* Initialise audio enable GPIO */
-	ret = gpio_request(GPIO_AUDIO_EN, "audio enable");
+	ret = gpio_request(pdata->gpio_audio_en, "audio enable");
 	if (ret) {
-		dev_err(&gt_i5700_snd_device->dev,
+		dev_err(&pdev->dev,
 				"Failed to register audio enable GPIO\n");
-		goto err_unregister_device;
+		goto err_free_pdev;
 	}
-	ret = gpio_direction_output(GPIO_AUDIO_EN, 1);
+	ret = gpio_direction_output(pdata->gpio_audio_en, 1);
 	if (ret) {
-		dev_err(&gt_i5700_snd_device->dev,
+		dev_err(&pdev->dev,
 				"Failed to configure audio enable GPIO\n");
 		goto err_free_gpio_audio_en;
 	}
 
-	/* Initialise microphone enable GPIO */
-	ret = gpio_request(GPIO_MICBIAS_EN, "mic bias");
-	if (ret) {
-		dev_err(&gt_i5700_snd_device->dev,
-				"Failed to register audio enable GPIO\n");
-		goto err_free_gpio_audio_en;
-	}
-	ret = gpio_direction_output(GPIO_MICBIAS_EN, 0);
-	if (ret) {
-		dev_err(&gt_i5700_snd_device->dev,
-				"Failed to configure audio enable GPIO\n");
-		goto err_free_gpio_micbias_en;
-	}
+	gt_i5700_pdata = pdata;
+
+	ret = platform_device_add(audio_pdev);
+	if (ret)
+		goto err_disable_gpio_audio_en;
 
 	return 0;
 
-err_free_gpio_micbias_en:
-	gpio_free(GPIO_MICBIAS_EN);
+err_disable_gpio_audio_en:
+	gpio_set_value(pdata->gpio_audio_en, 0);
 err_free_gpio_audio_en:
-	gpio_free(GPIO_AUDIO_EN);
-err_unregister_device:
-	platform_device_unregister(gt_i5700_snd_device);
+	gpio_free(pdata->gpio_audio_en);
+err_free_pdev:
+	platform_device_put(audio_pdev);
 
 	return ret;
 }
 
-static void __exit gt_i5700_exit(void)
+static void gt_i5700_shutdown(struct platform_device *pdev)
 {
-	gpio_set_value(GPIO_AUDIO_EN, 0);
-	gpio_set_value(GPIO_MICBIAS_EN, 0);
+	struct gt_i5700_audio_pdata *pdata = pdev->dev.platform_data;
 
-	gpio_free(GPIO_AUDIO_EN);
-	gpio_free(GPIO_MICBIAS_EN);
+	gpio_set_value(pdata->gpio_audio_en, 0);
+	pdata->set_micbias(0);
+}
 
-	platform_device_unregister(gt_i5700_snd_device);
+static struct platform_driver gt_i5700_driver = {
+	.shutdown = gt_i5700_shutdown,
+	.driver = {
+		.name = "gt_i5700_audio",
+	},
+};
+
+static int __init gt_i5700_init(void)
+{
+	return platform_driver_probe(&gt_i5700_driver, gt_i5700_probe);
 }
 
 module_init(gt_i5700_init);
-module_exit(gt_i5700_exit);
 
 /* Module information */
 MODULE_AUTHOR("Tomasz Figa <tomasz.figa at gmail.com>");

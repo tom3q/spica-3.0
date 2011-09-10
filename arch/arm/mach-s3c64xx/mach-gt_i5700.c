@@ -49,6 +49,8 @@
 #include <linux/i2c/bma023.h>
 #include <linux/spica_bt.h>
 
+#include <sound/gt_i5700.h>
+
 #include <video/s6d05a.h>
 
 #include <asm/mach/arch.h>
@@ -1591,6 +1593,36 @@ static struct platform_device spica_vibetonz_device = {
 };
 
 /*
+ * Sound
+ */
+static int spica_micbias_ref_cnt = 0;
+
+static void spica_set_micbias(bool enable)
+{
+	if (enable) {
+		if (!spica_micbias_ref_cnt++)
+			gpio_set_value(GPIO_MICBIAS_EN, 1);
+		return;
+	}
+
+	if(!--spica_micbias_ref_cnt)
+		gpio_set_value(GPIO_MICBIAS_EN, 0);
+}
+
+static struct gt_i5700_audio_pdata spica_audio_pdata = {
+	.gpio_audio_en	= GPIO_AUDIO_EN,
+	.set_micbias	= spica_set_micbias,
+};
+
+static struct platform_device spica_audio_device = {
+	.name	= "gt_i5700_audio",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &spica_audio_pdata,
+	},
+};
+
+/*
  * Platform devices
  */
 
@@ -1623,6 +1655,7 @@ static struct platform_device *spica_devices[] __initdata = {
 	&spica_bt_device,
 	&spica_dpram_device,
 	&spica_vibetonz_device,
+	&spica_audio_device,
 };
 
 /*
@@ -2188,6 +2221,7 @@ static void __init spica_machine_init(void)
 	gpio_request(GPIO_BT_WLAN_REG_ON, "WLAN/BT power");
 	gpio_request(GPIO_WLAN_RST_N, "WLAN reset");
 	gpio_request(GPIO_BT_RST_N, "BT reset");
+	gpio_request(GPIO_MICBIAS_EN, "MIC bias");
 
 	/* Setup power management */
 	gpio_request(GPIO_PDA_PS_HOLD, "Power hold");
