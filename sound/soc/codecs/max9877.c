@@ -235,28 +235,9 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"OUT", NULL, "OUT Bypass"},
 };
 
-static int max9877_add_controls(struct snd_soc_codec *codec)
-{
-	return snd_soc_add_controls(codec, max9877_controls,
-			ARRAY_SIZE(max9877_controls));
-}
-
-static int max9877_add_widgets(struct snd_soc_dapm_context *dapm)
-{
-	int ret = 0;
-
-	ret = snd_soc_dapm_new_controls(dapm, max9877_dapm_widgets,
-			ARRAY_SIZE(max9877_dapm_widgets));
-	if (ret < 0)
-		return ret;
-
-	return snd_soc_dapm_add_routes(dapm, intercon, ARRAY_SIZE(intercon));
-}
-
 static int max9877_probe(struct snd_soc_codec *codec)
 {
 	struct max9877_priv *max9877 = snd_soc_codec_get_drvdata(codec);
-	struct snd_soc_dapm_context *dapm = &codec->dapm;
 	int ret;
 
 	codec->hw_write = (hw_write_t)i2c_master_send;
@@ -264,18 +245,6 @@ static int max9877_probe(struct snd_soc_codec *codec)
 	ret = snd_soc_codec_set_cache_io(codec, 8, 8, max9877->control_type);
 	if (ret < 0) {
 		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
-		return ret;
-	}
-
-	ret = max9877_add_controls(codec);
-	if (ret < 0) {
-		dev_err(codec->dev, "Failed to add controls: %d\n", ret);
-		return ret;
-	}
-
-	ret = max9877_add_widgets(dapm);
-	if (ret < 0) {
-		dev_err(codec->dev, "Failed to add widgets: %d\n", ret);
 		return ret;
 	}
 
@@ -293,6 +262,12 @@ static struct snd_soc_codec_driver soc_codec_dev_max9877 = {
 	.reg_cache_size = MAX9877_CACHEREGNUM,
 	.reg_word_size = sizeof(u8),
 	.reg_cache_default = max9877_regs,
+	.controls = max9877_controls,
+	.num_controls = ARRAY_SIZE(max9877_controls),
+	.dapm_widgets = max9877_dapm_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(max9877_dapm_widgets),
+	.dapm_routes = max9877_dapm_routes,
+	.num_dapm_routes = ARRAY_SIZE(max9877_dapm_routes),
 };
 
 static int __devinit max9877_i2c_probe(struct i2c_client *client,
