@@ -204,7 +204,7 @@ static struct usb_configuration android_config_driver = {
 	.setup		= android_setup_config,
 	.bConfigurationValue = 1,
 	.bmAttributes	= USB_CONFIG_ATT_ONE | USB_CONFIG_ATT_SELFPOWER,
-	.bMaxPower	= 0xFA, /* 500ma */
+	.bMaxPower	= (CONFIG_USB_GADGET_VBUS_DRAW) >> 1,
 };
 
 static int android_setup_config(struct usb_configuration *c,
