@@ -39,7 +39,7 @@ static u8 max9877_regs[MAX9877_CACHEREGNUM] = {
 	0x00, /* MAX9877_SPK_VOLUME	(0x01) */
 	0x00, /* MAX9877_HPL_VOLUME	(0x02) */
 	0x00, /* MAX9877_HPR_VOLUME	(0x03) */
-	0x49, /* MAX9877_OUTPUT_MODE	(0x04) */
+	0x09, /* MAX9877_OUTPUT_MODE	(0x04) */
 };
 
 static const unsigned int max9877_pgain_tlv[] = {
