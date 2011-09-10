@@ -1569,6 +1569,28 @@ static struct platform_device spica_dpram_device = {
 };
 
 /*
+ * Vibetonz
+ */
+
+struct vibetonz_platform_data {
+	int gpio_en;
+	int pwm_chan;
+};
+
+static struct vibetonz_platform_data spica_vibetonz_pdata = {
+	.gpio_en	= GPIO_VIB_EN,
+	.pwm_chan	= 1,
+};
+
+static struct platform_device spica_vibetonz_device = {
+	.name	= "vibetonz",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &spica_vibetonz_pdata,
+	},
+};
+
+/*
  * Platform devices
  */
 
@@ -1600,6 +1622,7 @@ static struct platform_device *spica_devices[] __initdata = {
 	&spica_wlan_device,
 	&spica_bt_device,
 	&spica_dpram_device,
+	&spica_vibetonz_device,
 };
 
 /*
