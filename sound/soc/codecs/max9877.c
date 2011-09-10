@@ -22,6 +22,7 @@
 #include <sound/soc.h>
 #include <sound/tlv.h>
 #include <sound/soc-dapm.h>
+#include <linux/mutex.h>
 
 #include "max9877.h"
 
@@ -29,8 +30,9 @@
 struct max9877_priv {
 	enum snd_soc_control_type control_type;
 	void *control_data;
-	unsigned int mux_power;
-	unsigned int mux_mode;
+	unsigned int mix_power;
+	unsigned int mix_mode;
+	struct mutex mix_mutex;
 };
 
 /* default register values */
@@ -81,32 +83,28 @@ static const struct snd_kcontrol_new max9877_controls[] = {
 	SOC_SINGLE("MAX9877 Zero-crossing detection Switch",
 			MAX9877_INPUT_MODE, MAX9877_ZCD, 1, 0),
 	SOC_ENUM("MAX9877 Oscillator Mode", max9877_osc_mode_enum),
+	SOC_DAPM_PIN_SWITCH("INA PGA"),
+	SOC_DAPM_PIN_SWITCH("INB PGA"),
 };
 
-/* Output MUX */
+/* Output MIX */
+#define MIX_OUT_POWER	(1 << 0)
+#define MIX_HP_POWER	(1 << 1)
+#define MIX_INA		(1 << 0)
+#define MIX_INB		(1 << 1)
 
-static const char *max9877_mux_texts[] = {"INA", "INB", "IN Mix"};
-static const struct soc_enum max9877_mux_enum =
-	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(max9877_mux_texts),
-			max9877_mux_texts);
-static struct snd_kcontrol_new max9877_mux_control =
-	SOC_DAPM_ENUM_VIRT("Route", max9877_mux_enum);
-
-#define MUX_OUT_POWER	1
-#define MUX_HP_POWER	2
-
-/* TODO: This should be called with some lock held */
+/* Called with mux_mutex held. */
 static void max9877_update_mux(struct snd_soc_codec *codec)
 {
 	struct max9877_priv *max9877 = snd_soc_codec_get_drvdata(codec);
-	unsigned int mode = max9877->mux_mode;
-	unsigned int power = max9877->mux_power;
+	unsigned int mode = max9877->mix_mode;
+	unsigned int power = max9877->mix_power;
 	u8 reg;
 
 	printk("%s: mode = %u, power = %u\n", __func__,
-					max9877->mux_mode, max9877->mux_power);
+					max9877->mix_mode, max9877->mix_power);
 
-	if (!power) {
+	if (!power || !mode) {
 		reg = snd_soc_read(codec, MAX9877_OUTPUT_MODE);
 		reg &= ~MAX9877_SHDN;
 		snd_soc_write(codec, MAX9877_OUTPUT_MODE, reg);
@@ -115,24 +113,56 @@ static void max9877_update_mux(struct snd_soc_codec *codec)
 
 	reg = snd_soc_read(codec, MAX9877_OUTPUT_MODE);
 	reg &= ~MAX9877_OUTMODE_MASK;
-	reg |= 3*mode | power | MAX9877_SHDN;
+	reg |= (3*(mode - 1) + power) | MAX9877_SHDN;
 	snd_soc_write(codec, MAX9877_OUTPUT_MODE, reg);
 }
 
-static int max9877_mux_put(struct snd_kcontrol *kcontrol,
-			       struct snd_ctl_elem_value *ucontrol)
+static int max9877_ina_event(struct snd_soc_dapm_widget *w,
+				struct snd_kcontrol *kcontrol, int event)
 {
-	int value = ucontrol->value.enumerated.item[0];
-	struct snd_soc_dapm_widget *widget = snd_kcontrol_chip(kcontrol);
-	struct snd_soc_codec *codec = widget->codec;
+	struct snd_soc_codec *codec = w->codec;
 	struct max9877_priv *max9877 = snd_soc_codec_get_drvdata(codec);
 
-	/* TODO: This needs synchronization. */
+	mutex_lock(&max9877->mix_mutex);
 
-	max9877->mux_mode = value;
-	max9877_update_mux(codec);
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMD:
+		max9877->mix_mode &= ~MIX_INA;
+		max9877_update_mux(codec);
+		break;
+	case SND_SOC_DAPM_POST_PMU:
+		max9877->mix_mode |= MIX_INA;
+		max9877_update_mux(codec);
+		break;
+	}
 
-	return snd_soc_dapm_put_enum_virt(kcontrol, ucontrol);
+	mutex_unlock(&max9877->mix_mutex);
+
+	return 0;
+}
+
+static int max9877_inb_event(struct snd_soc_dapm_widget *w,
+				struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = w->codec;
+	struct max9877_priv *max9877 = snd_soc_codec_get_drvdata(codec);
+
+	mutex_lock(&max9877->mix_mutex);
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMD:
+		max9877->mix_mode &= ~MIX_INB;
+		max9877_update_mux(codec);
+		break;
+	case SND_SOC_DAPM_POST_PMU:
+		max9877->mix_mode |= MIX_INB;
+		max9877_update_mux(codec);
+		break;
+	}
+
+	mutex_unlock(&max9877->mix_mutex);
+
+	return 0;
 }
 
 static int max9877_hp_amp_event(struct snd_soc_dapm_widget *w,
@@ -141,18 +171,20 @@ static int max9877_hp_amp_event(struct snd_soc_dapm_widget *w,
 	struct snd_soc_codec *codec = w->codec;
 	struct max9877_priv *max9877 = snd_soc_codec_get_drvdata(codec);
 
-	/* TODO: This needs synchronization. */
+	mutex_lock(&max9877->mix_mutex);
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMD:
-		max9877->mux_power &= ~MUX_HP_POWER;
+		max9877->mix_power &= ~MIX_HP_POWER;
 		max9877_update_mux(codec);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
-		max9877->mux_power |= MUX_HP_POWER;
+		max9877->mix_power |= MIX_HP_POWER;
 		max9877_update_mux(codec);
 		break;
 	}
+
+	mutex_unlock(&max9877->mix_mutex);
 
 	return 0;
 }
@@ -163,18 +195,20 @@ static int max9877_out_amp_event(struct snd_soc_dapm_widget *w,
 	struct snd_soc_codec *codec = w->codec;
 	struct max9877_priv *max9877 = snd_soc_codec_get_drvdata(codec);
 
-	/* TODO: This needs synchronization. */
+	mutex_lock(&max9877->mix_mutex);
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMD:
-		max9877->mux_power &= ~MUX_OUT_POWER;
+		max9877->mix_power &= ~MIX_OUT_POWER;
 		max9877_update_mux(codec);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
-		max9877->mux_power |= MUX_OUT_POWER;
+		max9877->mix_power |= MIX_OUT_POWER;
 		max9877_update_mux(codec);
 		break;
 	}
+
+	mutex_unlock(&max9877->mix_mutex);
 
 	return 0;
 }
@@ -191,17 +225,18 @@ static const struct snd_kcontrol_new max9877_out_bypass_control =
 
 static const struct snd_soc_dapm_widget max9877_dapm_widgets[] = {
 	/* INPUTS */
-	SND_SOC_DAPM_INPUT("INA"),
-	SND_SOC_DAPM_INPUT("INB"),
+	SND_SOC_DAPM_INPUT("INA1"),
+	SND_SOC_DAPM_INPUT("INA2"),
+	SND_SOC_DAPM_INPUT("INB1"),
+	SND_SOC_DAPM_INPUT("INB2"),
 	SND_SOC_DAPM_INPUT("RXIN"),
 
 	/* OUTPUTS */
-	SND_SOC_DAPM_OUTPUT("HP"),
+	SND_SOC_DAPM_OUTPUT("HPL"),
+	SND_SOC_DAPM_OUTPUT("HPR"),
 	SND_SOC_DAPM_OUTPUT("OUT"),
 
 	/* MUXES */
-	SND_SOC_DAPM_MUX("Internal Mux", SND_SOC_NOPM, 0, 0,
-				&max9877_mux_control),
 	SND_SOC_DAPM_MUX("OUT Bypass", SND_SOC_NOPM, 0, 0,
 				&max9877_out_bypass_control),
 
@@ -209,29 +244,40 @@ static const struct snd_soc_dapm_widget max9877_dapm_widgets[] = {
 	SND_SOC_DAPM_MIXER("IN Mix", SND_SOC_NOPM, 0, 0, NULL, 0),
 
 	/* PGAs */
+	SND_SOC_DAPM_PGA_E("INA PGA", SND_SOC_NOPM, 0, 0, NULL, 0,
+				max9877_ina_event,
+				SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
+
+	SND_SOC_DAPM_PGA_E("INB PGA", SND_SOC_NOPM, 0, 0, NULL, 0,
+				max9877_inb_event,
+				SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
+
 	SND_SOC_DAPM_PGA_E("HP Amp", SND_SOC_NOPM, 0, 0, NULL, 0,
-			max9877_hp_amp_event,
-			SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
+				max9877_hp_amp_event,
+				SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
+
 	SND_SOC_DAPM_PGA_E("OUT Amp", SND_SOC_NOPM, 0, 0, NULL, 0,
-			max9877_out_amp_event,
-			SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
+				max9877_out_amp_event,
+				SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
 };
 
-static const struct snd_soc_dapm_route intercon[] = {
-	{"IN Mix", NULL, "INA"},
-	{"IN Mix", NULL, "INB"},
+static const struct snd_soc_dapm_route max9877_dapm_routes[] = {
+	{"INA PGA", NULL, "INA1"},
+	{"INA PGA", NULL, "INA2"},
+	{"INB PGA", NULL, "INB1"},
+	{"INB PGA", NULL, "INB2"},
 
-	{"Internal Mux", "INA", "INA"},
-	{"Internal Mux", "INB", "INB"},
-	{"Internal Mux", "IN Mix", "IN Mix"},
+	{"IN Mix", NULL, "INA PGA"},
+	{"IN Mix", NULL, "INB PGA"},
 
-	{"OUT Amp", NULL, "Internal Mux"},
-	{"HP Amp", NULL, "Internal Mux"},
+	{"OUT Amp", NULL, "IN Mix"},
+	{"HP Amp", NULL, "IN Mix"},
 
 	{"OUT Bypass", "OUT Amp", "OUT Amp"},
 	{"OUT Bypass", "RXIN", "RXIN"},
 
-	{"HP", NULL, "HP Amp"},
+	{"HPL", NULL, "HP Amp"},
+	{"HPR", NULL, "HP Amp"},
 	{"OUT", NULL, "OUT Bypass"},
 };
 
@@ -285,8 +331,9 @@ static int __devinit max9877_i2c_probe(struct i2c_client *client,
 	i2c_set_clientdata(client, max9877);
 	max9877->control_data = client;
 	max9877->control_type = SND_SOC_I2C;
-	max9877->mux_power = 3;
-	max9877->mux_mode = 9;
+	max9877->mix_power = 0;
+	max9877->mix_mode = 0;
+	mutex_init(&max9877->mix_mutex);
 
 	ret = snd_soc_register_codec(&client->dev,
 					&soc_codec_dev_max9877, NULL, 0);
@@ -320,8 +367,6 @@ static struct i2c_driver max9877_i2c_driver = {
 
 static int __init max9877_init(void)
 {
-	/* FIXME: This should be done in a more appropriate way... */
-	max9877_mux_control.put = max9877_mux_put;
 	return i2c_add_driver(&max9877_i2c_driver);
 }
 module_init(max9877_init);
