@@ -395,6 +395,13 @@ config SENSORS_APDS990X
 	   To compile this driver as a module, choose M here: the
 	   module will be called apds990x. If unsure, say N here.
 
+config SAMSUNG_JACK
+	bool "3.5MM ear jack driver for Samsung devices"
+	depends on INPUT && S3C_ADC
+	default n
+	---help---
+	  This is 3.5MM ear jack driver for Samsung devices.
+
 config HMC6352
 	tristate "Honeywell HMC6352 compass"
 	depends on I2C
