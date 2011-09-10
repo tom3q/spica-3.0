@@ -48,6 +48,7 @@
 #include <linux/akm8973.h>
 #include <linux/i2c/bma023.h>
 #include <linux/spica_bt.h>
+#include <linux/sec_jack.h>
 
 #include <sound/gt_i5700.h>
 
@@ -1609,6 +1610,73 @@ static void spica_set_micbias(bool enable)
 		gpio_set_value(GPIO_MICBIAS_EN, 0);
 }
 
+static struct sec_jack_zone spica_jack_zones[] = {
+	{
+		/* adc == 0, unstable zone, default to 3pole if it stays
+		 * in this range for a half second (20ms delays, 25 samples)
+		 */
+		.adc_high = 0,
+		.delay_ms = 20,
+		.check_count = 25,
+		.jack_type = SEC_HEADSET_3POLE,
+	},
+	{
+		/* 0 < adc <= 1000, unstable zone, default to 3pole if it stays
+		 * in this range for a second (10ms delays, 100 samples)
+		 */
+		.adc_high = 1000,
+		.delay_ms = 10,
+		.check_count = 100,
+		.jack_type = SEC_HEADSET_3POLE,
+	},
+	{
+		/* 1000 < adc <= 2000, unstable zone, default to 4pole if it
+		 * stays in this range for a second (10ms delays, 100 samples)
+		 */
+		.adc_high = 2000,
+		.delay_ms = 10,
+		.check_count = 100,
+		.jack_type = SEC_HEADSET_4POLE,
+	},
+	{
+		/* 2000 < adc <= 3700, 4 pole zone, default to 4pole if it
+		 * stays in this range for 200ms (20ms delays, 10 samples)
+		 */
+		.adc_high = 3700,
+		.delay_ms = 20,
+		.check_count = 10,
+		.jack_type = SEC_HEADSET_4POLE,
+	},
+	{
+		/* adc > 3700, unstable zone, default to 3pole if it stays
+		 * in this range for a second (10ms delays, 100 samples)
+		 */
+		.adc_high = 0x7fffffff,
+		.delay_ms = 10,
+		.check_count = 100,
+		.jack_type = SEC_HEADSET_3POLE,
+	},
+};
+
+static struct sec_jack_platform_data spica_jack_pdata = {
+	.set_micbias_state = spica_set_micbias,
+	.adc_chan = 3,
+	.zones = spica_jack_zones,
+	.num_zones = ARRAY_SIZE(spica_jack_zones),
+	.det_gpio = GPIO_DET_35,
+	.send_end_gpio = GPIO_EAR_SEND_END,
+	.det_active_high = 1,
+	.send_end_active_high = 0,
+};
+
+static struct platform_device spica_jack_device = {
+	.name	= "sec_jack",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &spica_jack_pdata,
+	},
+};
+
 static struct gt_i5700_audio_pdata spica_audio_pdata = {
 	.gpio_audio_en	= GPIO_AUDIO_EN,
 	.set_micbias	= spica_set_micbias,
@@ -1655,6 +1723,7 @@ static struct platform_device *spica_devices[] __initdata = {
 	&spica_bt_device,
 	&spica_dpram_device,
 	&spica_vibetonz_device,
+	&spica_jack_device,
 	&spica_audio_device,
 };
 
