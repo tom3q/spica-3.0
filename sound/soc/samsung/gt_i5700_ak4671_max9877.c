@@ -183,7 +183,7 @@ static int gt_i5700_ak4671_init(struct snd_soc_pcm_runtime *rtd)
 
 	/* Add gt_i5700 specific widgets */
 	err = snd_soc_dapm_new_controls(dapm, gt_i5700_dapm_direct_widgets,
-				  ARRAY_SIZE(gt_i5700_dapm_direct_widgets));
+				ARRAY_SIZE(gt_i5700_dapm_direct_widgets));
 	if (err < 0)
 		return err;
 
@@ -194,7 +194,7 @@ static int gt_i5700_ak4671_init(struct snd_soc_pcm_runtime *rtd)
 
 	/* set up gt_i5700 specific audio routes */
 	err = snd_soc_dapm_add_routes(dapm, dapm_direct_routes,
-				      ARRAY_SIZE(dapm_direct_routes));
+						ARRAY_SIZE(dapm_direct_routes));
 	if (err < 0)
 		return err;
 
@@ -215,7 +215,7 @@ static int gt_i5700_max9877_init(struct snd_soc_dapm_context *dapm)
 
 	/* Add gt_i5700 specific widgets */
 	err = snd_soc_dapm_new_controls(dapm, gt_i5700_dapm_amp_widgets,
-				  ARRAY_SIZE(gt_i5700_dapm_amp_widgets));
+					ARRAY_SIZE(gt_i5700_dapm_amp_widgets));
 	if (err < 0)
 		return err;
 
@@ -226,7 +226,7 @@ static int gt_i5700_max9877_init(struct snd_soc_dapm_context *dapm)
 
 	/* set up gt_i5700 specific audio routes */
 	err = snd_soc_dapm_add_routes(dapm, dapm_amp_routes,
-				      ARRAY_SIZE(dapm_amp_routes));
+						ARRAY_SIZE(dapm_amp_routes));
 	if (err < 0)
 		return err;
 
