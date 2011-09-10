@@ -157,13 +157,14 @@ static const struct snd_soc_dapm_route dapm_direct_routes[] = {
 
 static const struct snd_soc_dapm_route dapm_amp_routes[] = {
 	/* Amplifier inputs */
-	{"INA", NULL, "LOUT2"},
-	{"INA", NULL, "ROUT2"},
-	{"INB", NULL, "LOUT2"},
-	{"INB", NULL, "ROUT2"},
+	{"INA1", NULL, "LOUT2"},
+	{"INA2", NULL, "ROUT2"},
+	{"INB1", NULL, "LOUT2"},
+	{"INB2", NULL, "ROUT2"},
 
 	/* Amplifier outputs */
-	{"Headphones", NULL, "HP"},
+	{"Headphones", NULL, "HPL"},
+	{"Headphones", NULL, "HPR"},
 	{"Speaker", NULL, "OUT"},
 };
 
