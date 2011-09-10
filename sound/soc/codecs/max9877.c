@@ -239,12 +239,16 @@ static int max9877_probe(struct snd_soc_codec *codec)
 {
 	struct max9877_priv *max9877 = snd_soc_codec_get_drvdata(codec);
 	int ret;
+	int i;
 
 	ret = snd_soc_codec_set_cache_io(codec, 8, 8, max9877->control_type);
 	if (ret < 0) {
 		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
 		return ret;
 	}
+
+	for (i = 0; i < ARRAY_SIZE(max9877_regs); ++i)
+		snd_soc_write(codec, i, max9877_regs[i]);
 
 	return ret;
 }
