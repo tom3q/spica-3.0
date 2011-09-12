@@ -18,6 +18,7 @@
 #include <sound/soc.h>
 #include <sound/pcm_params.h>
 
+#include <plat/dma.h>
 #include <plat/audio.h>
 
 #include "dma.h"
@@ -162,6 +163,8 @@ struct i2s_dai {
 	/* DMA parameters */
 	struct s3c_dma_params dma_playback;
 	struct s3c_dma_params dma_capture;
+	struct s3c2410_dma_client dma_playback_client;
+	struct s3c2410_dma_client dma_capture_client;
 	u32	quirks;
 	u32	suspend_i2smod;
 	u32	suspend_i2scon;
@@ -1148,10 +1151,10 @@ static __devinit int samsung_i2s_probe(struct platform_device *pdev)
 
 	pri_dai->dma_playback.dma_addr = regs_base + I2STXD;
 	pri_dai->dma_capture.dma_addr = regs_base + I2SRXD;
-	pri_dai->dma_playback.client =
-		(struct s3c2410_dma_client *)&pri_dai->dma_playback;
-	pri_dai->dma_capture.client =
-		(struct s3c2410_dma_client *)&pri_dai->dma_capture;
+	pri_dai->dma_playback.client = &pri_dai->dma_playback_client;
+	pri_dai->dma_capture.client = &pri_dai->dma_capture_client;
+	pri_dai->dma_playback_client.name = "samsung-i2s playback";
+	pri_dai->dma_capture_client.name = "samsung-i2s capture";
 	pri_dai->dma_playback.channel = dma_pl_chan;
 	pri_dai->dma_capture.channel = dma_cp_chan;
 	pri_dai->src_clk = i2s_cfg->src_clk;
