@@ -49,6 +49,7 @@
 #include <linux/i2c/bma023.h>
 #include <linux/spica_bt.h>
 #include <linux/sec_jack.h>
+#include <linux/vibetonz.h>
 
 #include <sound/gt_i5700.h>
 
@@ -1574,12 +1575,6 @@ static struct platform_device spica_dpram_device = {
 /*
  * Vibetonz
  */
-
-struct vibetonz_platform_data {
-	int gpio_en;
-	int pwm_chan;
-};
-
 static struct vibetonz_platform_data spica_vibetonz_pdata = {
 	.gpio_en	= GPIO_VIB_EN,
 	.pwm_chan	= 1,
