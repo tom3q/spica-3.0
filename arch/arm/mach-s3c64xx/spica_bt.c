@@ -58,7 +58,7 @@ static int spica_bt_set_block(void *data, bool blocked)
 		return 0;
 
 	if (blocked) {
-		dev_dbg(bt->dev, "power off\n");
+		dev_info(bt->dev, "power off\n");
 
 		disable_irq(bt->irq);
 		WARN_ON(disable_irq_wake(bt->irq) < 0);
@@ -68,7 +68,7 @@ static int spica_bt_set_block(void *data, bool blocked)
 
 		wake_unlock(&bt->wake_lock);
 	} else {
-		dev_dbg(bt->dev, "power on\n");
+		dev_info(bt->dev, "power on\n");
 		
 		if (pdata->set_power)
 			pdata->set_power(1);
