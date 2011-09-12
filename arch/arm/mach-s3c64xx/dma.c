@@ -419,7 +419,12 @@ int s3c2410_dma_enqueue(enum dma_ch channel, void *id,
 		chan->next = buff;
 		chan->end = buff;
 
+		pm_runtime_get_sync(chan->dmac->dev);
+
 		s3c64xx_lli_to_regs(chan, lli);
+
+		pm_runtime_mark_last_busy(chan->dmac->dev);
+		pm_runtime_put_autosuspend(chan->dmac->dev);
 	}
 
 	local_irq_restore(flags);
@@ -479,7 +484,12 @@ int s3c2410_dma_devconfig(enum dma_ch channel,
 
 	pr_debug("%s: config %08x\n", __func__, config);
 
+	pm_runtime_get_sync(chan->dmac->dev);
+
 	writel(config, chan->regs + PL080S_CH_CONFIG);
+
+	pm_runtime_mark_last_busy(chan->dmac->dev);
+	pm_runtime_put_autosuspend(chan->dmac->dev);
 
 	return 0;
 }
