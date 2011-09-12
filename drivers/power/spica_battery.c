@@ -726,6 +726,9 @@ static int spica_battery_probe(struct platform_device *pdev)
 		goto err_chg_irq_free;
 	}
 
+	enable_irq_wake(bat->irq_pok);
+	enable_irq_wake(bat->irq_chg);
+
 	local_irq_save(flags);
 
 	reg = readl(S3C64XX_PWR_CFG);
@@ -780,6 +783,9 @@ static int spica_battery_remove(struct platform_device *pdev)
 	struct spica_battery_pdata *pdata = bat->pdata;
 	int i;
 
+	disable_irq_wake(bat->irq_pok);
+	disable_irq_wake(bat->irq_chg);
+
 	free_irq(IRQ_BATF, bat);
 	free_irq(bat->irq_chg, bat);
 	free_irq(bat->irq_pok, bat);
@@ -818,9 +824,6 @@ static int spica_battery_suspend(struct platform_device *pdev,
 	cancel_work_sync(&bat->work);
 	cancel_delayed_work_sync(&bat->poll_work);
 
-	enable_irq_wake(bat->irq_pok);
-	enable_irq_wake(bat->irq_chg);
-
 	return 0;
 }
 
@@ -830,8 +833,6 @@ static int spica_battery_resume(struct platform_device *pdev)
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock(&bat->wakelock);
 #endif
-	disable_irq_wake(bat->irq_pok);
-	disable_irq_wake(bat->irq_chg);
 
 	/* Schedule timer to check current status */
 	schedule_work(&bat->work);
