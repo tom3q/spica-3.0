@@ -1682,7 +1682,6 @@ static struct platform_device spica_jack_device = {
 };
 
 static struct gt_i5700_audio_pdata spica_audio_pdata = {
-	.gpio_audio_en	= GPIO_AUDIO_EN,
 	.set_micbias	= spica_set_micbias,
 };
 
