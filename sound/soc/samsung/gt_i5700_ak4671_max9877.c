@@ -290,11 +290,6 @@ static int __init gt_i5700_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	if (!gpio_is_valid(pdata->gpio_audio_en)) {
-		dev_err(&pdev->dev, "Invalid audio enable GPIO specified\n");
-		return -EINVAL;
-	}
-
 	if (!pdata->set_micbias) {
 		dev_err(&pdev->dev, "No micbias control function provided\n");
 		return -EINVAL;
@@ -306,32 +301,14 @@ static int __init gt_i5700_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(audio_pdev, &gt_i5700);
 
-	/* Initialise audio enable GPIO */
-	ret = gpio_request(pdata->gpio_audio_en, "audio enable");
-	if (ret) {
-		dev_err(&pdev->dev,
-				"Failed to register audio enable GPIO\n");
-		goto err_free_pdev;
-	}
-	ret = gpio_direction_output(pdata->gpio_audio_en, 1);
-	if (ret) {
-		dev_err(&pdev->dev,
-				"Failed to configure audio enable GPIO\n");
-		goto err_free_gpio_audio_en;
-	}
-
 	gt_i5700_pdata = pdata;
 
 	ret = platform_device_add(audio_pdev);
 	if (ret)
-		goto err_disable_gpio_audio_en;
+		goto err_free_pdev;
 
 	return 0;
 
-err_disable_gpio_audio_en:
-	gpio_set_value(pdata->gpio_audio_en, 0);
-err_free_gpio_audio_en:
-	gpio_free(pdata->gpio_audio_en);
 err_free_pdev:
 	platform_device_put(audio_pdev);
 
@@ -342,7 +319,6 @@ static void gt_i5700_shutdown(struct platform_device *pdev)
 {
 	struct gt_i5700_audio_pdata *pdata = pdev->dev.platform_data;
 
-	gpio_set_value(pdata->gpio_audio_en, 0);
 	pdata->set_micbias(0);
 }
 
