@@ -77,6 +77,8 @@ static int spica_bt_set_block(void *data, bool blocked)
 		enable_irq(bt->irq);
 	}
 
+	bt->blocked = blocked;
+
 	return 0;
 }
 
