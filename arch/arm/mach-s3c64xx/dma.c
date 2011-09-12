@@ -204,13 +204,8 @@ static int s3c64xx_dma_start(struct s3c2410_dma_chan *chan)
 	struct s3c64xx_dmac *dmac = chan->dmac;
 	u32 config;
 	u32 bit = chan->bit;
-	int ret;
 
-	ret = pm_runtime_get_sync(dmac->dev);
-	if (ret < 0) {
-		pr_err("%s: failed to power on DMAC\n", __func__);
-		return ret;
-	}
+	pm_runtime_get_sync(dmac->dev);
 
 	if (atomic_xchg(&chan->started, 1)) {
 		pr_err("%s: channel %d already started\n",
