@@ -96,7 +96,7 @@ struct s3c2410_dma_chan {
 
 	unsigned int		 flags;
 	enum s3c2410_dmasrc	 source;
-
+	atomic_t		started;
 
 	dma_addr_t		dev_addr;
 
