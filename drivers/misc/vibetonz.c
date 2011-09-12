@@ -243,7 +243,7 @@ static int __init vibetonz_probe(struct platform_device *pdev)
 	gpio_direction_output(pdata->gpio_en, 0);
 
 	vibetonz_start(vib, vib->duty);
-	msleep(10);
+	msleep(50);
 	vibetonz_stop(vib);
 
 	platform_set_drvdata(pdev, vib);
@@ -302,7 +302,7 @@ static void vibetonz_shutdown(struct platform_device *pdev)
 	struct vibetonz *vib = platform_get_drvdata(pdev);
 
 	vibetonz_start(vib, vib->duty);
-	msleep(10);
+	msleep(50);
 	vibetonz_stop(vib);
 }
 
