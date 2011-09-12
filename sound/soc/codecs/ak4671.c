@@ -145,6 +145,12 @@ static DECLARE_TLV_DB_SCALE(out2_tlv, -3300, 300, 1);
 static DECLARE_TLV_DB_SCALE(out3_tlv, -600, 300, 0);
 
 /*
+ * Master output volume control;
+ * from -115.5 to 12.0 dB in 0.5 dB steps (mute instead of -115.5 dB)
+ */
+static DECLARE_TLV_DB_SCALE(master_tlv, -11550, 50, 1);
+
+/*
  * Mic amp gain control:
  * from -15 to 30 dB in 3 dB steps
  * REVISIT: The actual min value(0x01) is -12 dB and the reg value 0x00 is not
@@ -160,6 +166,10 @@ static const struct snd_kcontrol_new ak4671_snd_controls[] = {
 			AK4671_OUTPUT_VOLUME_CONTROL, 4, 0xd, 0, out2_tlv),
 	SOC_SINGLE_TLV("Line Output3 Playback Volume",
 			AK4671_LOUT3_POWER_MANAGERMENT, 6, 0x3, 0, out3_tlv),
+	SOC_DOUBLE_R_TLV("Master Playback Volume",
+					AK4671_LCH_OUTPUT_VOLUME_CONTROL,
+					AK4671_RCH_OUTPUT_VOLUME_CONTROL,
+					0, 0xff, 1, master_tlv),
 
 	/* Common capture gain controls */
 	SOC_DOUBLE_TLV("Mic Amp Capture Volume",
