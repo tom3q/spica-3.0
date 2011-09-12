@@ -23,6 +23,7 @@
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/io.h>
+#include <linux/platform_device.h>
 
 #include <mach/dma.h>
 #include <mach/map.h>
@@ -635,15 +636,15 @@ static struct sysdev_class dma_sysclass = {
 	.name		= "s3c64xx-dma",
 };
 
-static int s3c64xx_dma_init1(int chno, enum dma_ch chbase,
-			     int irq, unsigned int base)
+static int __init s3c64xx_dma_probe(struct platform_device *pdev)
 {
-	struct s3c2410_dma_chan *chptr = &s3c2410_chans[chno];
+	struct s3c2410_dma_chan *chptr = &s3c2410_chans[8*pdev->id];
 	struct s3c64xx_dmac *dmac;
 	char clkname[16];
 	void __iomem *regs;
 	void __iomem *regptr;
-	int err, ch;
+	int err, ch, irq;
+	struct resource *res_mem, *res_chbase;
 
 	dmac = kzalloc(sizeof(struct s3c64xx_dmac), GFP_KERNEL);
 	if (!dmac) {
@@ -651,7 +652,10 @@ static int s3c64xx_dma_init1(int chno, enum dma_ch chbase,
 		return -ENOMEM;
 	}
 
-	dmac->sysdev.id = chno / 8;
+	res_mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	res_chbase = platform_get_resource(pdev, IORESOURCE_DMA, 0);
+
+	dmac->sysdev.id = pdev->id;
 	dmac->sysdev.cls = &dma_sysclass;
 
 	err = sysdev_register(&dmac->sysdev);
@@ -660,7 +664,7 @@ static int s3c64xx_dma_init1(int chno, enum dma_ch chbase,
 		goto err_alloc;
 	}
 
-	regs = ioremap(base, 0x200);
+	regs = ioremap(res_mem->start, resource_size(res_mem));
 	if (!regs) {
 		printk(KERN_ERR "%s: failed to ioremap()\n", __func__);
 		err = -ENXIO;
@@ -679,9 +683,11 @@ static int s3c64xx_dma_init1(int chno, enum dma_ch chbase,
 	clk_enable(dmac->clk);
 
 	dmac->regs = regs;
-	dmac->chanbase = chbase;
+	dmac->chanbase = res_chbase->start;
 	dmac->channels = chptr;
+	dmac->dev = &pdev->dev;
 
+	irq = platform_get_irq(pdev, 0);
 	err = request_irq(irq, s3c64xx_dma_irq, 0, "DMA", dmac);
 	if (err < 0) {
 		printk(KERN_ERR "%s: failed to get irq\n", __func__);
@@ -692,20 +698,22 @@ static int s3c64xx_dma_init1(int chno, enum dma_ch chbase,
 
 	for (ch = 0; ch < 8; ch++, chptr++) {
 		pr_debug("%s: registering DMA %d (%p)\n",
-			 __func__, chno + ch, regptr);
+			 __func__, 8*pdev->id + ch, regptr);
 
 		chptr->bit = 1 << ch;
-		chptr->number = chno + ch;
+		chptr->number = 8*pdev->id + ch;
 		chptr->dmac = dmac;
 		chptr->regs = regptr;
 		regptr += PL080_Cx_STRIDE;
 	}
 
+	platform_set_drvdata(pdev, dmac);
+
 	/* for the moment, permanently enable the controller */
 	writel(PL080_CONFIG_ENABLE, regs + PL080_CONFIG);
 
 	printk(KERN_INFO "PL080: IRQ %d, at %p, channels %d..%d\n",
-	       irq, regs, chno, chno+8);
+	       irq, regs, 8*pdev->id, 8*pdev->id+8);
 
 	return 0;
 
@@ -720,6 +728,63 @@ err_alloc:
 	kfree(dmac);
 	return err;
 }
+
+static struct platform_driver s3c64xx_dma_driver = {
+	.driver	= {
+		.name	= "s3c64xx-dma",
+	},
+};
+
+static struct resource s3c64xx_dma0_resources[] = {
+	{
+		.flags	= IORESOURCE_MEM,
+		.start	= 0x75000000,
+		.end	= 0x75000000 + SZ_512 - 1,
+	}, {
+		.flags	= IORESOURCE_DMA,
+		.start	= DMACH_UART0,
+		.end	= DMACH_HSI_I2SV40_RX,
+	}, {
+		.flags	= IORESOURCE_IRQ,
+		.start	= IRQ_DMA0,
+		.end	= IRQ_DMA0,
+	}
+};
+
+static struct platform_device s3c64xx_dma0_device = {
+	.name		= "s3c64xx-dma",
+	.id		= 0,
+	.num_resources	= ARRAY_SIZE(s3c64xx_dma0_resources),
+	.resource	= s3c64xx_dma0_resources,
+};
+
+static struct resource s3c64xx_dma1_resources[] = {
+	{
+		.flags	= IORESOURCE_MEM,
+		.start	= 0x75100000,
+		.end	= 0x75100000 + SZ_512 - 1,
+	}, {
+		.flags	= IORESOURCE_DMA,
+		.start	= DMACH_PCM1_TX,
+		.end	= DMACH_SECURITY_TX,
+	}, {
+		.flags	= IORESOURCE_IRQ,
+		.start	= IRQ_DMA1,
+		.end	= IRQ_DMA1,
+	}
+};
+
+static struct platform_device s3c64xx_dma1_device = {
+	.name		= "s3c64xx-dma",
+	.id		= 1,
+	.num_resources	= ARRAY_SIZE(s3c64xx_dma1_resources),
+	.resource	= s3c64xx_dma1_resources,
+};
+
+static struct platform_device *s3c64xx_dma_devices[] = {
+	&s3c64xx_dma0_device,
+	&s3c64xx_dma1_device,
+};
 
 static int __init s3c64xx_dma_init(void)
 {
@@ -743,10 +808,11 @@ static int __init s3c64xx_dma_init(void)
 	writel(0xffffff, S3C64XX_SDMA_SEL);
 
 	/* Register standard DMA controllers */
-	s3c64xx_dma_init1(0, DMACH_UART0, IRQ_DMA0, 0x75000000);
-	s3c64xx_dma_init1(8, DMACH_PCM1_TX, IRQ_DMA1, 0x75100000);
+	platform_add_devices(s3c64xx_dma_devices,
+					ARRAY_SIZE(s3c64xx_dma_devices));
+
+	platform_driver_probe(&s3c64xx_dma_driver, s3c64xx_dma_probe);
 
 	return 0;
 }
-
 arch_initcall(s3c64xx_dma_init);
