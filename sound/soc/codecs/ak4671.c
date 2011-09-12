@@ -188,6 +188,9 @@ static const struct snd_kcontrol_new ak4671_snd_controls[] = {
 			AK4671_LOUT1_POWER_MANAGERMENT, 5, 1, 0),
 	SOC_SINGLE("Line Output 3 Differential",
 			AK4671_LOUT3_POWER_MANAGERMENT, 5, 1, 0),
+
+    SOC_DAPM_PIN_SWITCH("ADC Left"),
+    SOC_DAPM_PIN_SWITCH("ADC Right"),
 };
 
 /* event handlers */
