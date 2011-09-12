@@ -488,6 +488,13 @@ config VMWARE_BALLOON
 	  To compile this driver as a module, choose M here: the
 	  module will be called vmw_balloon.
 
+config VIBETONZ
+	tristate "Vibetonz timed output"
+	depends on ANDROID_TIMED_OUTPUT
+	help
+	  This is a driver for a PWM and GPIO controlled Vibetonz actuator
+	  based on Android Timed Output subsystem.
+
 config ARM_CHARLCD
 	bool "ARM Ltd. Character LCD Driver"
 	depends on PLAT_VERSATILE
