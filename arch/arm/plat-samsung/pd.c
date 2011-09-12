@@ -95,6 +95,7 @@ static int samsung_pd_resume(struct device *dev)
 	pm_runtime_disable(dev);
 	pm_runtime_set_active(dev);
 	pm_runtime_enable(dev);
+	pm_request_idle(dev);
 
 	dev_dbg(dev, "resumed\n");
 	return ret;
