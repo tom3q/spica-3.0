@@ -52,6 +52,7 @@
 #include <linux/vibetonz.h>
 
 #include <sound/gt_i5700.h>
+#include <sound/ak4671.h>
 
 #include <video/s6d05a.h>
 
@@ -558,10 +559,15 @@ static struct platform_device spica_audio_i2c = {
 	.dev.platform_data	= &spica_audio_i2c_pdata,
 };
 
+static struct ak4671_platform_data spica_ak4671_pdata = {
+	.gpio_npdn = GPIO_AUDIO_EN,
+};
+
 static struct i2c_board_info spica_audio_i2c_devs[] __initdata = {
 	{
 		.type		= "ak4671",
 		.addr		= 0x12,
+		.platform_data	= &spica_ak4671_pdata,
 	}, {
 		.type		= "max9877",
 		.addr		= 0x4d,
