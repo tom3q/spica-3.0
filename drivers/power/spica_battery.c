@@ -818,7 +818,6 @@ static int spica_battery_suspend(struct platform_device *pdev,
 	cancel_work_sync(&bat->work);
 	cancel_delayed_work_sync(&bat->poll_work);
 
-	enable_irq_wake(IRQ_BATF);
 	enable_irq_wake(bat->irq_pok);
 	enable_irq_wake(bat->irq_chg);
 
@@ -833,7 +832,6 @@ static int spica_battery_resume(struct platform_device *pdev)
 #endif
 	disable_irq_wake(bat->irq_pok);
 	disable_irq_wake(bat->irq_chg);
-	disable_irq_wake(IRQ_BATF);
 
 	/* Schedule timer to check current status */
 	schedule_work(&bat->work);
