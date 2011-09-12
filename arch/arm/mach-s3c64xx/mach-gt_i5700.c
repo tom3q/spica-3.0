@@ -1209,6 +1209,7 @@ static void spica_wifi_bt_power_inc(void)
 	mutex_lock(&spica_wifi_bt_pwr_lock);
 
 	if (!(spica_wifi_bt_pwr_cnt++)) {
+		printk(KERN_INFO "WiFi/BT power ON.\n");
 		gpio_set_value(GPIO_BT_WLAN_REG_ON, 1);
 		msleep(100);
 	}
@@ -1220,8 +1221,10 @@ static void spica_wifi_bt_power_dec(void)
 {
 	mutex_lock(&spica_wifi_bt_pwr_lock);
 
-	if (!(--spica_wifi_bt_pwr_cnt))
+	if (!(--spica_wifi_bt_pwr_cnt)) {
+		printk(KERN_INFO "WiFi/BT power OFF.\n");
 		gpio_set_value(GPIO_BT_WLAN_REG_ON, 0);
+	}
 
 	mutex_unlock(&spica_wifi_bt_pwr_lock);
 }
