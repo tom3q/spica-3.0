@@ -16,6 +16,8 @@
 #include <linux/i2c.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
+#include <linux/gpio.h>
+#include <sound/ak4671.h>
 #include <sound/soc.h>
 #include <sound/initval.h>
 #include <sound/tlv.h>
@@ -590,18 +592,33 @@ static int ak4671_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 static int ak4671_set_bias_level(struct snd_soc_codec *codec,
 		enum snd_soc_bias_level level)
 {
-	u8 reg;
+	struct ak4671_platform_data *pdata = codec->dev->platform_data;
+	int ret;
 
 	switch (level) {
 	case SND_SOC_BIAS_ON:
 	case SND_SOC_BIAS_PREPARE:
+		break;
 	case SND_SOC_BIAS_STANDBY:
-		reg = snd_soc_read(codec, AK4671_AD_DA_POWER_MANAGEMENT);
-		snd_soc_write(codec, AK4671_AD_DA_POWER_MANAGEMENT,
-				reg | AK4671_PMVCM);
+		if (codec->dapm.bias_level == SND_SOC_BIAS_OFF) {
+			if (pdata && gpio_is_valid(pdata->gpio_npdn))
+				gpio_set_value(pdata->gpio_npdn, 1);
+			mdelay(1);
+			ret = snd_soc_cache_sync(codec);
+			if (ret) {
+				dev_err(codec->dev,
+					"Failed to sync cache: %d\n", ret);
+				return ret;
+			}
+		}
+		snd_soc_update_bits(codec, AK4671_AD_DA_POWER_MANAGEMENT,
+						AK4671_PMVCM, AK4671_PMVCM);
 		break;
 	case SND_SOC_BIAS_OFF:
 		snd_soc_write(codec, AK4671_AD_DA_POWER_MANAGEMENT, 0x00);
+		if (pdata && gpio_is_valid(pdata->gpio_npdn))
+			gpio_set_value(pdata->gpio_npdn, 0);
+		codec->cache_sync = 1;
 		break;
 	}
 	codec->dapm.bias_level = level;
@@ -620,6 +637,18 @@ static struct snd_soc_dai_ops ak4671_dai_ops = {
 	.set_sysclk	= ak4671_set_dai_sysclk,
 	.set_fmt	= ak4671_set_dai_fmt,
 };
+
+static int ak4671_suspend(struct snd_soc_codec *codec, pm_message_t state)
+{
+	ak4671_set_bias_level(codec, SND_SOC_BIAS_OFF);
+	return 0;
+}
+
+static int ak4671_resume(struct snd_soc_codec *codec)
+{
+	ak4671_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+	return 0;
+}
 
 static struct snd_soc_dai_driver ak4671_dai = {
 	.name = "ak4671-hifi",
@@ -641,17 +670,31 @@ static struct snd_soc_dai_driver ak4671_dai = {
 static int ak4671_probe(struct snd_soc_codec *codec)
 {
 	struct ak4671_priv *ak4671 = snd_soc_codec_get_drvdata(codec);
+	struct ak4671_platform_data *pdata = codec->dev->platform_data;
 	int ret;
+
+	if (pdata) {
+		if (gpio_is_valid(pdata->gpio_npdn)) {
+			ret = gpio_request_one(pdata->gpio_npdn,
+					GPIOF_OUT_INIT_LOW, "ak4671 npdn");
+			if (ret)
+				return ret;
+
+			udelay(1); /* > 150 ns */
+			gpio_set_value(pdata->gpio_npdn, 1);
+		}
+	}
 
 	ret = snd_soc_codec_set_cache_io(codec, 8, 8, ak4671->control_type);
 	if (ret < 0) {
 		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
+		gpio_set_value(pdata->gpio_npdn, 0);
 		return ret;
 	}
 
 	ak4671_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 
-	return ret;
+	return 0;
 }
 
 static int ak4671_remove(struct snd_soc_codec *codec)
@@ -663,6 +706,8 @@ static int ak4671_remove(struct snd_soc_codec *codec)
 static struct snd_soc_codec_driver soc_codec_dev_ak4671 = {
 	.probe = ak4671_probe,
 	.remove = ak4671_remove,
+	.suspend = ak4671_suspend,
+	.resume = ak4671_resume,
 	.set_bias_level = ak4671_set_bias_level,
 	.reg_cache_size = AK4671_CACHEREGNUM,
 	.reg_word_size = sizeof(u8),
