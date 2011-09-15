@@ -24,7 +24,6 @@
 #include <linux/err.h>
 #include <linux/io.h>
 #include <linux/platform_device.h>
-#include <linux/pm_runtime.h>
 
 #include <mach/dma.h>
 #include <mach/map.h>
@@ -33,8 +32,6 @@
 #include <mach/regs-sys.h>
 
 #include <asm/hardware/pl080.h>
-
-#define DMA_AUTOSUSPEND_DELAY	(1000)
 
 /* dma channel state information */
 
@@ -205,14 +202,6 @@ static int s3c64xx_dma_start(struct s3c2410_dma_chan *chan)
 	u32 config;
 	u32 bit = chan->bit;
 
-	pm_runtime_get_sync(dmac->dev);
-
-	if (atomic_xchg(&chan->started, 1)) {
-		pr_err("%s: channel %d already started\n",
-							__func__, chan->number);
-		return -EBUSY;
-	}
-
 	dbg_showchan(chan);
 
 	pr_debug("%s: clearing interrupts\n", __func__);
@@ -265,11 +254,6 @@ static int s3c64xx_dma_stop(struct s3c2410_dma_chan *chan)
 	config &= ~PL080_CONFIG_ENABLE;
 	writel(config, chan->regs + PL080S_CH_CONFIG);
 
-	if (atomic_xchg(&chan->started, 0)) {
-		pm_runtime_mark_last_busy(chan->dmac->dev);
-		pm_runtime_put_autosuspend(chan->dmac->dev);
-	}
-
 	return 0;
 }
 
@@ -311,11 +295,6 @@ static int s3c64xx_dma_flush(struct s3c2410_dma_chan *chan)
 	}
 
 	chan->curr = chan->next = chan->end = NULL;
-
-	if (atomic_xchg(&chan->started, 0)) {
-		pm_runtime_mark_last_busy(chan->dmac->dev);
-		pm_runtime_put_autosuspend(chan->dmac->dev);
-	}
 
 	return 0;
 }
@@ -419,12 +398,7 @@ int s3c2410_dma_enqueue(enum dma_ch channel, void *id,
 		chan->next = buff;
 		chan->end = buff;
 
-		pm_runtime_get_sync(chan->dmac->dev);
-
 		s3c64xx_lli_to_regs(chan, lli);
-
-		pm_runtime_mark_last_busy(chan->dmac->dev);
-		pm_runtime_put_autosuspend(chan->dmac->dev);
 	}
 
 	local_irq_restore(flags);
@@ -484,12 +458,7 @@ int s3c2410_dma_devconfig(enum dma_ch channel,
 
 	pr_debug("%s: config %08x\n", __func__, config);
 
-	pm_runtime_get_sync(chan->dmac->dev);
-
 	writel(config, chan->regs + PL080S_CH_CONFIG);
-
-	pm_runtime_mark_last_busy(chan->dmac->dev);
-	pm_runtime_put_autosuspend(chan->dmac->dev);
 
 	return 0;
 }
@@ -659,11 +628,6 @@ static irqreturn_t s3c64xx_dma_irq(int irq, void *pw)
 		} else {
 			chan->next = buff->next;
 		}
-
-		if (!chan->next && atomic_xchg(&chan->started, 0)) {
-			pm_runtime_mark_last_busy(dmac->dev);
-			pm_runtime_put_autosuspend(dmac->dev);
-		}
 	}
 
 	return IRQ_HANDLED;
@@ -710,16 +674,13 @@ static int __init s3c64xx_dma_probe(struct platform_device *pdev)
 
 	snprintf(clkname, sizeof(clkname), "dma%d", dmac->sysdev.id);
 
-	dmac->clk = clk_get(NULL, clkname);
+	dmac->clk = clk_get(&pdev->dev, clkname);
 	if (IS_ERR(dmac->clk)) {
 		printk(KERN_ERR "%s: failed to get clock %s\n", __func__, clkname);
 		err = PTR_ERR(dmac->clk);
 		goto err_map;
 	}
-
-	pm_runtime_set_autosuspend_delay(&pdev->dev, DMA_AUTOSUSPEND_DELAY);
-	pm_runtime_use_autosuspend(&pdev->dev);
-	pm_runtime_enable(&pdev->dev);
+	clk_enable(dmac->clk);
 
 	dmac->regs = regs;
 	dmac->chanbase = res_chbase->start;
@@ -749,20 +710,15 @@ static int __init s3c64xx_dma_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, dmac);
 
-	pm_runtime_get_sync(&pdev->dev);
-
 	/* for the moment, permanently enable the controller */
 	writel(PL080_CONFIG_ENABLE, regs + PL080_CONFIG);
 
 	printk(KERN_INFO "PL080: IRQ %d, at %p, channels %d..%d\n",
 	       irq, regs, 8*pdev->id, 8*pdev->id+8);
 
-	pm_runtime_put_sync(&pdev->dev);
-
 	return 0;
 
 err_clk:
-	pm_runtime_disable(&pdev->dev);
 	clk_disable(dmac->clk);
 	clk_put(dmac->clk);
 err_map:
@@ -778,9 +734,6 @@ static int s3c64xx_dma_suspend(struct device *dev)
 {
 	struct s3c64xx_dmac *dmac = dev_get_drvdata(dev);
 	int i;
-
-	if (pm_runtime_suspended(dev))
-		return 0;
 
 	dev_dbg(dev, "suspend\n");
 
@@ -802,43 +755,12 @@ static int s3c64xx_dma_resume(struct device *dev)
 	clk_enable(dmac->clk);
 	writel(PL080_CONFIG_ENABLE, dmac->regs + PL080_CONFIG);
 
-	pm_runtime_disable(dev);
-	pm_runtime_set_active(dev);
-	pm_runtime_enable(dev);
-	pm_request_idle(dev);
-
-	return 0;
-}
-
-static int s3c64xx_dma_runtime_suspend(struct device *dev)
-{
-	struct s3c64xx_dmac *dmac = dev_get_drvdata(dev);
-
-	dev_dbg(dev, "runtime_suspend\n");
-
-	writel(0, dmac->regs + PL080_CONFIG);
-	clk_disable(dmac->clk);
-
-	return 0;
-}
-
-static int s3c64xx_dma_runtime_resume(struct device *dev)
-{
-	struct s3c64xx_dmac *dmac = dev_get_drvdata(dev);
-
-	dev_dbg(dev, "runtime_resume\n");
-
-	clk_enable(dmac->clk);
-	writel(PL080_CONFIG_ENABLE, dmac->regs + PL080_CONFIG);
-
 	return 0;
 }
 
 static struct dev_pm_ops s3c64xx_dma_pm_ops = {
 	.suspend		= s3c64xx_dma_suspend,
 	.resume			= s3c64xx_dma_resume,
-	.runtime_suspend	= s3c64xx_dma_runtime_suspend,
-	.runtime_resume		= s3c64xx_dma_runtime_resume,
 };
 
 static struct platform_driver s3c64xx_dma_driver = {
