@@ -1600,18 +1600,31 @@ static struct platform_device spica_vibetonz_device = {
 /*
  * Sound
  */
-static int spica_micbias_ref_cnt = 0;
+static bool snd_mic_bias = 0;
+static bool jack_mic_bias = 0;
 
-static void spica_set_micbias(bool enable)
+static void snd_set_mic_bias(bool on)
 {
-	if (enable) {
-		if (!spica_micbias_ref_cnt++)
-			gpio_set_value(GPIO_MICBIAS_EN, 1);
-		return;
-	}
+	unsigned long flags;
 
-	if(!--spica_micbias_ref_cnt)
-		gpio_set_value(GPIO_MICBIAS_EN, 0);
+	local_irq_save(flags);
+
+	snd_mic_bias = on;
+	gpio_set_value(GPIO_MICBIAS_EN, snd_mic_bias || jack_mic_bias);
+
+	local_irq_restore(flags);
+}
+
+static void jack_set_mic_bias(bool on)
+{
+	unsigned long flags;
+
+	local_irq_save(flags);
+
+	jack_mic_bias = on;
+	gpio_set_value(GPIO_MICBIAS_EN, snd_mic_bias || jack_mic_bias);
+
+	local_irq_restore(flags);
 }
 
 static struct sec_jack_zone spica_jack_zones[] = {
@@ -1663,7 +1676,7 @@ static struct sec_jack_zone spica_jack_zones[] = {
 };
 
 static struct sec_jack_platform_data spica_jack_pdata = {
-	.set_micbias_state = spica_set_micbias,
+	.set_micbias_state = jack_set_mic_bias,
 	.adc_chan = 3,
 	.zones = spica_jack_zones,
 	.num_zones = ARRAY_SIZE(spica_jack_zones),
@@ -1682,7 +1695,7 @@ static struct platform_device spica_jack_device = {
 };
 
 static struct gt_i5700_audio_pdata spica_audio_pdata = {
-	.set_micbias	= spica_set_micbias,
+	.set_micbias	= snd_set_mic_bias,
 };
 
 static struct platform_device spica_audio_device = {
