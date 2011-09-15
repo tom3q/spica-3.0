@@ -487,6 +487,9 @@ static int i2s_set_sysclk(struct snd_soc_dai *dai,
 	struct i2s_dai *other = i2s->pri_dai ? : i2s->sec_dai;
 	u32 mod = readl(i2s->addr + I2SMOD);
 
+	if (!other)
+		other = i2s;
+
 	switch (clk_id) {
 	case SAMSUNG_I2S_CDCLK:
 		/* Shouldn't matter in GATING(CLOCK_IN) mode */
