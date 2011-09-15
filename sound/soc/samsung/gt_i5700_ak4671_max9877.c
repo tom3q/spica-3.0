@@ -85,28 +85,63 @@ static struct snd_soc_ops gt_i5700_hifi_ops = {
 	.hw_params = gt_i5700_hifi_hw_params,
 };
 
-static int gt_i5700_mic_event(struct snd_soc_dapm_widget *w,
+DEFINE_MUTEX(mic_lock);
+static int mic_enabled = 0;
+
+#define MIC_MAIN	(1 << 0)
+#define MIC_SUB		(1 << 1)
+#define MIC_JACK	(1 << 2)
+
+static int gt_i5700_main_mic_event(struct snd_soc_dapm_widget *w,
 				struct snd_kcontrol *k,
 				int event)
 {
-	static int mic_ref_cnt = 0;
+	mutex_lock(&mic_lock);
 
-	if (SND_SOC_DAPM_EVENT_OFF(event)) {
-		--mic_ref_cnt;
+	if (SND_SOC_DAPM_EVENT_ON(event))
+		mic_enabled |= MIC_MAIN;
+	else
+		mic_enabled &= ~MIC_MAIN;
 
-		if (mic_ref_cnt == 0)
-			gt_i5700_pdata->set_micbias(0);
+	gt_i5700_pdata->set_micbias(!!mic_enabled);
 
-		if (mic_ref_cnt < 0)
-			mic_ref_cnt = 0;
+	mutex_unlock(&mic_lock);
 
-		return 0;
-	}
+	return 0;
+}
 
-	if (mic_ref_cnt == 0)
-		gt_i5700_pdata->set_micbias(1);
+static int gt_i5700_sub_mic_event(struct snd_soc_dapm_widget *w,
+				struct snd_kcontrol *k,
+				int event)
+{
+	mutex_lock(&mic_lock);
 
-	++mic_ref_cnt;
+	if (SND_SOC_DAPM_EVENT_ON(event))
+		mic_enabled |= MIC_SUB;
+	else
+		mic_enabled &= ~MIC_SUB;
+
+	gt_i5700_pdata->set_micbias(!!mic_enabled);
+
+	mutex_unlock(&mic_lock);
+
+	return 0;
+}
+
+static int gt_i5700_jack_mic_event(struct snd_soc_dapm_widget *w,
+				struct snd_kcontrol *k,
+				int event)
+{
+	mutex_lock(&mic_lock);
+
+	if (SND_SOC_DAPM_EVENT_ON(event))
+		mic_enabled |= MIC_JACK;
+	else
+		mic_enabled &= ~MIC_JACK;
+
+	gt_i5700_pdata->set_micbias(!!mic_enabled);
+
+	mutex_unlock(&mic_lock);
 
 	return 0;
 }
@@ -128,9 +163,9 @@ static const struct snd_kcontrol_new gt_i5700_amp_controls[] = {
 static const struct snd_soc_dapm_widget gt_i5700_dapm_direct_widgets[] = {
 	SND_SOC_DAPM_LINE("Earpiece", NULL),
 	SND_SOC_DAPM_LINE("GSM Send", NULL),
-	SND_SOC_DAPM_MIC("Main Mic", gt_i5700_mic_event),
-	SND_SOC_DAPM_MIC("Sub Mic", gt_i5700_mic_event),
-	SND_SOC_DAPM_MIC("Jack Mic", gt_i5700_mic_event),
+	SND_SOC_DAPM_MIC("Main Mic", gt_i5700_main_mic_event),
+	SND_SOC_DAPM_MIC("Sub Mic", gt_i5700_sub_mic_event),
+	SND_SOC_DAPM_MIC("Jack Mic", gt_i5700_jack_mic_event),
 	SND_SOC_DAPM_MIC("GSM Receive", NULL),
 };
 
