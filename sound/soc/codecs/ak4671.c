@@ -188,9 +188,6 @@ static const struct snd_kcontrol_new ak4671_snd_controls[] = {
 			AK4671_LOUT1_POWER_MANAGERMENT, 5, 1, 0),
 	SOC_SINGLE("Line Output 3 Differential",
 			AK4671_LOUT3_POWER_MANAGERMENT, 5, 1, 0),
-
-    SOC_DAPM_PIN_SWITCH("ADC Left"),
-    SOC_DAPM_PIN_SWITCH("ADC Right"),
 };
 
 /* event handlers */
@@ -317,9 +314,15 @@ static const struct snd_soc_dapm_widget ak4671_dapm_widgets[] = {
 
 	/* ADC */
 	SND_SOC_DAPM_ADC("ADC Left", "Left HiFi Capture",
-			AK4671_AD_DA_POWER_MANAGEMENT, 4, 0),
+			SND_SOC_NOPM, 0, 0),
 	SND_SOC_DAPM_ADC("ADC Right", "Right HiFi Capture",
-			AK4671_AD_DA_POWER_MANAGEMENT, 5, 0),
+			SND_SOC_NOPM, 0, 0),
+
+	/* Switch */
+	SND_SOC_DAPM_PGA("ADC Left PMU",
+			AK4671_AD_DA_POWER_MANAGEMENT, 4, 0, NULL, 0),
+	SND_SOC_DAPM_PGA("ADC Right PMU",
+			AK4671_AD_DA_POWER_MANAGEMENT, 5, 0, NULL, 0),
 
 	/* PGA */
 	SND_SOC_DAPM_PGA("LOUT2 Mix Amp",
@@ -420,8 +423,13 @@ static const struct snd_soc_dapm_route ak4671_intercon[] = {
 	{"LIN2", NULL, "Mic Bias"},
 	{"RIN2", NULL, "Mic Bias"},
 
-	{"ADC Left", "NULL", "LIN MUX"},
-	{"ADC Right", "NULL", "RIN MUX"},
+	{"ADC Left PMU", NULL, "LIN MUX"},
+	{"ADC Right PMU", NULL, "RIN MUX"},
+
+	{"ADC Left", "NULL", "ADC Left PMU"},
+	{"ADC Left", "NULL", "ADC Right PMU"},
+	{"ADC Right", "NULL", "ADC Left PMU"},
+	{"ADC Right", "NULL", "ADC Right PMU"},
 
 	/* Analog Loops */
 	{"LIN1 Mixing Circuit", "NULL", "LIN1"},
