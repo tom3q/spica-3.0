@@ -101,6 +101,8 @@
 #define S3C_FLASH_AUX_CNTRL	(0x300)	/* Flash Auxiliary control register */
 #define S3C_FLASH_AFIFO_CNT	(0x310)	/* Number of data in asynchronous FIFO in flash controller 0. */
 
+#define S3C_MEM_CFG_ECC		(1 << 8)
+
 /*
  * Driver data
  */
@@ -706,6 +708,7 @@ static int s3c6410_onenand_probe(struct platform_device *pdev)
 	struct mtd_info *mtd;
 	struct resource *r;
 	int size, err;
+	u32 reg;
 
 	pdata = pdev->dev.platform_data;
 	/* No need to check pdata. the platform data is optional */
@@ -799,6 +802,12 @@ static int s3c6410_onenand_probe(struct platform_device *pdev)
 	mtd->subpage_sft = 0;
 	this->subpagesize = mtd->writesize;
 
+	/* Enable ECC */
+	reg = s3c6410_onenand_read_reg(S3C_MEM_CFG);
+	reg &= ~S3C_MEM_CFG_ECC;
+	s3c6410_onenand_write_reg(reg, S3C_MEM_CFG);
+
+	/* Perform BBT scan */
 	if (onenand_scan(mtd, 1)) {
 		err = -EFAULT;
 		goto scan_failed;
