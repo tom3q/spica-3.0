@@ -2299,7 +2299,7 @@ static void __init spica_machine_init(void)
 
 	/* Setup UCLK1 frequency */
 	uclk1 = clk_get(NULL, "uclk1");
-	clk_set_parent(uclk1, clk_get(NULL, "dout_mpll"));
+	clk_set_parent(uclk1, dout_mpll);
 	clk_set_rate(uclk1, 133000000);
 
 	/* Put the clocks */
