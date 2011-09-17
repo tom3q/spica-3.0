@@ -66,6 +66,7 @@
 #include <mach/gpio-cfg.h>
 #include <mach/s3c6410.h>
 #include <mach/pd.h>
+#include <mach/regs-gpio.h>
 
 #include <asm/irq.h>
 #include <asm/mach-types.h>
@@ -2296,6 +2297,12 @@ static void __init spica_machine_init(void)
 	clk_set_parent(uclk1, clk_get(NULL, "dout_mpll"));
 	clk_set_rate(uclk1, 133000000);
 	clk_put(uclk1);
+
+	/* Setup interrupt filtering */
+	__raw_writel(0x88888888, S3C64XX_EINT0FLTCON0);
+	__raw_writel(0x88888888, S3C64XX_EINT0FLTCON1);
+	__raw_writel(0x88888888, S3C64XX_EINT0FLTCON2);
+	__raw_writel(0x00008888, S3C64XX_EINT0FLTCON3);
 
 	/* Configure GPIO pins */
 	s3c_pin_config(spica_pin_config, ARRAY_SIZE(spica_pin_config));
