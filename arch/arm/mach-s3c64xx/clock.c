@@ -622,8 +622,47 @@ static unsigned long s3c64xx_clk_doutmpll_get_rate(struct clk *clk)
 	return rate;
 }
 
+static unsigned long s3c64xx_clk_doutmpll_round_rate(struct clk *clk,
+						unsigned long rate)
+{
+	unsigned long parent = clk_get_rate(clk->parent);
+	u32 div;
+
+	if (parent < rate)
+		return parent;
+
+	div = (parent / rate) - 1;
+	if (div > 1)
+		div = 1;
+
+	return parent / (div + 1);
+}
+
+static int s3c64xx_clk_doutmpll_set_rate(struct clk *clk, unsigned long rate)
+{
+	unsigned long parent = clk_get_rate(clk->parent);
+	u32 div;
+	u32 val;
+
+	if (rate < parent / 2)
+		return -EINVAL;
+
+	rate = clk_round_rate(clk, rate);
+	div = clk_get_rate(clk->parent) / rate;
+
+	val = __raw_readl(S3C_CLK_DIV0);
+	val &= ~S3C6400_CLKDIV0_MPLL_MASK;
+	val |= (div - 1) << S3C6400_CLKDIV0_MPLL_SHIFT;
+	__raw_writel(val, S3C_CLK_DIV0);
+
+	return 0;
+
+}
+
 static struct clk_ops clk_dout_ops = {
 	.get_rate	= s3c64xx_clk_doutmpll_get_rate,
+	.set_rate	= s3c64xx_clk_doutmpll_set_rate,
+	.round_rate	= s3c64xx_clk_doutmpll_round_rate,
 };
 
 static struct clk clk_dout_mpll = {
