@@ -2291,12 +2291,20 @@ static void spica_poweroff(void)
 static void __init spica_machine_init(void)
 {
 	struct clk *uclk1;
+	struct clk *dout_mpll;
+
+	/* Setup DOUT MPLL frequency */
+	dout_mpll = clk_get(NULL, "dout_mpll");
+	clk_set_rate(dout_mpll, 133000000);
 
 	/* Setup UCLK1 frequency */
 	uclk1 = clk_get(NULL, "uclk1");
 	clk_set_parent(uclk1, clk_get(NULL, "dout_mpll"));
 	clk_set_rate(uclk1, 133000000);
+
+	/* Put the clocks */
 	clk_put(uclk1);
+	clk_put(dout_mpll);
 
 	/* Setup interrupt filtering */
 	__raw_writel(0x88888888, S3C64XX_EINT0FLTCON0);
