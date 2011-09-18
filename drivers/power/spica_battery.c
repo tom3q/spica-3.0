@@ -204,12 +204,20 @@ static void spica_battery_poll(struct work_struct *work)
 
 	/* Get a voltage sample from the ADC */
 	volt_sample = s3c_adc_read(bat->client, bat->pdata->volt_channel);
+	if (volt_sample < 0) {
+		dev_warn(bat->dev, "Failed to get ADC sample.\n");
+		goto error;
+	}
 	volt_sample = put_sample_get_avg(&bat->volt_avg, volt_sample);
 	volt_value = lookup_value(&bat->volt_lookup, volt_sample);
 	percent_value = lookup_value(&bat->percent_lookup, volt_sample);
 
 	/* Get a temperature sample from the ADC */
 	temp_sample = s3c_adc_read(bat->client, bat->pdata->temp_channel);
+	if (temp_sample < 0) {
+		dev_warn(bat->dev, "Failed to get ADC sample.\n");
+		goto error;
+	}
 	temp_sample = put_sample_get_avg(&bat->temp_avg, temp_sample);
 	temp_value = lookup_value(&bat->temp_lookup, temp_sample);
 
@@ -239,6 +247,7 @@ static void spica_battery_poll(struct work_struct *work)
 
 	mutex_unlock(&bat->mutex);
 
+error:
 	/* Schedule next poll */
 	if (update) {
 		schedule_work(&bat->work);
@@ -647,10 +656,18 @@ static int spica_battery_probe(struct platform_device *pdev)
 		int sample;
 		/* Get a voltage sample from the ADC */
 		sample = s3c_adc_read(bat->client, bat->pdata->volt_channel);
+		if (sample < 0) {
+			dev_warn(&pdev->dev, "Failed to get ADC sample.\n");
+			continue;
+		}
 		/* Put the sample and get the new average */
 		bat->volt_value = put_sample_get_avg(&bat->volt_avg, sample);
 		/* Get a temperature sample from the ADC */
 		sample = s3c_adc_read(bat->client, bat->pdata->temp_channel);
+		if (sample < 0) {
+			dev_warn(&pdev->dev, "Failed to get ADC sample.\n");
+			continue;
+		}
 		/* Put the sample and get the new average */
 		bat->temp_value = put_sample_get_avg(&bat->temp_avg, sample);
 	}
