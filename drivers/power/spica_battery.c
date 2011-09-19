@@ -174,6 +174,7 @@ struct spica_battery {
 	struct device			*dev;
 #ifdef CONFIG_HAS_WAKELOCK
 	struct wake_lock	wakelock;
+	struct wake_lock	chg_wakelock;
 	struct wake_lock	fault_wakelock;
 #endif
 #ifdef CONFIG_RTC_INTF_ALARM
@@ -320,6 +321,9 @@ static void spica_battery_work(struct work_struct *work)
 		goto no_change;
 
 	if (chg_enable) {
+#ifdef CONFIG_HAS_WAKELOCK
+		wake_lock(&bat->chg_wakelock);
+#endif
 		bat->status = POWER_SUPPLY_STATUS_FULL;
 
 		/* Enable the charger */
@@ -336,6 +340,10 @@ static void spica_battery_work(struct work_struct *work)
 	} else {
 		/* Disable the charger */
 		gpio_set_value(pdata->gpio_en, pdata->gpio_en_inverted);
+
+#ifdef CONFIG_HAS_WAKELOCK
+		wake_lock_timeout(&bat->chg_wakelock, HZ / 2);
+#endif
 	}
 
 	bat->chg_enable = chg_enable;
@@ -670,6 +678,7 @@ static int spica_battery_probe(struct platform_device *pdev)
 	mutex_init(&bat->mutex);
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_init(&bat->wakelock, WAKE_LOCK_SUSPEND, "battery");
+	wake_lock_init(&bat->chg_wakelock, WAKE_LOCK_SUSPEND, "charger");
 	wake_lock_init(&bat->fault_wakelock,
 					WAKE_LOCK_SUSPEND, "battery fault");
 #endif
@@ -853,6 +862,7 @@ static int spica_battery_remove(struct platform_device *pdev)
 	gpio_set_value(pdata->gpio_en, pdata->gpio_en_inverted);
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&bat->fault_wakelock);
+	wake_lock_destroy(&bat->chg_wakelock);
 	wake_lock_destroy(&bat->wakelock);
 #endif
 	kfree(bat);
