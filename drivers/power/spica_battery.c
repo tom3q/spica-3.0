@@ -832,6 +832,11 @@ err_psy_unreg:
 	for (i = 0; i < SPICA_BATTERY_NUM; ++i)
 		power_supply_unregister(&bat->psy[i]);
 err_temp_free:
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_destroy(&bat->wakelock);
+	wake_lock_destroy(&bat->chg_wakelock);
+	wake_lock_destroy(&bat->fault_wakelock);
+#endif
 	kfree(bat->temp_lookup.table);
 err_volt_free:
 	kfree(bat->volt_lookup.table);
