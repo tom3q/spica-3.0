@@ -189,6 +189,7 @@ struct spica_battery {
 	int health;
 	int online[SPICA_BATTERY_NUM];
 	int fault;
+	int chg_enable;
 	enum spica_battery_supply supply;
 
 	unsigned int		interval;
@@ -314,6 +315,10 @@ static void spica_battery_work(struct work_struct *work)
 
 	/* Update charging status and polling interval */
 	chg_enable = is_plugged && is_healthy;
+
+	if (bat->chg_enable == chg_enable)
+		goto no_change;
+
 	if (chg_enable) {
 		bat->status = POWER_SUPPLY_STATUS_FULL;
 
@@ -333,6 +338,9 @@ static void spica_battery_work(struct work_struct *work)
 		gpio_set_value(pdata->gpio_en, pdata->gpio_en_inverted);
 	}
 
+	bat->chg_enable = chg_enable;
+
+no_change:
 	/* We're no longer accessing shared data */
 	mutex_unlock(&bat->mutex);
 
