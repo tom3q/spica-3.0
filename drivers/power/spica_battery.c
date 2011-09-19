@@ -286,7 +286,7 @@ static void spica_battery_poll(struct work_struct *work)
 
 	/* Update driver data (locked) */
 	mutex_lock(&bat->mutex);
-	
+
 	bat->volt_value = volt_value;
 	bat->percent_value = percent_value;
 	bat->temp_value = temp_value;
