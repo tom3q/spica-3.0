@@ -896,10 +896,9 @@ static int spica_battery_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int spica_battery_suspend(struct platform_device *pdev,
-							pm_message_t state)
+static int spica_battery_prepare(struct device *dev)
 {
-	struct spica_battery *bat = platform_get_drvdata(pdev);
+	struct spica_battery *bat = dev_get_drvdata(dev);
 	ktime_t now, start, end;
 
 	cancel_work_sync(&bat->work);
@@ -915,9 +914,9 @@ static int spica_battery_suspend(struct platform_device *pdev,
 	return 0;
 }
 
-static int spica_battery_resume(struct platform_device *pdev)
+static void spica_battery_complete(struct device *dev)
 {
-	struct spica_battery *bat = platform_get_drvdata(pdev);
+	struct spica_battery *bat = dev_get_drvdata(dev);
 	int volt_value = -1, temp_value = -1;
 	int i;
 #ifdef CONFIG_HAS_WAKELOCK
@@ -932,7 +931,7 @@ static int spica_battery_resume(struct platform_device *pdev)
 		/* Get a voltage sample from the ADC */
 		sample = s3c_adc_read(bat->client, bat->pdata->volt_channel);
 		if (sample < 0) {
-			dev_warn(&pdev->dev, "Failed to get ADC sample.\n");
+			dev_warn(dev, "Failed to get ADC sample.\n");
 			continue;
 		}
 		/* Put the sample and get the new average */
@@ -940,7 +939,7 @@ static int spica_battery_resume(struct platform_device *pdev)
 		/* Get a temperature sample from the ADC */
 		sample = s3c_adc_read(bat->client, bat->pdata->temp_channel);
 		if (sample < 0) {
-			dev_warn(&pdev->dev, "Failed to get ADC sample.\n");
+			dev_warn(dev, "Failed to get ADC sample.\n");
 			continue;
 		}
 		/* Put the sample and get the new average */
@@ -957,18 +956,20 @@ static int spica_battery_resume(struct platform_device *pdev)
 
 	/* Schedule timer to check current status */
 	schedule_work(&bat->work);
-
-	return 0;
 }
+
+static struct dev_pm_ops spica_battery_pm_ops = {
+	.prepare	= spica_battery_prepare,
+	.complete	= spica_battery_complete,
+};
 
 static struct platform_driver spica_battery_driver = {
 	.driver		= {
 		.name	= "spica-battery",
+		.pm	= &spica_battery_pm_ops,
 	},
 	.probe		= spica_battery_probe,
 	.remove		= spica_battery_remove,
-	.suspend	= spica_battery_suspend,
-	.resume		= spica_battery_resume,
 };
 
 /*
