@@ -289,7 +289,7 @@ static int __devinit s6d05a_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	ret = gpio_direction_output(pdata->reset_gpio, 1);
+	ret = gpio_direction_output(pdata->reset_gpio, 0);
 	if (ret)
 		goto err_reset;
 
@@ -297,7 +297,7 @@ static int __devinit s6d05a_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_reset;
 
-	ret = gpio_direction_output(pdata->cs_gpio, 1);
+	ret = gpio_direction_output(pdata->cs_gpio, 0);
 	if (ret)
 		goto err_cs;
 
