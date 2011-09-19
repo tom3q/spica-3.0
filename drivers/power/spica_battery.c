@@ -522,7 +522,9 @@ static const struct power_supply spica_bat_template = {
 static irqreturn_t spica_charger_irq(int irq, void *dev_id)
 {
 	struct spica_battery *bat = dev_id;
-
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock(&bat->wakelock);
+#endif
 	schedule_work(&bat->work);
 
 	return IRQ_HANDLED;
@@ -813,6 +815,9 @@ static int spica_battery_probe(struct platform_device *pdev)
 	pdata->supply_detect_init(spica_battery_supply_notify);
 
 	/* Schedule work to check current status */
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock(&bat->wakelock);
+#endif
 	schedule_work(&bat->work);
 
 	return 0;
