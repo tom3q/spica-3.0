@@ -347,8 +347,6 @@ static void spica_battery_work(struct work_struct *work)
 		bat->online[i] = (type == i);
 
 	/* Default polling interval if not overheated nor charging */
-	bat->status = POWER_SUPPLY_STATUS_DISCHARGING;
-
 	is_healthy = (bat->health == POWER_SUPPLY_HEALTH_GOOD);
 	if (!is_healthy) {
 		if (bat->health == POWER_SUPPLY_HEALTH_OVERHEAT)
@@ -365,6 +363,8 @@ static void spica_battery_work(struct work_struct *work)
 
 	if (bat->chg_enable == chg_enable)
 		goto no_change;
+
+	bat->status = POWER_SUPPLY_STATUS_DISCHARGING;
 
 	if (chg_enable) {
 #ifdef CONFIG_HAS_WAKELOCK
