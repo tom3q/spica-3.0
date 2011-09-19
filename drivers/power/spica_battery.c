@@ -209,6 +209,52 @@ static void spica_battery_alarm(struct alarm *alarm)
 }
 #endif
 
+/* Battery fault handling */
+static void spica_battery_set_fault_enable(bool enable)
+{
+	unsigned long flags;
+	u32 reg, val;
+
+	if (enable)
+		val = S3C64XX_PWRCFG_CFG_BATFLT_IRQ;
+	else
+		val = S3C64XX_PWRCFG_CFG_BATFLT_IGNORE;
+
+	local_irq_save(flags);
+
+	reg = readl(S3C64XX_PWR_CFG);
+	reg &= ~S3C64XX_PWRCFG_CFG_BATFLT_MASK;
+	reg |= val;
+	writel(reg, S3C64XX_PWR_CFG);
+
+	local_irq_restore(flags);
+}
+
+static irqreturn_t spica_battery_fault_irq(int irq, void *dev_id)
+{
+	struct spica_battery *bat = dev_id;
+	unsigned long flags;
+	u32 reg;
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock(&bat->fault_wakelock);
+#endif
+	local_irq_save(flags);
+
+	spica_battery_set_fault_enable(0);
+
+	reg = readl(S3C64XX_OTHERS);
+	reg |= S3C64XX_OTHERS_CLEAR_BATF_INT;
+	writel(reg, S3C64XX_OTHERS);
+
+	bat->fault = 1;
+
+	local_irq_restore(flags);
+
+	schedule_work(&bat->work);
+
+	return IRQ_HANDLED;
+}
+
 /* Polling function */
 static void spica_battery_poll(struct work_struct *work)
 {
@@ -341,6 +387,8 @@ static void spica_battery_work(struct work_struct *work)
 		/* Disable the charger */
 		gpio_set_value(pdata->gpio_en, pdata->gpio_en_inverted);
 
+		/* Enable battery fault interrupt */
+		spica_battery_set_fault_enable(1);
 #ifdef CONFIG_HAS_WAKELOCK
 		wake_lock_timeout(&bat->chg_wakelock, HZ / 2);
 #endif
@@ -381,30 +429,6 @@ static void spica_battery_supply_notify(struct platform_device *pdev,
 /*
  * Battery specific code
  */
-
-/* Battery fault IRQ */
-static irqreturn_t spica_battery_fault_irq(int irq, void *dev_id)
-{
-	struct spica_battery *bat = dev_id;
-	unsigned long flags;
-	u32 reg;
-#ifdef CONFIG_HAS_WAKELOCK
-	wake_lock(&bat->fault_wakelock);
-#endif
-	local_irq_save(flags);
-
-	reg = readl(S3C64XX_OTHERS);
-	reg |= S3C64XX_OTHERS_CLEAR_BATF_INT;
-	writel(reg, S3C64XX_OTHERS);
-
-	bat->fault = 1;
-
-	local_irq_restore(flags);
-
-	schedule_work(&bat->work);
-
-	return IRQ_HANDLED;
-}
 
 /* Gets a property */
 static int spica_battery_get_property(struct power_supply *psy,
@@ -559,9 +583,7 @@ static int spica_battery_probe(struct platform_device *pdev)
 	struct s3c_adc_client	*client;
 	struct spica_battery_pdata *pdata = pdev->dev.platform_data;
 	struct spica_battery *bat;
-	unsigned long flags;
 	int ret, i, irq;
-	u32 reg;
 
 	/* Platform data is required */
 	if (!pdata) {
@@ -782,14 +804,7 @@ static int spica_battery_probe(struct platform_device *pdev)
 	enable_irq_wake(bat->irq_pok);
 	enable_irq_wake(bat->irq_chg);
 
-	local_irq_save(flags);
-
-	reg = readl(S3C64XX_PWR_CFG);
-	reg &= ~S3C64XX_PWRCFG_CFG_BATFLT_MASK;
-	reg |= S3C64XX_PWRCFG_CFG_BATFLT_IRQ;
-	writel(reg, S3C64XX_PWR_CFG);
-
-	local_irq_restore(flags);
+	spica_battery_set_fault_enable(1);
 
 	/* Finish */
 	dev_info(&pdev->dev, "successfully loaded\n");
