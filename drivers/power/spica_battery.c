@@ -917,12 +917,42 @@ static int spica_battery_suspend(struct platform_device *pdev,
 static int spica_battery_resume(struct platform_device *pdev)
 {
 	struct spica_battery *bat = platform_get_drvdata(pdev);
+	int volt_value = -1, temp_value = -1;
+	int i;
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock(&bat->wakelock);
 #endif
 #ifdef CONFIG_RTC_INTF_ALARM
 	alarm_cancel(&bat->alarm);
 #endif
+	/* Get some initial data for averaging */
+	for (i = 0; i < NUM_SAMPLES; ++i) {
+		int sample;
+		/* Get a voltage sample from the ADC */
+		sample = s3c_adc_read(bat->client, bat->pdata->volt_channel);
+		if (sample < 0) {
+			dev_warn(&pdev->dev, "Failed to get ADC sample.\n");
+			continue;
+		}
+		/* Put the sample and get the new average */
+		volt_value = put_sample_get_avg(&bat->volt_avg, sample);
+		/* Get a temperature sample from the ADC */
+		sample = s3c_adc_read(bat->client, bat->pdata->temp_channel);
+		if (sample < 0) {
+			dev_warn(&pdev->dev, "Failed to get ADC sample.\n");
+			continue;
+		}
+		/* Put the sample and get the new average */
+		temp_value = put_sample_get_avg(&bat->temp_avg, sample);
+	}
+
+	if (volt_value > 0) {
+		bat->percent_value = lookup_value(&bat->percent_lookup, volt_value);
+		bat->volt_value = lookup_value(&bat->volt_lookup, volt_value);
+	}
+
+	if (temp_value > 0)
+		bat->temp_value = lookup_value(&bat->temp_lookup, temp_value);
 
 	/* Schedule timer to check current status */
 	schedule_work(&bat->work);
