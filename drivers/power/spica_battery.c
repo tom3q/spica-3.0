@@ -346,7 +346,6 @@ static void spica_battery_work(struct work_struct *work)
 	for (i = 0; i < SPICA_BATTERY_NUM; ++i)
 		bat->online[i] = (type == i);
 
-	/* Default polling interval if not overheated nor charging */
 	is_healthy = (bat->health == POWER_SUPPLY_HEALTH_GOOD);
 	if (!is_healthy) {
 		if (bat->health == POWER_SUPPLY_HEALTH_OVERHEAT)
