@@ -22,6 +22,7 @@
 #include <linux/mutex.h>
 #include <linux/wakelock.h>
 #include <linux/io.h>
+#include <linux/android_alarm.h>
 
 #include <linux/power/spica_battery.h>
 
@@ -34,6 +35,9 @@
 
 /* Time between samples (in milliseconds) */
 #define BAT_POLL_INTERVAL	10000
+
+/* Time to wake up phone and recheck battery after (in seconds) */
+#define SUSPEND_INTERVAL	3600
 
 /* Number of samples for averaging (a power of two!) */
 #define NUM_SAMPLES		4
@@ -172,6 +176,9 @@ struct spica_battery {
 	struct wake_lock	wakelock;
 	struct wake_lock	fault_wakelock;
 #endif
+#ifdef CONFIG_RTC_INTF_ALARM
+	struct alarm		alarm;
+#endif
 	unsigned int irq_pok;
 	unsigned int irq_chg;
 
@@ -191,6 +198,14 @@ struct spica_battery {
 	struct lookup_data	volt_lookup;
 	struct lookup_data	temp_lookup;
 };
+
+#ifdef CONFIG_RTC_INTF_ALARM
+/* Alarm handler */
+static void spica_battery_alarm(struct alarm *alarm)
+{
+	/* Nothing to do here */
+}
+#endif
 
 /* Polling function */
 static void spica_battery_poll(struct work_struct *work)
@@ -650,6 +665,10 @@ static int spica_battery_probe(struct platform_device *pdev)
 	wake_lock_init(&bat->fault_wakelock,
 					WAKE_LOCK_SUSPEND, "battery fault");
 #endif
+#ifdef CONFIG_RTC_INTF_ALARM
+	alarm_init(&bat->alarm, ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP,
+							spica_battery_alarm);
+#endif
 
 	/* Get some initial data for averaging */
 	for (i = 0; i < NUM_SAMPLES; ++i) {
@@ -837,10 +856,18 @@ static int spica_battery_suspend(struct platform_device *pdev,
 							pm_message_t state)
 {
 	struct spica_battery *bat = platform_get_drvdata(pdev);
+	ktime_t now, start, end;
 
 	cancel_work_sync(&bat->work);
 	cancel_delayed_work_sync(&bat->poll_work);
-
+#ifdef CONFIG_RTC_INTF_ALARM
+	now = alarm_get_elapsed_realtime();
+	start = ktime_set(SUSPEND_INTERVAL - 10, 0);
+	start = ktime_add(now, start);
+	end = ktime_set(SUSPEND_INTERVAL + 20, 0);
+	end = ktime_add(now, end);
+	alarm_start_range(&bat->alarm, start, end);
+#endif
 	return 0;
 }
 
@@ -849,6 +876,9 @@ static int spica_battery_resume(struct platform_device *pdev)
 	struct spica_battery *bat = platform_get_drvdata(pdev);
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock(&bat->wakelock);
+#endif
+#ifdef CONFIG_RTC_INTF_ALARM
+	alarm_cancel(&bat->alarm);
 #endif
 
 	/* Schedule timer to check current status */
