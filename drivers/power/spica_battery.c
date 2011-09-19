@@ -421,7 +421,9 @@ static void spica_battery_supply_notify(struct platform_device *pdev,
 	bat->supply = type;
 
 	mutex_unlock(&bat->mutex);
-
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock(&bat->wakelock);
+#endif
 	schedule_work(&bat->work);
 }
 
