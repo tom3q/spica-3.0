@@ -928,8 +928,7 @@ static struct s3c_fb_platdata spica_lcd_pdata __initdata = {
 #ifdef SECOND_FB
 	.win[1]		= &spica_fb_win[1],
 #endif
-	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB
-			| VIDCON0_CLKSEL_LCD,
+	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB,
 	.vidcon1	= VIDCON1_INV_HSYNC | VIDCON1_INV_VSYNC
 			| VIDCON1_INV_VCLK,
 	.dithmode	= DITHMODE_R_POS_8BIT | DITHMODE_G_POS_8BIT
