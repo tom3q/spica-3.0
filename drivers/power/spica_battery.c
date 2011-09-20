@@ -711,7 +711,6 @@ static int spica_battery_probe(struct platform_device *pdev)
 	alarm_init(&bat->alarm, ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP,
 							spica_battery_alarm);
 #endif
-
 	/* Get some initial data for averaging */
 	for (i = 0; i < NUM_SAMPLES; ++i) {
 		int sample;
