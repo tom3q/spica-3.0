@@ -906,7 +906,7 @@ static int spica_battery_prepare(struct device *dev)
 	now = alarm_get_elapsed_realtime();
 	start = ktime_set(SUSPEND_INTERVAL - 10, 0);
 	start = ktime_add(now, start);
-	end = ktime_set(SUSPEND_INTERVAL + 20, 0);
+	end = ktime_set(SUSPEND_INTERVAL + 10, 0);
 	end = ktime_add(now, end);
 	alarm_start_range(&bat->alarm, start, end);
 #endif
