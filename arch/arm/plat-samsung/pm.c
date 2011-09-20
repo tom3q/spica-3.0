@@ -186,7 +186,7 @@ void s3c_pm_do_save(struct sleep_save *ptr, int count)
 void s3c_pm_do_restore(struct sleep_save *ptr, int count)
 {
 	for (; count > 0; count--, ptr++) {
-		printk(KERN_DEBUG "restore %p (restore %08lx, was %08x)\n",
+		S3C_PMDBG("restore %p (restore %08lx, was %08x)\n",
 		       ptr->reg, ptr->val, __raw_readl(ptr->reg));
 
 		__raw_writel(ptr->val, ptr->reg);
