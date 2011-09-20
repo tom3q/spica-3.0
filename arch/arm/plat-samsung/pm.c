@@ -248,6 +248,8 @@ static int s3c_pm_enter(suspend_state_t state)
 
 	S3C_PMDBG("%s(%d)\n", __func__, state);
 
+	printk(KERN_INFO "S3C PM Suspend (pre-save)\n");
+
 	if (pm_cpu_prep == NULL || pm_cpu_sleep == NULL) {
 		printk(KERN_ERR "%s: error: no cpu sleep function\n", __func__);
 		return -EINVAL;
@@ -327,7 +329,7 @@ static int s3c_pm_enter(suspend_state_t state)
 
 	/* ok, let's return from sleep */
 
-	S3C_PMDBG("S3C PM Resume (post-restore)\n");
+	printk(KERN_INFO "S3C PM Resume (post-restore)\n");
 	return 0;
 }
 
