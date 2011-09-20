@@ -374,15 +374,10 @@ static void spica_battery_work(struct work_struct *work)
 #ifdef CONFIG_HAS_WAKELOCK
 		wake_lock(&bat->chg_wakelock);
 #endif
-		bat->status = POWER_SUPPLY_STATUS_FULL;
-
 		/* Enable the charger */
 		gpio_set_value(pdata->gpio_en, !pdata->gpio_en_inverted);
 
-		/* Get charging state */
-		if (gpio_get_value(pdata->gpio_chg) ^ pdata->gpio_chg_inverted)
-			bat->status = POWER_SUPPLY_STATUS_CHARGING;
-
+		bat->status = POWER_SUPPLY_STATUS_CHARGING;
 		bat->fault = 0;
 #ifdef CONFIG_HAS_WAKELOCK
 		wake_unlock(&bat->fault_wakelock);
@@ -401,6 +396,10 @@ static void spica_battery_work(struct work_struct *work)
 	bat->chg_enable = chg_enable;
 
 no_change:
+	if (chg_enable &&
+	    !(gpio_get_value(pdata->gpio_chg) ^ pdata->gpio_chg_inverted))
+		bat->status = POWER_SUPPLY_STATUS_FULL;
+
 	/* We're no longer accessing shared data */
 	mutex_unlock(&bat->mutex);
 
