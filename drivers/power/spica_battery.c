@@ -459,6 +459,9 @@ static int spica_battery_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
 		if (bat->fault)
 			val->intval = 0;
+		else if (bat->percent_value == 100000
+		    && bat->status == POWER_SUPPLY_STATUS_CHARGING)
+			val->intval = 99999;
 		else
 			val->intval = bat->percent_value;
 		break;
@@ -485,6 +488,9 @@ static int spica_battery_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CAPACITY:
 		if (bat->fault)
 			val->intval = 0;
+		else if (bat->percent_value == 100000
+		    && bat->status == POWER_SUPPLY_STATUS_CHARGING)
+			val->intval = 99;
 		else
 			val->intval = bat->percent_value / 1000;
 		break;
