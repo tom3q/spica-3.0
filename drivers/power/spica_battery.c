@@ -269,6 +269,7 @@ static void spica_battery_poll(struct work_struct *work)
 	volt_sample = s3c_adc_read(bat->client, bat->pdata->volt_channel);
 	if (volt_sample < 0) {
 		dev_warn(bat->dev, "Failed to get ADC sample.\n");
+		bat->health = POWER_SUPPLY_HEALTH_UNKNOWN;
 		goto error;
 	}
 	volt_sample = put_sample_get_avg(&bat->volt_avg, volt_sample);
@@ -279,6 +280,7 @@ static void spica_battery_poll(struct work_struct *work)
 	temp_sample = s3c_adc_read(bat->client, bat->pdata->temp_channel);
 	if (temp_sample < 0) {
 		dev_warn(bat->dev, "Failed to get ADC sample.\n");
+		bat->health = POWER_SUPPLY_HEALTH_UNKNOWN;
 		goto error;
 	}
 	temp_sample = put_sample_get_avg(&bat->temp_avg, temp_sample);
@@ -286,6 +288,9 @@ static void spica_battery_poll(struct work_struct *work)
 
 	/* Update driver data (locked) */
 	mutex_lock(&bat->mutex);
+
+	if (bat->health == POWER_SUPPLY_HEALTH_UNKNOWN)
+		bat->health = POWER_SUPPLY_HEALTH_GOOD;
 
 	bat->volt_value = volt_value;
 	bat->percent_value = percent_value;
