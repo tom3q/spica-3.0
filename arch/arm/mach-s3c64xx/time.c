@@ -115,6 +115,37 @@ static inline void s3c64xx_pwm_start(unsigned int pwm_id, bool periodic)
 	__raw_writel(tcon, S3C2410_TCON);
 }
 
+static inline void s3c64xx_pwm_reconfigure(unsigned int pwm_id,
+					unsigned long tcnt, bool periodic)
+{
+	unsigned long tcon = __raw_readl(S3C2410_TCON);
+
+	switch (pwm_id) {
+	case 3:
+		tcon |= S3C2410_TCON_T3START;
+		tcon &= ~S3C2410_TCON_T3MANUALUPD;
+
+		if (periodic)
+			tcon |= S3C2410_TCON_T3RELOAD;
+		else
+			tcon &= ~S3C2410_TCON_T3RELOAD;
+		break;
+	case 4:
+		tcon |= S3C2410_TCON_T4START;
+		tcon &= ~S3C2410_TCON_T4MANUALUPD;
+
+		if (periodic)
+			tcon |= S3C2410_TCON_T4RELOAD;
+		else
+			tcon &= ~S3C2410_TCON_T4RELOAD;
+		break;
+	}
+
+	__raw_writel(tcnt, S3C2410_TCNTB(pwm_id));
+	__raw_writel(tcnt, S3C2410_TCMPB(pwm_id));
+	__raw_writel(tcon, S3C2410_TCON);
+}
+
 /*
  * Clock event
  */
@@ -226,6 +257,13 @@ static cycle_t s3c64xx_clocksource_read(struct clocksource *cs)
 	return (cycle_t) ~__raw_readl(S3C2410_TCNTO(PWM_SOURCE));
 }
 
+static u32 saved_tcnt;
+
+static void s3c64xx_clocksource_suspend(struct clocksource *cs)
+{
+	saved_tcnt = __raw_readl(S3C2410_TCNTO(PWM_SOURCE));
+}
+
 static void s3c64xx_clocksource_resume(struct clocksource *cs)
 {
 	unsigned long pclk;
@@ -238,8 +276,9 @@ static void s3c64xx_clocksource_resume(struct clocksource *cs)
 	clk_set_rate(source_div, pclk / 6);
 	clk_set_parent(source_in, source_div);
 
-	s3c64xx_pwm_init(PWM_SOURCE, TCNT_MAX);
-	s3c64xx_pwm_start(PWM_SOURCE, PERIODIC);
+	s3c64xx_pwm_init(PWM_SOURCE, saved_tcnt);
+	s3c64xx_pwm_start(PWM_SOURCE, ONESHOT);
+	s3c64xx_pwm_reconfigure(PWM_SOURCE, TCNT_MAX, PERIODIC);
 }
 
 /*
@@ -269,6 +308,7 @@ static struct clocksource pwm_clocksource = {
 	.read		= s3c64xx_clocksource_read,
 	.mask		= CLOCKSOURCE_MASK(32),
 	.flags		= CLOCK_SOURCE_IS_CONTINUOUS,
+	.suspend	= s3c64xx_clocksource_suspend,
 	.resume		= s3c64xx_clocksource_resume,
 };
 
