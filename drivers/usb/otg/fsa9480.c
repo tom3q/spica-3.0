@@ -636,6 +636,18 @@ static int __devexit fsa9480_remove(struct i2c_client *client)
 static int fsa9480_resume(struct i2c_client *client)
 {
 	struct fsa9480_usbsw *usbsw = i2c_get_clientdata(client);
+	int intr;
+
+	/* read and clear interrupt status bits */
+	intr = i2c_smbus_read_word_data(client, FSA9480_REG_INT1);
+	if (intr < 0) {
+		dev_err(&client->dev, "%s: err %d\n", __func__, intr);
+	} else if (intr == 0) {
+		/* interrupt was fired, but no status bits were set,
+		so device was reset. In this case, the registers were
+		reset to defaults so they need to be reinitialised. */
+		fsa9480_reg_init(usbsw);
+	}
 
 	/* device detection */
 	schedule_work(&usbsw->work);
