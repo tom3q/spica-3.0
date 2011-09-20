@@ -211,7 +211,7 @@ static struct clock_event_device s3c64xx_clock_event_device = {
 
 static irqreturn_t s3c64xx_clock_event_isr(int irq, void *dev_id)
 {
-	struct clock_event_device *evt = &s3c64xx_clock_event_device;
+	struct clock_event_device *evt = dev_id;
 
 	evt->event_handler(evt);
 
@@ -222,6 +222,7 @@ static struct irqaction s3c64xx_clock_event_irq = {
 	.name		= "s3c64xx_clkevt_irq",
 	.flags		= IRQF_DISABLED | IRQF_TIMER | IRQF_IRQPOLL,
 	.handler	= s3c64xx_clock_event_isr,
+	.dev_id		= &s3c64xx_clock_event_device,
 };
 
 static void __init s3c64xx_clock_event_init(void)
