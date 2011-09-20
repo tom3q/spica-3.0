@@ -241,6 +241,12 @@ static int gt_i5700_ak4671_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_disable_pin(dapm, "Sub Mic");
 	snd_soc_dapm_disable_pin(dapm, "Jack Mic");
 	snd_soc_dapm_disable_pin(dapm, "GSM Receive");
+	snd_soc_dapm_ignore_suspend(dapm, "Earpiece");
+	snd_soc_dapm_ignore_suspend(dapm, "GSM Send");
+	snd_soc_dapm_ignore_suspend(dapm, "Main Mic");
+	snd_soc_dapm_ignore_suspend(dapm, "Sub Mic");
+	snd_soc_dapm_ignore_suspend(dapm, "Jack Mic");
+	snd_soc_dapm_ignore_suspend(dapm, "GSM Receive");
 
 	snd_soc_dapm_sync(dapm);
 	return 0;
@@ -270,6 +276,8 @@ static int gt_i5700_max9877_init(struct snd_soc_dapm_context *dapm)
 	snd_soc_dapm_nc_pin(dapm, "RXIN");
 	snd_soc_dapm_disable_pin(dapm, "Headphones");
 	snd_soc_dapm_disable_pin(dapm, "Speaker");
+	snd_soc_dapm_ignore_suspend(dapm, "Headphones");
+	snd_soc_dapm_ignore_suspend(dapm, "Speaker");
 
 	snd_soc_dapm_sync(dapm);
 	return 0;
