@@ -1021,6 +1021,9 @@ static struct platform_device spica_gpio_keys = {
  */
 
 static struct mtd_partition spica_onenand_parts[] = {
+	/*
+	 * Bootloaders (DO NOT TOUCH!)
+	 */
 	[0] = {
 		.name		= "pbl",
 		.size		= SZ_128K,
@@ -1033,6 +1036,9 @@ static struct mtd_partition spica_onenand_parts[] = {
 		.offset		= 0x00020000,
 		.mask_flags	= MTD_WRITEABLE,
 	},
+	/*
+	 * Bootloader parameters
+	 */
 	[2] = {
 		.name		= "logo",
 		.size		= SZ_128K,
@@ -1044,11 +1050,17 @@ static struct mtd_partition spica_onenand_parts[] = {
 		.offset		= 0x00180000,
 		.mask_flags	= MTD_USERSPACE,
 	},
+	/*
+	 * Kernel (zImage)
+	 */
 	[4] = {
 		.name		= "kernel",
 		.size		= SZ_4M + SZ_1M,
 		.offset		= 0x001c0000,
 	},
+	/*
+	 * User accessible partitions (incompatible with legacy kernels)
+	 */
 	[5] = {
 		.name		= "system",
 		.size		= SZ_128M + SZ_16M + SZ_8M,
@@ -1074,23 +1086,35 @@ static struct mtd_partition spica_onenand_parts[] = {
 		.size		= SZ_8M,
 		.offset		= 0x1d540000,
 	},
+	/*
+	 * Baseband firmware
+	 */
 	[10] = {
 		.name		= "modem",
 		.size		= SZ_16M,
 		.offset		= 0x1dd40000,
 	},
+	/*
+	 * EFS partition of legacy kernels, unused
+	 */
 	[11] = {
 		.name		= "efs_legacy",
 		.size		= SZ_8M,
 		.offset		= 0x1ed40000,
 		.mask_flags	= MTD_WRITEABLE,
 	},
+	/*
+	 * XSR reservoir
+	 */
 	[12] = {
 		.name		= "reservoir",
 		.size		= SZ_8M + SZ_2M + SZ_512K + SZ_128K,
 		.offset		= 0x1f540000,
 		.mask_flags	= MTD_USERSPACE | MTD_UNLOCKED,
 	},
+	/*
+	 * Phone unique data
+	 */
 	[13] = {
 		.name		= "dgs",
 		.size		= SZ_128K,
