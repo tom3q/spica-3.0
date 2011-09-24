@@ -42,6 +42,7 @@
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/onenand.h>
 #include <linux/mtd/partitions.h>
+#include <linux/mtd/bml.h>
 #include <linux/power/spica_battery.h>
 #include <linux/input/qt5480_ts.h>
 #include <linux/wlan_plat.h>
@@ -1104,6 +1105,34 @@ static struct onenand_platform_data spica_onenand_pdata = {
 	.nr_parts	= ARRAY_SIZE(spica_onenand_parts),
 };
 
+static struct bml_partition spica_bml_parts[] = {
+	{
+		.name	= "kernel",
+		.offset	= 0x001c0000,
+	},
+	{
+		.name	= "xbin",
+		.offset	= 0x1b540000,
+	},
+	{
+		.name	= "modem",
+		.offset	= 0x1dd40000,
+	},
+};
+
+static struct bml_platform_data spica_bml_pdata = {
+	.parts		= spica_bml_parts,
+	.nr_parts	= ARRAY_SIZE(spica_bml_parts),
+};
+
+static struct platform_device spica_bml_device = {
+	.name	= "mtd-bml",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &spica_bml_pdata,
+	},
+};
+
 /*
  * Hardware monitoring (ADC)
  */
@@ -1741,6 +1770,7 @@ static struct platform_device *spica_devices[] __initdata = {
 	&spica_vibetonz_device,
 	&spica_jack_device,
 	&spica_audio_device,
+	&spica_bml_device,
 };
 
 /*
