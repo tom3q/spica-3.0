@@ -296,7 +296,7 @@ int add_mtd_device(struct mtd_info *mtd)
 	int i, error;
 
 	if (!mtd_is_partition(mtd))
-		mtd->flags |= MTD_USERSPACE;
+		mtd->flags |= MTD_USERSPACE | MTD_UNLOCKED;
 
 	if (!mtd->backing_dev_info) {
 		switch (mtd->type) {
@@ -342,11 +342,20 @@ int add_mtd_device(struct mtd_info *mtd)
 
 	/* Some chips always power up locked. Unlock them now */
 	if ((mtd->flags & MTD_WRITEABLE)
-	    && (mtd->flags & MTD_POWERUP_LOCK) && mtd->unlock) {
+	    && (mtd->flags & MTD_POWERUP_LOCK)
+	    && (mtd->flags & MTD_UNLOCKED) && mtd->unlock) {
 		if (mtd->unlock(mtd, 0, mtd->size))
 			printk(KERN_WARNING
 			       "%s: unlock failed, writes may not work\n",
 			       mtd->name);
+	}
+
+	/* Some platforms may want the chip locked. Lock it now */
+	if (!(mtd->flags & MTD_UNLOCKED) && mtd->lock) {
+		if (mtd->lock(mtd, 0, mtd->size))
+			printk(KERN_WARNING
+				"%s: lock failed, operation might be unsafe\n",
+				mtd->name);
 	}
 
 	/* Do not register userspace interfaces if dev is kernel-only */

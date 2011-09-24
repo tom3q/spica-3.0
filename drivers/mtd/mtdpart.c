@@ -399,7 +399,7 @@ static struct mtd_part *allocate_partition(struct mtd_info *master,
 
 	/* set up the MTD object for this partition */
 	slave->mtd.type = master->type;
-	slave->mtd.flags = MTD_USERSPACE | master->flags;
+	slave->mtd.flags = MTD_USERSPACE | MTD_UNLOCKED | master->flags;
 	slave->mtd.flags &= ~part->mask_flags;
 	slave->mtd.size = part->size;
 	slave->mtd.writesize = master->writesize;
