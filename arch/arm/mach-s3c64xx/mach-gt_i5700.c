@@ -1037,7 +1037,6 @@ static struct mtd_partition spica_onenand_parts[] = {
 		.name		= "logo",
 		.size		= SZ_128K,
 		.offset		= 0x00160000,
-		.mask_flags	= MTD_WRITEABLE,
 	},
 	[3] = {
 		.name		= "param",
