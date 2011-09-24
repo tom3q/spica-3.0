@@ -116,6 +116,10 @@ struct s3c6410_onenand {
 	struct resource 	*ahb_res;
 	int			bootram_command;
 
+	int		start_block;
+	int		end_block;
+	int		wp_status;
+
 	void		*page_buf;
 	void		*oob_buf;
 
@@ -218,8 +222,9 @@ static unsigned short s3c6410_onenand_readw(void __iomem *addr)
 		return 0;
 
 	case ONENAND_REG_WP_STATUS:
-		return ONENAND_WP_US;
-
+		reg = onenand->wp_status;
+		onenand->wp_status = ONENAND_WP_US;
+		return reg;
 	default:
 		break;
 	}
@@ -259,6 +264,11 @@ static void s3c6410_onenand_writew(unsigned short value, void __iomem *addr)
 
 	/* Lock/lock-tight/unlock/unlock_all */
 	case ONENAND_REG_START_BLOCK_ADDRESS:
+		onenand->start_block = value;
+		return;
+
+	case ONENAND_REG_END_BLOCK_ADDRESS:
+		onenand->end_block = value;
 		return;
 
 	default:
@@ -451,6 +461,46 @@ static int s3c6410_onenand_command(struct mtd_info *mtd, int cmd, loff_t addr,
 	case ONENAND_CMD_ERASE:
 		s3c6410_onenand_write_cmd(ONENAND_ERASE_START, cmd_map_10);
 		return 0;
+
+	case ONENAND_CMD_LOCK: {
+		int start_mem_addr, end_mem_addr;
+
+		start_mem_addr = onenand->mem_addr(onenand->start_block, 0, 0);
+		end_mem_addr = onenand->mem_addr(onenand->end_block, 0, 0);
+
+		if (onenand->end_block == -1)
+			end_mem_addr = start_mem_addr;
+		else
+			s3c6410_onenand_write_cmd(ONENAND_LOCK_START,
+					CMD_MAP_10(onenand, start_mem_addr));
+
+		s3c6410_onenand_write_cmd(ONENAND_LOCK_END,
+					CMD_MAP_10(onenand, end_mem_addr));
+
+		onenand->wp_status = ONENAND_WP_LS;
+		onenand->end_block = -1;
+		return 0;
+	}
+
+	case ONENAND_CMD_UNLOCK: {
+		int start_mem_addr, end_mem_addr;
+
+		start_mem_addr = onenand->mem_addr(onenand->start_block, 0, 0);
+		end_mem_addr = onenand->mem_addr(onenand->end_block, 0, 0);
+
+		if (onenand->end_block == -1)
+			end_mem_addr = start_mem_addr;
+		else
+			s3c6410_onenand_write_cmd(ONENAND_UNLOCK_START,
+					CMD_MAP_10(onenand, start_mem_addr));
+
+		s3c6410_onenand_write_cmd(ONENAND_UNLOCK_END,
+					CMD_MAP_10(onenand, end_mem_addr));
+
+		onenand->wp_status = ONENAND_WP_US;
+		onenand->end_block = -1;
+		return 0;
+	}
 
 	default:
 		break;
@@ -731,6 +781,7 @@ static int s3c6410_onenand_probe(struct platform_device *pdev)
 	mtd->dev.parent = &pdev->dev;
 	mtd->owner = THIS_MODULE;
 	onenand->pdev = pdev;
+	onenand->end_block = -1;
 
 	s3c6410_onenand_setup(mtd);
 
