@@ -192,6 +192,19 @@ config MTD_BLOCK
 	  You do not need this option for use with the DiskOnChip devices. For
 	  those, enable NFTL support (CONFIG_NFTL) instead.
 
+config MTD_BML
+	tristate "Compatibility layer for Samsung BML volumes"
+	depends on BLOCK
+	select MTD_BLKDEVS
+	---help---
+	  This provides a compatibility layer enabling access to Samsung BML
+	  volumes with possible remapped bad blocks. It is very similar to
+	  the mtdblock interface, adding just bad block remapping support.
+
+	  You only need this option for use with Samsung devices which
+	  originally used Samsung proprietary flash management system known as
+	  XSR, FSR or LinuStore. Otherwise, just say N here.
+
 config MTD_BLOCK_RO
 	tristate "Readonly block device access to MTD devices"
 	depends on MTD_BLOCK!=y && BLOCK
