@@ -295,6 +295,9 @@ int add_mtd_device(struct mtd_info *mtd)
 	struct mtd_notifier *not;
 	int i, error;
 
+	if (!mtd_is_partition(mtd))
+		mtd->flags |= MTD_USERSPACE;
+
 	if (!mtd->backing_dev_info) {
 		switch (mtd->type) {
 		case MTD_RAM:
@@ -346,6 +349,10 @@ int add_mtd_device(struct mtd_info *mtd)
 			       mtd->name);
 	}
 
+	/* Do not register userspace interfaces if dev is kernel-only */
+	if (!(mtd->flags & MTD_USERSPACE))
+		goto finish;
+
 	/* Caller should have set dev.parent to match the
 	 * physical device.
 	 */
@@ -368,6 +375,7 @@ int add_mtd_device(struct mtd_info *mtd)
 	list_for_each_entry(not, &mtd_notifiers, list)
 		not->add(mtd);
 
+finish:
 	mutex_unlock(&mtd_table_mutex);
 	/* We _know_ we aren't being removed, because
 	   our caller is still holding us here. So none
@@ -402,20 +410,22 @@ int del_mtd_device(struct mtd_info *mtd)
 
 	if (idr_find(&mtd_idr, mtd->index) != mtd) {
 		ret = -ENODEV;
-		goto out_error;
+		goto out;
 	}
 
 	/* No need to get a refcount on the module containing
 		the notifier, since we hold the mtd_table_mutex */
-	list_for_each_entry(not, &mtd_notifiers, list)
-		not->remove(mtd);
+	if (mtd->flags & MTD_USERSPACE)
+		list_for_each_entry(not, &mtd_notifiers, list)
+			not->remove(mtd);
 
 	if (mtd->usecount) {
 		printk(KERN_NOTICE "Removing MTD device #%d (%s) with use count %d\n",
 		       mtd->index, mtd->name, mtd->usecount);
 		ret = -EBUSY;
 	} else {
-		device_unregister(&mtd->dev);
+		if (mtd->flags & MTD_USERSPACE)
+			device_unregister(&mtd->dev);
 
 		idr_remove(&mtd_idr, mtd->index);
 
@@ -423,7 +433,7 @@ int del_mtd_device(struct mtd_info *mtd)
 		ret = 0;
 	}
 
-out_error:
+out:
 	mutex_unlock(&mtd_table_mutex);
 	return ret;
 }
@@ -492,7 +502,8 @@ void register_mtd_user (struct mtd_notifier *new)
 	__module_get(THIS_MODULE);
 
 	mtd_for_each_device(mtd)
-		new->add(mtd);
+		if (mtd->flags & MTD_USERSPACE)
+			new->add(mtd);
 
 	mutex_unlock(&mtd_table_mutex);
 }
@@ -516,7 +527,8 @@ int unregister_mtd_user (struct mtd_notifier *old)
 	module_put(THIS_MODULE);
 
 	mtd_for_each_device(mtd)
-		old->remove(mtd);
+		if (mtd->flags & MTD_USERSPACE)
+			old->remove(mtd);
 
 	list_del(&old->list);
 	mutex_unlock(&mtd_table_mutex);

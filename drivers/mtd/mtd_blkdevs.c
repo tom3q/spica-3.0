@@ -564,7 +564,7 @@ int register_mtd_blktrans(struct mtd_blktrans_ops *tr)
 	list_add(&tr->list, &blktrans_majors);
 
 	mtd_for_each_device(mtd)
-		if (mtd->type != MTD_ABSENT)
+		if (mtd->type != MTD_ABSENT && (mtd->flags & MTD_USERSPACE))
 			tr->add_mtd(tr, mtd);
 
 	mutex_unlock(&mtd_table_mutex);
