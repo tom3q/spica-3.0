@@ -543,6 +543,8 @@ static int fsa9480_irq_init(struct fsa9480_usbsw *usbsw)
 			return ret;
 		}
 
+		device_init_wakeup(&client->dev, 1);
+
 		ret = enable_irq_wake(client->irq);
 		if (ret < 0)
 			dev_err(&client->dev,
