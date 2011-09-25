@@ -374,6 +374,7 @@ static int build_map_info(void)
 		}
 		pr_info("mtd-bml: Found mapping of bad block %u to reserved block %u.\n",
 								bad, res);
+		mtd->unlock(mtd, entry->to_offs, mtd->erasesize);
 	}
 
 	bml_map_info->mtd = mtd;
@@ -573,10 +574,6 @@ static int build_bad_bitmap(struct bml_dev *bml)
 			break;
 
 		offset = entry->from - bml->offset;
-
-		if ((mtd->flags & MTD_WRITEABLE) && bml_map_info->mtd->unlock)
-			bml_map_info->mtd->unlock(bml_map_info->mtd,
-						entry->to_offs, mtd->erasesize);
 
 		if (mtd->erasesize_shift)
 			block = offset >> mtd->erasesize_shift;
