@@ -33,6 +33,7 @@
 #include <linux/platform_device.h>
 #include <linux/sort.h>
 #include <linux/bsearch.h>
+#include <linux/suspend.h>
 
 #include <linux/mtd/partitions.h>
 #include <linux/mtd/bml.h>
@@ -885,6 +886,38 @@ static struct mtd_blktrans_ops bml_tr = {
 	.owner		= THIS_MODULE,
 };
 
+static int bml_pm_notification(struct notifier_block *nb,
+					unsigned long mode, void *_unused)
+{
+	struct bml_map_entry *entry;
+	struct mtd_info *mtd;
+	int i;
+
+	switch (mode) {
+	case PM_POST_SUSPEND:
+		if (!bml_map_info) {
+			mtd = get_mtd_device_nm("reservoir");
+			if (!mtd)
+				return 0;
+			mtd->lock(mtd, 0, mtd->size);
+			put_mtd_device(mtd);
+			return 0;
+		}
+
+		mtd = bml_map_info->mtd;
+		entry = bml_map_info->table;
+		for (i = 0; i < bml_map_info->length; ++i, ++entry)
+			mtd->unlock(mtd, entry->to_offs, mtd->erasesize);
+		break;
+	}
+
+	return 0;
+}
+
+static struct notifier_block bml_pm_notifier = {
+	.notifier_call	= bml_pm_notification,
+};
+
 static int __devinit bml_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -902,6 +935,8 @@ static int __devinit bml_probe(struct platform_device *pdev)
 	bml_pdata = pdev->dev.platform_data;
 	mutex_init(&bmls_lock);
 
+	register_pm_notifier(&bml_pm_notifier);
+
 	if ((ret = register_mtd_blktrans(&bml_tr)) != 0) {
 		dev_err(&pdev->dev, "Failed to register mtd blktrans.\n");
 		return ret;
@@ -913,6 +948,8 @@ static int __devinit bml_probe(struct platform_device *pdev)
 static int __devexit bml_remove(struct platform_device *pdev)
 {
 	deregister_mtd_blktrans(&bml_tr);
+
+	unregister_pm_notifier(&bml_pm_notifier);
 
 	if (bml_map_info) {
 		put_mtd_device(bml_map_info->mtd);
