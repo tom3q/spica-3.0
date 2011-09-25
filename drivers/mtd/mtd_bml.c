@@ -335,6 +335,12 @@ static int build_map_info(void)
 		return PTR_ERR(mtd);
 	}
 
+	if (!mtd->lock || !mtd->unlock) {
+		pr_err("mtd-bml: Block lock and unlock functionality is required.\n");
+		put_mtd_device(mtd);
+		return -EINVAL;
+	}
+
 	last_upcb = find_last_upcb(mtd);
 	if (last_upcb < 0) {
 		pr_err("mtd-bml: Could not find UPCB block.\n");
