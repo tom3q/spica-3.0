@@ -755,6 +755,7 @@ static int bml_writesect(struct mtd_blktrans_dev *dev,
 static int bml_open(struct mtd_blktrans_dev *mbd)
 {
 	struct bml_dev *bmldev = container_of(mbd, struct bml_dev, mbd);
+	int ret = 0;
 
 	DEBUG(MTD_DEBUG_LEVEL1,"bml_open\n");
 
@@ -772,15 +773,17 @@ static int bml_open(struct mtd_blktrans_dev *mbd)
 	bmldev->cache_size = mbd->mtd->erasesize;
 	bmldev->cache_data = NULL;
 	if (unlikely(!bml_map_info))
-		build_map_info();
+		if((ret = build_map_info()) != 0)
+			goto error;
 	if (unlikely(!bmldev->bad_bitmap))
-		build_bad_bitmap(bmldev);
+		ret = build_bad_bitmap(bmldev);
 
+error:
 	mutex_unlock(&bmls_lock);
 
 	DEBUG(MTD_DEBUG_LEVEL1, "ok\n");
 
-	return 0;
+	return ret;
 }
 
 static int bml_release(struct mtd_blktrans_dev *mbd)
