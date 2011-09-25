@@ -33,6 +33,7 @@
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+#include <linux/wakelock.h>
 #include <linux/usb.h>
 #include <linux/usb/otg.h>
 #include <linux/usb/ulpi.h>
@@ -123,6 +124,7 @@ struct fsa9480_usbsw {
 	int				mansw;
 	struct otg_transceiver		otg;
 	struct work_struct		work;
+	struct wake_lock		wakelock;
 };
 
 static ssize_t fsa9480_show_control(struct device *dev,
@@ -356,7 +358,7 @@ static void fsa9480_detect_dev(struct work_struct *work)
 	val2 = device_type >> 8;
 
 	if (val1 == usbsw->dev1 && val2 == usbsw->dev2)
-		return;
+		goto out;
 
 	dev_info(&client->dev, "dev1: 0x%x, dev2: 0x%x\n", val1, val2);
 
@@ -462,6 +464,11 @@ static void fsa9480_detect_dev(struct work_struct *work)
 
 	usbsw->dev1 = val1;
 	usbsw->dev2 = val2;
+
+out:
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_unlock(&usbsw->wakelock);
+#endif
 }
 
 static void fsa9480_reg_init(struct fsa9480_usbsw *usbsw)
@@ -502,7 +509,9 @@ static irqreturn_t fsa9480_irq_thread(int irq, void *data)
 	struct fsa9480_usbsw *usbsw = data;
 	struct i2c_client *client = usbsw->client;
 	int intr;
-
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock(&usbsw->wakelock);
+#endif
 	/* read and clear interrupt status bits */
 	intr = i2c_smbus_read_word_data(client, FSA9480_REG_INT1);
 	if (intr < 0) {
@@ -573,6 +582,9 @@ static int __devinit fsa9480_probe(struct i2c_client *client,
 	i2c_set_clientdata(client, usbsw);
 
 	INIT_WORK(&usbsw->work, fsa9480_detect_dev);
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_init(&usbsw->wakelock, WAKE_LOCK_SUSPEND, "fsa9480");
+#endif
 
 	if (usbsw->pdata->cfg_gpio)
 		usbsw->pdata->cfg_gpio();
@@ -611,6 +623,9 @@ fail2:
 		free_irq(client->irq, usbsw);
 fail1:
 	i2c_set_clientdata(client, NULL);
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_destroy(&usbsw->wakelock);
+#endif
 	kfree(usbsw);
 	return ret;
 }
@@ -626,7 +641,9 @@ static int __devexit fsa9480_remove(struct i2c_client *client)
 		free_irq(client->irq, usbsw);
 	}
 	i2c_set_clientdata(client, NULL);
-
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_destroy(&usbsw->wakelock);
+#endif
 	sysfs_remove_group(&client->dev.kobj, &fsa9480_group);
 	kfree(usbsw);
 	return 0;
