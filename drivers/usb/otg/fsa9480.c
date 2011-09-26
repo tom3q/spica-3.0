@@ -355,6 +355,13 @@ static void fsa9480_detect_dev(struct work_struct *work)
 	unsigned char val1, val2;
 	struct fsa9480_platform_data *pdata = usbsw->pdata;
 	struct i2c_client *client = usbsw->client;
+	int intr;
+
+	/* read and clear interrupt status bits */
+	intr = i2c_smbus_read_word_data(client, FSA9480_REG_INT1);
+	if (intr < 0) {
+		dev_err(&client->dev, "%s: err %d\n", __func__, intr);
+	}
 
 	device_type = i2c_smbus_read_word_data(client, FSA9480_REG_DEV_T1);
 	if (device_type < 0)
@@ -510,25 +517,12 @@ static void fsa9480_reg_init(struct fsa9480_usbsw *usbsw)
 		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
 }
 
-static irqreturn_t fsa9480_irq_thread(int irq, void *data)
+static irqreturn_t fsa9480_irq(int irq, void *data)
 {
 	struct fsa9480_usbsw *usbsw = data;
-	struct i2c_client *client = usbsw->client;
-	int intr;
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock(&usbsw->wakelock);
 #endif
-	/* read and clear interrupt status bits */
-	intr = i2c_smbus_read_word_data(client, FSA9480_REG_INT1);
-	if (intr < 0) {
-		dev_err(&client->dev, "%s: err %d\n", __func__, intr);
-	} else if (intr == 0) {
-		/* interrupt was fired, but no status bits were set,
-		so device was reset. In this case, the registers were
-		reset to defaults so they need to be reinitialised. */
-		fsa9480_reg_init(usbsw);
-	}
-
 	/* device detection */
 	queue_work(usbsw->workqueue, &usbsw->work);
 
@@ -541,9 +535,8 @@ static int fsa9480_irq_init(struct fsa9480_usbsw *usbsw)
 	int ret;
 
 	if (client->irq) {
-		ret = request_threaded_irq(client->irq, NULL,
-			fsa9480_irq_thread, IRQF_TRIGGER_FALLING,
-			"fsa9480 micro USB", usbsw);
+		ret = request_irq(client->irq, fsa9480_irq,
+			IRQF_TRIGGER_FALLING, "fsa9480 micro USB", usbsw);
 		if (ret) {
 			dev_err(&client->dev, "failed to reqeust IRQ\n");
 			return ret;
