@@ -39,6 +39,7 @@
 #include <linux/usb/ulpi.h>
 #include <linux/usb/gadget.h>
 #include <linux/usb/hcd.h>
+#include <linux/workqueue.h>
 
 /* FSA9480 I2C registers */
 #define FSA9480_REG_DEVID		0x01
@@ -124,6 +125,7 @@ struct fsa9480_usbsw {
 	int				mansw;
 	struct otg_transceiver		otg;
 	struct work_struct		work;
+	struct workqueue_struct		*workqueue;
 	struct wake_lock		wakelock;
 };
 
@@ -295,7 +297,7 @@ static int fsa9480_set_host(struct otg_transceiver *otg, struct usb_bus *host)
 
 	otg->host = host;
 	dev_dbg(otg->dev, "host driver registered w/ tranceiver\n");
-	schedule_work(&usbsw->work);
+	queue_work(usbsw->workqueue, &usbsw->work);
 
 	return 0;
 }
@@ -336,7 +338,7 @@ static int fsa9480_set_peripheral(struct otg_transceiver *otg,
 
 	otg->gadget = gadget;
 	dev_dbg(otg->dev, "peripheral driver registered w/ tranceiver\n");
-	schedule_work(&usbsw->work);
+	queue_work(usbsw->workqueue, &usbsw->work);
 
 	return 0;
 }
@@ -524,7 +526,7 @@ static irqreturn_t fsa9480_irq_thread(int irq, void *data)
 	}
 
 	/* device detection */
-	schedule_work(&usbsw->work);
+	queue_work(usbsw->workqueue, &usbsw->work);
 
 	return IRQ_HANDLED;
 }
@@ -588,6 +590,13 @@ static int __devinit fsa9480_probe(struct i2c_client *client,
 	wake_lock_init(&usbsw->wakelock, WAKE_LOCK_SUSPEND, "fsa9480");
 #endif
 
+	usbsw->workqueue = create_freezable_workqueue(dev_name(&client->dev));
+	if (!usbsw->workqueue) {
+		dev_err(&client->dev, "Failed to create freezeable workqueue\n");
+		ret = -ENOMEM;
+		goto err_wake_lock_destroy;
+	}
+
 	if (usbsw->pdata->cfg_gpio)
 		usbsw->pdata->cfg_gpio();
 
@@ -625,6 +634,9 @@ fail2:
 		free_irq(client->irq, usbsw);
 fail1:
 	i2c_set_clientdata(client, NULL);
+err_destroy_workqueue:
+	destroy_workqueue(usbsw->workqueue);
+err_wake_lock_destroy:
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&usbsw->wakelock);
 #endif
@@ -642,6 +654,7 @@ static int __devexit fsa9480_remove(struct i2c_client *client)
 		disable_irq_wake(client->irq);
 		free_irq(client->irq, usbsw);
 	}
+	destroy_workqueue(usbsw->workqueue);
 	i2c_set_clientdata(client, NULL);
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&usbsw->wakelock);
