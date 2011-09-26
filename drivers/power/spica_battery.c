@@ -23,6 +23,7 @@
 #include <linux/wakelock.h>
 #include <linux/io.h>
 #include <linux/android_alarm.h>
+#include <linux/workqueue.h>
 
 #include <linux/power/spica_battery.h>
 
@@ -169,6 +170,7 @@ struct spica_battery {
 	struct s3c_adc_client		*client;
 	struct spica_battery_pdata	*pdata;
 	struct work_struct		work;
+	struct workqueue_struct		*workqueue;
 	struct delayed_work		poll_work;
 	struct mutex			mutex;
 	struct device			*dev;
@@ -250,7 +252,7 @@ static irqreturn_t spica_battery_fault_irq(int irq, void *dev_id)
 
 	local_irq_restore(flags);
 
-	schedule_work(&bat->work);
+	queue_work(bat->workqueue, &bat->work);
 
 	return IRQ_HANDLED;
 }
@@ -318,9 +320,9 @@ static void spica_battery_poll(struct work_struct *work)
 error:
 	/* Schedule next poll */
 	if (update) {
-		schedule_work(&bat->work);
+		queue_work(bat->workqueue, &bat->work);
 	} else {
-		schedule_delayed_work(&bat->poll_work,
+		queue_delayed_work(bat->workqueue, &bat->poll_work,
 					msecs_to_jiffies(bat->interval));
 		power_supply_changed(&bat->bat);
 	}
@@ -428,7 +430,7 @@ static void spica_battery_supply_notify(struct platform_device *pdev,
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock(&bat->wakelock);
 #endif
-	schedule_work(&bat->work);
+	queue_work(bat->workqueue, &bat->work);
 }
 
 /*
@@ -536,7 +538,7 @@ static irqreturn_t spica_charger_irq(int irq, void *dev_id)
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock(&bat->wakelock);
 #endif
-	schedule_work(&bat->work);
+	queue_work(bat->workqueue, &bat->work);
 
 	return IRQ_HANDLED;
 }
@@ -774,11 +776,18 @@ static int spica_battery_probe(struct platform_device *pdev)
 		goto err_psy_unreg;
 	}
 
+	bat->workqueue = create_freezable_workqueue(dev_name(&pdev->dev));
+	if (!bat->workqueue) {
+		dev_err(&pdev->dev, "Failed to create freezeable workqueue\n");
+		ret = -ENOMEM;
+		goto err_bat_unreg;
+	}
+
 	/* Claim IRQs */
 	irq = gpio_to_irq(pdata->gpio_pok);
 	if (irq <= 0) {
 		dev_err(&pdev->dev, "POK irq invalid.\n");
-		goto err_bat_unreg;
+		goto err_destroy_workqueue;
 	}
 	bat->irq_pok = irq;
 
@@ -828,7 +837,7 @@ static int spica_battery_probe(struct platform_device *pdev)
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock(&bat->wakelock);
 #endif
-	schedule_work(&bat->work);
+	queue_work(bat->workqueue, &bat->work);
 
 	return 0;
 
@@ -836,6 +845,8 @@ err_chg_irq_free:
 	free_irq(bat->irq_chg, bat);
 err_pok_irq_free:
 	free_irq(bat->irq_pok, bat);
+err_destroy_workqueue:
+	destroy_workqueue(bat->workqueue);
 err_bat_unreg:
 	power_supply_unregister(&bat->bat);
 err_psy_unreg:
@@ -887,6 +898,7 @@ static int spica_battery_remove(struct platform_device *pdev)
 
 	cancel_work_sync(&bat->work);
 	cancel_delayed_work_sync(&bat->poll_work);
+	destroy_workqueue(bat->workqueue);
 
 	s3c_adc_release(bat->client);
 
@@ -909,9 +921,6 @@ static int spica_battery_prepare(struct device *dev)
 {
 	struct spica_battery *bat = dev_get_drvdata(dev);
 	ktime_t now, start, end;
-
-	cancel_work_sync(&bat->work);
-	cancel_delayed_work_sync(&bat->poll_work);
 #ifdef CONFIG_RTC_INTF_ALARM
 	now = alarm_get_elapsed_realtime();
 	start = ktime_set(SUSPEND_INTERVAL - 10, 0);
@@ -964,7 +973,7 @@ static void spica_battery_complete(struct device *dev)
 		bat->temp_value = lookup_value(&bat->temp_lookup, temp_value);
 
 	/* Schedule timer to check current status */
-	schedule_work(&bat->work);
+	queue_work(bat->workqueue, &bat->work);
 }
 
 static struct dev_pm_ops spica_battery_pm_ops = {
