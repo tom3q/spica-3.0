@@ -294,7 +294,9 @@ static int fsa9480_set_host(struct otg_transceiver *otg, struct usb_bus *host)
 
 	hcd = bus_to_hcd(host);
 	hcd->power_budget = usbsw->pdata->power_budget;
-
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock(&usbsw->wakelock);
+#endif
 	otg->host = host;
 	dev_dbg(otg->dev, "host driver registered w/ tranceiver\n");
 	queue_work(usbsw->workqueue, &usbsw->work);
@@ -335,7 +337,9 @@ static int fsa9480_set_peripheral(struct otg_transceiver *otg,
 		otg->gadget = NULL;
 		return 0;
 	}
-
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock(&usbsw->wakelock);
+#endif
 	otg->gadget = gadget;
 	dev_dbg(otg->dev, "peripheral driver registered w/ tranceiver\n");
 	queue_work(usbsw->workqueue, &usbsw->work);
