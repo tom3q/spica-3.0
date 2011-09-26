@@ -620,7 +620,7 @@ static int __devinit fsa9480_probe(struct i2c_client *client,
 		usbsw->pdata->reset_cb();
 
 	/* device detection */
-	schedule_work(&usbsw->work);
+	queue_work(usbsw->workqueue, &usbsw->work);
 
 	return 0;
 
