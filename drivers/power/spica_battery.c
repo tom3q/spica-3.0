@@ -793,7 +793,7 @@ static int spica_battery_probe(struct platform_device *pdev)
 	}
 	bat->irq_pok = irq;
 
-	ret = request_any_context_irq(irq, spica_charger_irq,
+	ret = request_irq(irq, spica_charger_irq,
 				IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
 				dev_name(&pdev->dev), bat);
 	if (ret) {
@@ -808,7 +808,7 @@ static int spica_battery_probe(struct platform_device *pdev)
 	}
 	bat->irq_chg = irq;
 
-	ret = request_any_context_irq(irq, spica_charger_irq,
+	ret = request_irq(irq, spica_charger_irq,
 				IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
 				dev_name(&pdev->dev), bat);
 	if (ret) {
