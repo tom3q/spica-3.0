@@ -578,7 +578,7 @@ static int __devinit fsa9480_probe(struct i2c_client *client,
 	usbsw->client = client;
 	usbsw->pdata = client->dev.platform_data;
 	if (!usbsw->pdata)
-		goto fail1;
+		goto err_free_mem;
 
 	i2c_set_clientdata(client, usbsw);
 
@@ -601,19 +601,19 @@ static int __devinit fsa9480_probe(struct i2c_client *client,
 
 	ret = fsa9480_irq_init(usbsw);
 	if (ret)
-		goto fail1;
+		goto err_destroy_workqueue;
 
 	ret = sysfs_create_group(&client->dev.kobj, &fsa9480_group);
 	if (ret) {
 		dev_err(&client->dev,
 				"failed to create fsa9480 attribute group\n");
-		goto fail2;
+		goto err_free_irq;
 	}
 
 	ret = otg_set_transceiver(&usbsw->otg);
 	if (ret) {
 		dev_err(&client->dev, "otg_set_transceiver failed\n");
-		goto fail3;
+		goto err_sysfs_remove;
 	}
 
 	if (usbsw->pdata->reset_cb)
@@ -624,19 +624,19 @@ static int __devinit fsa9480_probe(struct i2c_client *client,
 
 	return 0;
 
-fail3:
+err_sysfs_remove:
 	sysfs_remove_group(&client->dev.kobj, &fsa9480_group);
-fail2:
+err_free_irq:
 	if (client->irq)
 		free_irq(client->irq, usbsw);
-fail1:
-	i2c_set_clientdata(client, NULL);
 err_destroy_workqueue:
 	destroy_workqueue(usbsw->workqueue);
 err_wake_lock_destroy:
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&usbsw->wakelock);
 #endif
+err_free_mem:
+	i2c_set_clientdata(client, NULL);
 	kfree(usbsw);
 	return ret;
 }
