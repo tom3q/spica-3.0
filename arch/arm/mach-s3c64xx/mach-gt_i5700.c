@@ -162,6 +162,10 @@
  */
 
 #define IRQ_WLAN		IRQ_EINT(1)
+#define IRQ_AKM8973		IRQ_EINT(2)
+#define IRQ_BMA023		IRQ_EINT(3)
+#define IRQ_FSA9480		IRQ_EINT(9)
+#define IRQ_QT5480		IRQ_EINT(20)
 
 /*
  * UART
@@ -275,16 +279,16 @@ static struct i2c_board_info spica_misc_i2c_devs[] __initdata = {
 	{
 		.type		= "fsa9480",
 		.addr		= 0x25,
-		.irq		= IRQ_EINT(9),
+		.irq		= IRQ_FSA9480,
 		.platform_data	= &spica_fsa9480_pdata,
 	}, {
 		.type		= "bma023",
 		.addr		= 0x38,
-		.irq		= IRQ_EINT(3),
+		.irq		= IRQ_BMA023,
 	}, {
 		.type		= "akm8973",
 		.addr		= 0x1c,
-		.irq		= IRQ_EINT(2),
+		.irq		= IRQ_AKM8973,
 		.platform_data	= &spica_akm8973_pdata,
 	}
 };
@@ -600,7 +604,7 @@ static struct i2c_board_info spica_touch_i2c_devs[] __initdata = {
 	{
 		.type		= "qt5480_ts",
 		.addr		= 0x30,
-		.irq		= IRQ_EINT(20),
+		.irq		= IRQ_QT5480,
 		.platform_data	= &spica_qt5480_pdata,
 	}
 };
