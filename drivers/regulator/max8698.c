@@ -101,19 +101,19 @@ struct voltage_map_desc {
 
 /* Voltage maps */
 static const struct voltage_map_desc ldo23_voltage_map_desc = {
-	.min = 800,	.step = 50,	.max = 1300,
+	.min = 800000,	.step = 50000,	.max = 1300000,
 };
 static const struct voltage_map_desc ldo45679_voltage_map_desc = {
-	.min = 1600,	.step = 100,	.max = 3600,
+	.min = 1600000,	.step = 100000,	.max = 3600000,
 };
 static const struct voltage_map_desc ldo8_voltage_map_desc = {
-	.min = 3000,	.step = 100,	.max = 3600,
+	.min = 3000000,	.step = 100000,	.max = 3600000,
 };
 static const struct voltage_map_desc buck12_voltage_map_desc = {
-	.min = 750,	.step = 50,	.max = 1500,
+	.min = 750000,	.step = 50000,	.max = 1500000,
 };
 static const struct voltage_map_desc buck3_voltage_map_desc = {
-	.min = 1600,	.step = 100,	.max = 3600,
+	.min = 1600000,	.step = 100000,	.max = 3600000,
 };
 
 static const struct voltage_map_desc *ldo_voltage_map[] = {
@@ -153,7 +153,7 @@ static int max8698_list_voltage(struct regulator_dev *rdev,
 	if (val > desc->max)
 		return -EINVAL;
 
-	return val * 1000;
+	return val;
 }
 
 enum {
@@ -312,11 +312,10 @@ static int max8698_set_voltage(struct regulator_dev *rdev,
 {
 	struct max8698_data *max8698 = rdev_get_drvdata(rdev);
 	const struct voltage_map_desc *desc;
-	int min_vol = min_uV / 1000, max_vol = max_uV / 1000;
 	int ldo = max8698_get_ldo(rdev);
 	int reg = 0, shift = 0, mask = 0, ret;
 	int i = 0;
-	int sel_mV;
+	int sel_uV;
 
 	if (ldo >= ARRAY_SIZE(ldo_voltage_map))
 		return -EINVAL;
@@ -325,16 +324,16 @@ static int max8698_set_voltage(struct regulator_dev *rdev,
 	if (desc == NULL)
 		return -EINVAL;
 
-	if (max_vol < desc->min || min_vol > desc->max)
+	if (max_uV < desc->min || min_uV > desc->max)
 		return -EINVAL;
 
-	sel_mV = desc->min;
-	while (sel_mV < min_vol && sel_mV < desc->max) {
-		sel_mV += desc->step;
+	sel_uV = desc->min;
+	while (sel_uV < min_uV && sel_uV < desc->max) {
+		sel_uV += desc->step;
 		++i;
 	}
 
-	if (sel_mV > max_vol)
+	if (sel_uV > max_uV)
 		return -EINVAL;
 
 	*selector = i;
@@ -362,8 +361,7 @@ static int max8698_set_buck12_voltage(struct regulator_dev *rdev,
 {
 	struct max8698_data *max8698 = rdev_get_drvdata(rdev);
 	const struct voltage_map_desc *desc;
-	int min_vol = min_uV / 1000, max_vol = max_uV / 1000;
-	int prev_mV, sel_mV;
+	int prev_uV, sel_uV;
 	int ldo = max8698_get_ldo(rdev), i = 0, ret;
 
 	if (ldo >= ARRAY_SIZE(ldo_voltage_map))
@@ -373,21 +371,21 @@ static int max8698_set_buck12_voltage(struct regulator_dev *rdev,
 	if (desc == NULL)
 		return -EINVAL;
 
-	if (max_vol < desc->min || min_vol > desc->max)
+	if (max_uV < desc->min || min_uV > desc->max)
 		return -EINVAL;
 
-	sel_mV = desc->min;
-	while (sel_mV < min_vol && sel_mV < desc->max) {
-		sel_mV += desc->step;
+	sel_uV = desc->min;
+	while (sel_uV < min_uV && sel_uV < desc->max) {
+		sel_uV += desc->step;
 		++i;
 	}
 
-	if (sel_mV > max_vol)
+	if (sel_uV > max_uV)
 		return -EINVAL;
 
 	*selector = i;
 
-	prev_mV = max8698_get_voltage(rdev);
+	prev_uV = max8698_get_voltage(rdev);
 
 	switch (ldo) {
 	case MAX8698_BUCK1:
@@ -408,15 +406,15 @@ static int max8698_set_buck12_voltage(struct regulator_dev *rdev,
 		break;
 	}
 
-	if (prev_mV < sel_mV) {
-		while (prev_mV < sel_mV) {
+	if (prev_uV < sel_uV) {
+		while (prev_uV < sel_uV) {
 			udelay(1);
-			prev_mV += max8698->ramp_rate;
+			prev_uV += max8698->ramp_rate;
 		}
 	} else {
-		while (prev_mV > sel_mV) {
+		while (prev_uV > sel_uV) {
 			udelay(1);
-			prev_mV -= max8698->ramp_rate;
+			prev_uV -= max8698->ramp_rate;
 		}
 	}
 
@@ -544,7 +542,7 @@ static int max8698_probe(struct i2c_client *i2c,
 	ret = max8698_i2c_device_read(max8698, MAX8698_REG_ADISCHG_EN2, &val);
 	if (ret)
 		goto err;
-	max8698->ramp_rate = ((val & 0xf) + 1);
+	max8698->ramp_rate = 1000*((val & 0xf) + 1);
 
 	for (i = 0; i < pdata->num_regulators; i++) {
 		const struct voltage_map_desc *desc;
