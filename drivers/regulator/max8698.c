@@ -540,6 +540,13 @@ static int max8698_probe(struct i2c_client *i2c,
 	max8698->num_regulators = pdata->num_regulators;
 	i2c_set_clientdata(i2c, max8698);
 
+	if (pdata->lben)
+		max8698_i2c_device_update(max8698, MAX8698_REG_LBCNFG,
+			(pdata->lbhyst & 3) << 4 | (pdata->lbth & 7) << 1,
+			0x3e);
+	max8698_i2c_device_update(max8698, MAX8698_REG_ONOFF2,
+							(!!pdata->lben), 0x01);
+
 	ret = max8698_i2c_device_read(max8698, MAX8698_REG_ADISCHG_EN2, &val);
 	if (ret)
 		goto err;
@@ -566,9 +573,6 @@ static int max8698_probe(struct i2c_client *i2c,
 			goto err;
 		}
 	}
-
-	max8698_i2c_device_update(max8698, MAX8698_REG_LBCNFG,
-		(pdata->lbhyst & 3) << 4 | (pdata->lbth & 7) << 1, 0x3e);
 
 	return 0;
 err:
