@@ -1376,12 +1376,14 @@ static int spica_wlan_set_power(int val)
 		return 0;
 
 	if (val) {
+		s3c_gpio_setpull(GPIO_WLAN_HOST_WAKE, S3C_GPIO_PULL_NONE);
 		gpio_set_value(GPIO_WLAN_RST_N, 0);
 		spica_wifi_bt_power_inc();
 		msleep(100);
 		gpio_set_value(GPIO_WLAN_RST_N, 1);
 		msleep(50);
 	} else {
+		s3c_gpio_setpull(GPIO_WLAN_HOST_WAKE, S3C_GPIO_PULL_DOWN);
 		gpio_set_value(GPIO_WLAN_RST_N, 0);
 		spica_wifi_bt_power_dec();
 	}
