@@ -315,6 +315,7 @@ static int max8698_set_voltage(struct regulator_dev *rdev,
 	int ldo = max8698_get_ldo(rdev);
 	int reg = 0, shift = 0, mask = 0, ret;
 	int i = 0;
+	int sel_mV;
 
 	if (ldo >= ARRAY_SIZE(ldo_voltage_map))
 		return -EINVAL;
@@ -326,11 +327,13 @@ static int max8698_set_voltage(struct regulator_dev *rdev,
 	if (max_vol < desc->min || min_vol > desc->max)
 		return -EINVAL;
 
-	while (desc->min + desc->step*i < min_vol &&
-	       desc->min + desc->step*i < desc->max)
-		i++;
+	sel_mV = desc->min;
+	while (sel_mV < min_vol && sel_mV < desc->max) {
+		sel_mV += desc->step;
+		++i;
+	}
 
-	if (desc->min + desc->step*i > max_vol)
+	if (sel_mV > max_vol)
 		return -EINVAL;
 
 	*selector = i;
@@ -360,6 +363,7 @@ static int max8698_set_buck12_voltage(struct regulator_dev *rdev,
 	const struct voltage_map_desc *desc;
 	int min_vol = min_uV / 1000, max_vol = max_uV / 1000;
 	int previous_vol = 0;
+	int sel_mV;
 	int ldo = max8698_get_ldo(rdev), i = 0, ret;
 	int difference, rate;
 	u8 val = 0;
@@ -374,11 +378,13 @@ static int max8698_set_buck12_voltage(struct regulator_dev *rdev,
 	if (max_vol < desc->min || min_vol > desc->max)
 		return -EINVAL;
 
-	while (desc->min + desc->step*i < min_vol &&
-	       desc->min + desc->step*i < desc->max)
-		i++;
+	sel_mV = desc->min;
+	while (sel_mV < min_vol && sel_mV < desc->max) {
+		sel_mV += desc->step;
+		++i;
+	}
 
-	if (desc->min + desc->step*i > max_vol)
+	if (sel_mV > max_vol)
 		return -EINVAL;
 
 	*selector = i;
