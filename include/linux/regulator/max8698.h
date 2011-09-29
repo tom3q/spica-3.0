@@ -51,12 +51,14 @@ struct max8698_regulator_data {
  * @regulators: array of defined regulators
  * @lbhyst: Low Main-Battery Comparator Hysteresis register value
  * @lbth: Low Main-Battery threshold voltage register value
+ * @lben: Enable Low Main-Battery alarm signal
  */
 struct max8698_platform_data {
 	int				num_regulators;
 	struct max8698_regulator_data	*regulators;
 	unsigned int lbhyst;
 	unsigned int lbth;
+	unsigned int lben;
 };
 
 #endif /* _MAX8698_H_ */
