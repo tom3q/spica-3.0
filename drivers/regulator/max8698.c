@@ -342,7 +342,8 @@ static int max8698_set_voltage(struct regulator_dev *rdev,
 	if (ret)
 		return ret;
 
-	return max8698_i2c_device_update(max8698, reg, i<<shift, mask<<shift);
+	return max8698_i2c_device_update(max8698, reg,
+						i << shift, mask << shift);
 }
 
 static struct regulator_ops max8698_regulator_ops = {
