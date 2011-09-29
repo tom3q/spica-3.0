@@ -40,6 +40,7 @@ struct max8698_data {
 	struct i2c_client	*i2c_client;
 	int			num_regulators;
 	struct regulator_dev	**rdev;
+	struct mutex		lock;
 };
 
 /*
@@ -51,7 +52,12 @@ static int max8698_i2c_device_read(struct max8698_data *max8698, u8 reg, u8 *des
 	struct i2c_client *client = max8698->i2c_client;
 	int ret;
 
+	mutex_lock(&max8698->lock);
+
 	ret = i2c_smbus_read_byte_data(client, reg);
+
+	mutex_unlock(&max8698->lock);
+
 	if (ret < 0)
 		return ret;
 
@@ -66,6 +72,8 @@ static int max8698_i2c_device_update(struct max8698_data *max8698, u8 reg,
 	struct i2c_client *client = max8698->i2c_client;
 	int ret;
 
+	mutex_lock(&max8698->lock);
+
 	ret = i2c_smbus_read_byte_data(client, reg);
 	if (ret >= 0) {
 		u8 old_val = ret & 0xff;
@@ -74,6 +82,9 @@ static int max8698_i2c_device_update(struct max8698_data *max8698, u8 reg,
 		if (ret >= 0)
 			ret = 0;
 	}
+
+	mutex_unlock(&max8698->lock);
+
 	return ret;
 }
 
@@ -519,6 +530,7 @@ static int max8698_probe(struct i2c_client *i2c,
 		return -ENOMEM;
 	}
 
+	mutex_init(&max8698->lock);
 	rdev = max8698->rdev;
 	max8698->dev = &i2c->dev;
 	max8698->i2c_client = i2c;
