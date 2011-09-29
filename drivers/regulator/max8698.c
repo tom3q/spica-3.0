@@ -41,6 +41,7 @@ struct max8698_data {
 	int			num_regulators;
 	struct regulator_dev	**rdev;
 	struct mutex		lock;
+	int			ramp_rate;
 };
 
 /*
@@ -362,11 +363,8 @@ static int max8698_set_buck12_voltage(struct regulator_dev *rdev,
 	struct max8698_data *max8698 = rdev_get_drvdata(rdev);
 	const struct voltage_map_desc *desc;
 	int min_vol = min_uV / 1000, max_vol = max_uV / 1000;
-	int previous_vol = 0;
-	int sel_mV;
+	int prev_mV, sel_mV;
 	int ldo = max8698_get_ldo(rdev), i = 0, ret;
-	int difference, rate;
-	u8 val = 0;
 
 	if (ldo >= ARRAY_SIZE(ldo_voltage_map))
 		return -EINVAL;
@@ -389,13 +387,7 @@ static int max8698_set_buck12_voltage(struct regulator_dev *rdev,
 
 	*selector = i;
 
-	/* Read ramp rate */
-	ret = max8698_i2c_device_read(max8698, MAX8698_REG_ADISCHG_EN2, &val);
-	if (ret)
-		goto err;
-	rate = (val & 0xf) + 1;
-
-	previous_vol = max8698_get_voltage(rdev);
+	prev_mV = max8698_get_voltage(rdev);
 
 	switch (ldo) {
 	case MAX8698_BUCK1:
@@ -416,12 +408,17 @@ static int max8698_set_buck12_voltage(struct regulator_dev *rdev,
 		break;
 	}
 
-	difference = desc->min + desc->step*i - previous_vol/1000;
-	if (difference < 0)
-		difference = -difference;
-
-	/* wait for ramp delay */
-	udelay(difference / rate);
+	if (prev_mV < sel_mV) {
+		while (prev_mV < sel_mV) {
+			udelay(1);
+			prev_mV += max8698->ramp_rate;
+		}
+	} else {
+		while (prev_mV > sel_mV) {
+			udelay(1);
+			prev_mV -= max8698->ramp_rate;
+		}
+	}
 
 err:
 	return ret;
@@ -519,6 +516,7 @@ static int max8698_probe(struct i2c_client *i2c,
 	struct regulator_dev **rdev;
 	struct max8698_data *max8698;
 	int i, ret, size;
+	u8 val;
 
 	if (!pdata) {
 		dev_err(&i2c->dev, "No platform init data supplied\n");
@@ -542,6 +540,11 @@ static int max8698_probe(struct i2c_client *i2c,
 	max8698->i2c_client = i2c;
 	max8698->num_regulators = pdata->num_regulators;
 	i2c_set_clientdata(i2c, max8698);
+
+	ret = max8698_i2c_device_read(max8698, MAX8698_REG_ADISCHG_EN2, &val);
+	if (ret)
+		goto err;
+	max8698->ramp_rate = ((val & 0xf) + 1);
 
 	for (i = 0; i < pdata->num_regulators; i++) {
 		const struct voltage_map_desc *desc;
