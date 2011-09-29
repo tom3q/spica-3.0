@@ -1310,8 +1310,9 @@ static void spica_bt_set_power(int val)
 	if (val) {
 		gpio_set_value(GPIO_BT_RST_N, 0);
 		spica_wifi_bt_power_inc();
-		msleep(50);
+		msleep(100);
 		gpio_set_value(GPIO_BT_RST_N, 1);
+		msleep(50);
 	} else {
 		gpio_set_value(GPIO_BT_RST_N, 0);
 		spica_wifi_bt_power_dec();
@@ -1377,8 +1378,9 @@ static int spica_wlan_set_power(int val)
 	if (val) {
 		gpio_set_value(GPIO_WLAN_RST_N, 0);
 		spica_wifi_bt_power_inc();
-		msleep(50);
+		msleep(100);
 		gpio_set_value(GPIO_WLAN_RST_N, 1);
+		msleep(50);
 	} else {
 		gpio_set_value(GPIO_WLAN_RST_N, 0);
 		spica_wifi_bt_power_dec();
@@ -1402,6 +1404,7 @@ static int spica_wlan_set_carddetect(int val)
 	spica_wlan_cd_state = val;
 	if (spica_wlan_notify_func)
 		spica_wlan_notify_func(&s3c_device_hsmmc2, val);
+	msleep(100);
 	return 0;
 }
 
