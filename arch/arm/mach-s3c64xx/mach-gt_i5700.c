@@ -1168,7 +1168,9 @@ static struct platform_device spica_bml_device = {
 /* TODO: Verify these values. */
 static struct spica_battery_threshold spica_battery_percent_lut[] = {
 	/* ADC, 0.001% */
-	{ 2319,      0 },
+	{ 2170,      0 },
+	{ 2310,      0 },
+	{ 2311,   1000 },
 	{ 2419,   3000 },
 	{ 2455,   5000 },
 	{ 2490,  15000 },
@@ -1180,7 +1182,9 @@ static struct spica_battery_threshold spica_battery_percent_lut[] = {
 
 static struct spica_battery_threshold spica_battery_volt_lut[] = {
 	/* ADC, microvolts */
-	{ 2319, 3402900 },
+	{ 2170, 3200000 },
+	{ 2240, 3300000 },
+	{ 2310, 3400000 },
 	{ 2419, 3554000 },
 	{ 2455, 3603700 },
 	{ 2490, 3656600 },
