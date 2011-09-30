@@ -328,8 +328,13 @@ void __init early_print(const char *str, ...)
 	printk("%s", buf);
 }
 
+#define DISABLE_HWCAP_TLS
+
 static void __init feat_v6_fixup(void)
 {
+#ifdef DISABLE_HWCAP_TLS
+	elf_hwcap &= ~HWCAP_TLS;
+#else
 	int id = read_cpuid_id();
 
 	if ((id & 0xff0f0000) != 0x41070000)
@@ -341,6 +346,7 @@ static void __init feat_v6_fixup(void)
 	 */
 	if ((((id >> 4) & 0xfff) == 0xb36) && (((id >> 20) & 3) == 0))
 		elf_hwcap &= ~HWCAP_TLS;
+#endif
 }
 
 static void __init setup_processor(void)
