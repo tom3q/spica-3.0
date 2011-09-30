@@ -178,6 +178,7 @@ struct spica_battery {
 	struct wake_lock	wakelock;
 	struct wake_lock	chg_wakelock;
 	struct wake_lock	fault_wakelock;
+	struct wake_lock	suspend_lock;
 #endif
 #ifdef CONFIG_RTC_INTF_ALARM
 	struct alarm		alarm;
@@ -532,7 +533,33 @@ static const struct power_supply spica_bat_template = {
 /*
  * Charger specific code
  */
+#ifdef CONFIG_HAS_WAKELOCK
+static ssize_t suspend_lock_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct spica_battery *bat = dev_get_drvdata(dev->parent);
+	int val;
 
+	if (sscanf(buf, "%d\n", &val) != 1)
+		return -EINVAL;
+
+	if (val)
+		wake_lock(&bat->suspend_lock);
+	else
+		wake_lock_timeout(&bat->suspend_lock, HZ / 2);
+
+	return count;
+}
+
+static ssize_t suspend_lock_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	return 0;
+}
+
+static DEVICE_ATTR(suspend_lock, S_IRUGO | S_IWUGO,
+					suspend_lock_show, suspend_lock_store);
+#endif
 /* State change irq */
 static irqreturn_t spica_charger_irq(int irq, void *dev_id)
 {
@@ -720,6 +747,7 @@ static int spica_battery_probe(struct platform_device *pdev)
 	wake_lock_init(&bat->chg_wakelock, WAKE_LOCK_SUSPEND, "charger");
 	wake_lock_init(&bat->fault_wakelock,
 					WAKE_LOCK_SUSPEND, "battery fault");
+	wake_lock_init(&bat->suspend_lock, WAKE_LOCK_SUSPEND, "suspend_lock");
 #endif
 #ifdef CONFIG_RTC_INTF_ALARM
 	alarm_init(&bat->alarm, ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP,
@@ -768,14 +796,22 @@ static int spica_battery_probe(struct platform_device *pdev)
 			power_supply_unregister(&bat->psy[i]);
 		goto err_temp_free;
 	}
-
+#ifdef CONFIG_HAS_WAKELOCK
+	ret = device_create_file(bat->psy[SPICA_BATTERY_AC].dev,
+							&dev_attr_suspend_lock);
+	if (ret < 0) {
+		dev_err(&pdev->dev,
+			"Failed to register device attribute.\n");
+		goto err_psy_unreg;
+	}
+#endif
 	/* Register the battery */
 	bat->bat = spica_bat_template;
 	ret = power_supply_register(&pdev->dev, &bat->bat);
 	if (ret < 0) {
 		dev_err(&pdev->dev,
 			"Failed to register battery power supply: %d\n", ret);
-		goto err_psy_unreg;
+		goto err_attr_unreg;
 	}
 
 	bat->workqueue = create_freezable_workqueue(dev_name(&pdev->dev));
@@ -798,7 +834,7 @@ static int spica_battery_probe(struct platform_device *pdev)
 				dev_name(&pdev->dev), bat);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to request POK irq (%d)\n", ret);
-		goto err_bat_unreg;
+		goto err_destroy_workqueue;
 	}
 
 	irq = gpio_to_irq(pdata->gpio_chg);
@@ -851,7 +887,12 @@ err_destroy_workqueue:
 	destroy_workqueue(bat->workqueue);
 err_bat_unreg:
 	power_supply_unregister(&bat->bat);
+err_attr_unreg:
+#ifdef CONFIG_HAS_WAKELOCK
+	device_remove_file(bat->psy[SPICA_BATTERY_AC].dev,
+							&dev_attr_suspend_lock);
 err_psy_unreg:
+#endif
 	for (i = 0; i < SPICA_BATTERY_NUM; ++i)
 		power_supply_unregister(&bat->psy[i]);
 err_temp_free:
@@ -859,6 +900,7 @@ err_temp_free:
 	wake_lock_destroy(&bat->wakelock);
 	wake_lock_destroy(&bat->chg_wakelock);
 	wake_lock_destroy(&bat->fault_wakelock);
+	wake_lock_destroy(&bat->suspend_lock);
 #endif
 	kfree(bat->temp_lookup.table);
 err_volt_free:
@@ -895,6 +937,10 @@ static int spica_battery_remove(struct platform_device *pdev)
 		pdata->supply_detect_cleanup();
 
 	power_supply_unregister(&bat->bat);
+#ifdef CONFIG_HAS_WAKELOCK
+	device_remove_file(bat->psy[SPICA_BATTERY_AC].dev,
+							&dev_attr_suspend_lock);
+#endif
 	for (i = 0; i < SPICA_BATTERY_NUM; ++i)
 		power_supply_unregister(&bat->psy[i]);
 
@@ -913,6 +959,7 @@ static int spica_battery_remove(struct platform_device *pdev)
 	wake_lock_destroy(&bat->fault_wakelock);
 	wake_lock_destroy(&bat->chg_wakelock);
 	wake_lock_destroy(&bat->wakelock);
+	wake_lock_destroy(&bat->suspend_lock);
 #endif
 	kfree(bat);
 
