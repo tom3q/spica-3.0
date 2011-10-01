@@ -15,6 +15,7 @@
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/regulator/consumer.h>
+#include <linux/delay.h>
 
 static struct clk *armclk;
 static struct regulator *vddarm;
@@ -111,6 +112,9 @@ static int s3c64xx_cpufreq_set_target(struct cpufreq_policy *policy,
 			       freqs.new, ret);
 			goto err;
 		}
+
+		/* Wait for voltage ramp caused by internal capacitance */
+		udelay(10);
 	}
 #endif
 
