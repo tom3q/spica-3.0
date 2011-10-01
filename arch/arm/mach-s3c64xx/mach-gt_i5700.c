@@ -84,6 +84,7 @@
 #include <plat/sdhci.h>
 #include <plat/keypad.h>
 #include <plat/pm.h>
+#include <plat/audio.h>
 
 /*
  * GPIOs
@@ -1772,6 +1773,26 @@ static struct platform_device spica_audio_device = {
 	},
 };
 
+static int spica_i2s_cfg_gpio(struct platform_device *pdev)
+{
+	/* Nothing to do here */
+	return 0;
+}
+
+static const char *spica_i2s_clksrc[] = {
+	[0] = "iis",
+	[1] = "audio-bus",
+};
+
+static struct s3c_audio_pdata spica_i2s_pdata = {
+	.cfg_gpio = spica_i2s_cfg_gpio,
+	.type = {
+		.i2s = {
+			.src_clk = spica_i2s_clksrc,
+		},
+	},
+};
+
 /*
  * Platform devices
  */
@@ -2421,6 +2442,10 @@ static void __init spica_machine_init(void)
 	/* Setup OneNAND */
 	s3c_set_platdata(&spica_onenand_pdata, sizeof(spica_onenand_pdata),
 							&s3c_device_onenand);
+
+	/* Setup audio */
+	s3c_set_platdata(&spica_i2s_pdata, sizeof(spica_i2s_pdata),
+							&s3c64xx_device_iis0);
 
 	/* Setup power domains */
 	s3c_device_fb.dev.parent = &s3c64xx_device_pd[S3C64XX_DOMAIN_F].dev;
