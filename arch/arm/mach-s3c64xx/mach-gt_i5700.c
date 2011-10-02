@@ -1292,6 +1292,7 @@ static void spica_wifi_bt_power_dec(void)
 	if (!(--spica_wifi_bt_pwr_cnt)) {
 		printk(KERN_INFO "WiFi/BT power OFF.\n");
 		gpio_set_value(GPIO_BT_WLAN_REG_ON, 0);
+		msleep(100);
 	}
 
 	mutex_unlock(&spica_wifi_bt_pwr_lock);
