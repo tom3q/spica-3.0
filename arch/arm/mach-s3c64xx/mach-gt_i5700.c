@@ -1372,6 +1372,7 @@ static void __init spica_bt_lpm_init(void)
  */
 
 static int spica_wlan_power = 0;
+static struct wake_lock wlan_wakelock;
 
 static int spica_wlan_set_power(int val)
 {
@@ -1381,6 +1382,7 @@ static int spica_wlan_set_power(int val)
 		return 0;
 
 	if (val) {
+		wake_lock(&wlan_wakelock);
 		s3c_gpio_setpull(GPIO_WLAN_HOST_WAKE, S3C_GPIO_PULL_NONE);
 		gpio_set_value(GPIO_WLAN_RST_N, 0);
 		spica_wifi_bt_power_inc();
@@ -1390,6 +1392,7 @@ static int spica_wlan_set_power(int val)
 		s3c_gpio_setpull(GPIO_WLAN_HOST_WAKE, S3C_GPIO_PULL_DOWN);
 		gpio_set_value(GPIO_WLAN_RST_N, 0);
 		spica_wifi_bt_power_dec();
+		wake_unlock(&wlan_wakelock);
 	}
 
 	spica_wlan_power = val;
@@ -2454,6 +2457,9 @@ static void __init spica_machine_init(void)
 	s3c_device_fb.dev.parent = &s3c64xx_device_pd[S3C64XX_DOMAIN_F].dev;
 	samsung_pd_set_persistent(&s3c64xx_device_pd[S3C64XX_DOMAIN_F]);
 	s3c64xx_add_pd_devices();
+
+	/* Wakelock for WLAN sleep workaround */
+	wake_lock_init(&wlan_wakelock, WAKE_LOCK_SUSPEND, "wlan");
 
 	/* Register platform devices */
 	platform_add_devices(spica_devices, ARRAY_SIZE(spica_devices));
