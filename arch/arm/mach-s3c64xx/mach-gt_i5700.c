@@ -1347,6 +1347,9 @@ static enum hrtimer_restart spica_bt_enter_lpm(struct hrtimer *timer)
 
 static void spica_bt_uart_wake_peer(struct uart_port *port)
 {
+	if (!spica_bt_lpm_timer.function)
+		return;
+
 	hrtimer_try_to_cancel(&spica_bt_lpm_timer);
 	gpio_set_value(GPIO_BT_WAKE, 1);
 	hrtimer_start(&spica_bt_lpm_timer,
