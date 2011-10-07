@@ -162,11 +162,34 @@
  * External interrupts
  */
 
+/* Low level */
+#define IRQ_ONEDRAM		IRQ_EINT(0)
 #define IRQ_WLAN		IRQ_EINT(1)
+/* Rising edge */
 #define IRQ_AKM8973		IRQ_EINT(2)
 #define IRQ_BMA023		IRQ_EINT(3)
+/* Both edges */
+#define IRQ_SIM_DETECT		IRQ_EINT(4)
+#define IRQ_POWER		IRQ_EINT(5)
+/* Both edges */
+#define IRQ_TF_DETECT		IRQ_EINT(6)
+#define IRQ_PHONE_ACTIVE	IRQ_EINT(7)
+/* Falling edge */
+#define IRQ_PMIC		IRQ_EINT(8)
 #define IRQ_FSA9480		IRQ_EINT(9)
+/* Both edges */
+#define IRQ_JACK		IRQ_EINT(10)
+#define IRQ_HEADSET		IRQ_EINT(11)
+/* Both edges */
+#define IRQ_HOLD_KEY		IRQ_EINT(17)
+/* Both edges */
+#define IRQ_TA_ONLINE		IRQ_EINT(19)
+/* Low level */
 #define IRQ_QT5480		IRQ_EINT(20)
+/* Both edges */
+#define IRQ_BLUETOOTH		IRQ_EINT(22)
+/* Both edges */
+#define IRQ_CHARGING		IRQ_EINT(25)
 
 /*
  * UART
