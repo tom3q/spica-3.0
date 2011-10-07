@@ -599,6 +599,59 @@ static int s3c64xx_clk_arm_set_rate(struct clk *clk, unsigned long rate)
 
 }
 
+static int s3c64xx_clk_arm_set_rate_sync(struct clk *clk, unsigned long rate)
+{
+	unsigned long parent = clk_get_rate(clk->parent);
+	unsigned long flags;
+	u32 div;
+	u32 val;
+
+	if (rate < parent / (armclk_mask + 1))
+		return -EINVAL;
+
+	rate = clk_round_rate(clk, rate);
+	div = clk_get_rate(clk->parent) / rate;
+
+	local_irq_save(flags);
+
+	val = __raw_readl(S3C_CLK_DIV0);
+	val &= ~armclk_mask;
+	val |= (div - 1);
+
+	__asm__ __volatile__ (
+		"	mrc	p15, 0, r0, c1, c0, 0\n"
+		"	orr	r1, r0, #0x800\n"
+		"	mcr	p15, 0, r1, c1, c0, 0\n"
+		"\n"
+		"	mov	r2, #0\n"
+		"	mov	r3, #0\n"
+		"loop:\n"
+		"	add 	r3, r3, #1\n"
+		"	mov 	r1, #0\n"
+		"	mcr 	p15, 0, r2, c7, c10, 4\n"
+		"	mcr 	p15, 0, r2, c7, c10, 5\n"
+		"	cmp 	r3, #2\n"
+		"	streq 	%0, [%1]\n"
+		"\n"
+		"1:\n"
+		"	add 	r1, r1, #1\n"
+		"	cmp 	r1, #0x100\n"
+		"	bne 	1b\n"
+		"	cmp 	r3, #2\n"
+		"	bne 	loop\n"
+		"\n"
+		"	mcr	p15, 0, r0, c1, c0, 0\n"
+		: /* No output */
+		: "r"(val), "r"(S3C_CLK_DIV0)
+		: "r0", "r1", "r2", "r3"
+	);
+
+	local_irq_restore(flags);
+
+	return 0;
+
+}
+
 static struct clk clk_arm = {
 	.name		= "armclk",
 	.id		= -1,
@@ -1199,12 +1252,14 @@ void __init_or_cpufreq s3c6400_setup_clocks(void)
 	printk(KERN_INFO "S3C64XX: PLL settings, A=%ld, M=%ld, E=%ld\n",
 	       apll, mpll, epll);
 
-	if(__raw_readl(S3C64XX_OTHERS) & S3C64XX_OTHERS_SYNCMUXSEL)
+	if(__raw_readl(S3C64XX_OTHERS) & S3C64XX_OTHERS_SYNCMUXSEL) {
 		/* Synchronous mode */
 		hclk2 = apll / GET_DIV(clkdiv0, S3C6400_CLKDIV0_HCLK2);
-	else
+		clk_arm.ops->set_rate = s3c64xx_clk_arm_set_rate_sync;
+	} else {
 		/* Asynchronous mode */
 		hclk2 = mpll / GET_DIV(clkdiv0, S3C6400_CLKDIV0_HCLK2);
+	}
 
 	hclk = hclk2 / GET_DIV(clkdiv0, S3C6400_CLKDIV0_HCLK);
 	pclk = hclk2 / GET_DIV(clkdiv0, S3C6400_CLKDIV0_PCLK);
