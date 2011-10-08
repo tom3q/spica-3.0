@@ -661,15 +661,32 @@ static int __devexit fsa9480_remove(struct i2c_client *client)
 	return 0;
 }
 
+static int fsa9480_resume(struct device *dev)
+{
+	struct fsa9480_usbsw *usbsw = dev_get_drvdata(dev);
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock(&usbsw->wakelock);
+#endif
+	/* device detection */
+	queue_work(usbsw->workqueue, &usbsw->work);
+
+	return 0;
+}
+
 static const struct i2c_device_id fsa9480_id[] = {
 	{"fsa9480", 0},
 	{}
 };
 MODULE_DEVICE_TABLE(i2c, fsa9480_id);
 
+static struct dev_pm_ops fsa9480_pm_ops = {
+	.resume = fsa9480_resume,
+};
+
 static struct i2c_driver fsa9480_i2c_driver = {
 	.driver = {
-		.name = "fsa9480",
+		.name	= "fsa9480",
+		.pm	= &fsa9480_pm_ops,
 	},
 	.probe = fsa9480_probe,
 	.remove = __devexit_p(fsa9480_remove),
