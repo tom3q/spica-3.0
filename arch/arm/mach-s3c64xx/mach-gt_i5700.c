@@ -564,7 +564,7 @@ static struct max8698_platform_data spica_max8698_pdata = {
 	.regulators	= spica_regulators,
 	.num_regulators	= ARRAY_SIZE(spica_regulators),
 	.lbhyst		= 0, /* 100 mV */
-	.lbth		= 3, /* 3,4 V */
+	.lbth		= 2, /* 3,3 V */
 	.lben		= 1, /* Enable low battery alarm */
 };
 
