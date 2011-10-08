@@ -42,7 +42,8 @@
 
 struct sec_jack_info {
 	struct sec_jack_platform_data *pdata;
-	struct delayed_work jack_detect_work;
+	struct work_struct work;
+	struct workqueue_struct *workqueue;
 	struct wake_lock det_wake_lock;
 	struct sec_jack_zone *zone;
 	struct s3c_adc_client *adc;
@@ -98,8 +99,12 @@ static void sec_jack_set_type(struct sec_jack_info *hi, int jack_type)
 	/* this can happen during slow inserts where we think we identified
 	 * the type but then we get another interrupt and do it again
 	 */
-	if (jack_type == hi->cur_jack_type)
+	if (jack_type == hi->cur_jack_type) {
+#ifdef CONFIG_HAS_WAKE_LOCK
+		wake_unlock(&hi->det_wake_lock);
+#endif
 		return;
+	}
 
 	if (jack_type == SEC_HEADSET_4POLE) {
 		/* for a 4 pole headset, enable detection of send/end key */
@@ -123,10 +128,10 @@ static void sec_jack_set_type(struct sec_jack_info *hi, int jack_type)
 
 	hi->cur_jack_type = jack_type;
 	pr_info("%s : jack_type = %d\n", __func__, jack_type);
-
+#ifdef CONFIG_HAS_WAKE_LOCK
 	/* prevent suspend to allow user space to respond to switch */
 	wake_lock_timeout(&hi->det_wake_lock, WAKE_LOCK_TIME);
-
+#endif
 	switch_set_state(&switch_jack_detection, jack_type);
 }
 
@@ -177,9 +182,10 @@ static void determine_jack_type(struct sec_jack_info *hi)
 /* thread run whenever the headset detect state changes (either insertion
  * or removal).
  */
-static irqreturn_t sec_jack_detect_irq_thread(int irq, void *dev_id)
+static void sec_jack_detect_work(struct work_struct *work)
 {
-	struct sec_jack_info *hi = dev_id;
+	struct sec_jack_info *hi =
+				container_of(work, struct sec_jack_info, work);
 	struct sec_jack_platform_data *pdata = hi->pdata;
 	int time_left_ms = DET_CHECK_TIME_MS;
 	unsigned npolarity = !hi->pdata->det_active_high;
@@ -194,13 +200,23 @@ static irqreturn_t sec_jack_detect_irq_thread(int irq, void *dev_id)
 		if (!(gpio_get_value(hi->pdata->det_gpio) ^ npolarity)) {
 			/* jack not detected. */
 			handle_jack_not_inserted(hi);
-			return IRQ_HANDLED;
+			return;
 		}
 		msleep(10);
 		time_left_ms -= 10;
 	}
 	/* jack presence was detected the whole time, figure out which type */
 	determine_jack_type(hi);
+}
+
+static irqreturn_t sec_jack_irq(int irq, void *dev_id)
+{
+	struct sec_jack_info *hi = dev_id;
+#ifdef CONFIG_HAS_WAKE_LOCK
+	wake_lock(&hi->det_wake_lock);
+#endif
+	queue_work(hi->workqueue, &hi->work);
+
 	return IRQ_HANDLED;
 }
 
@@ -262,19 +278,27 @@ static int sec_jack_probe(struct platform_device *pdev)
 		goto err_adc_register;
 	}
 
+	hi->workqueue = create_freezable_workqueue(dev_name(&pdev->dev));
+	if (!hi->workqueue) {
+		dev_err(&pdev->dev, "Failed to create freezeable workqueue\n");
+		ret = -ENOMEM;
+		goto err_workqueue;
+	}
+
 	ret = switch_dev_register(&switch_jack_detection);
 	if (ret < 0) {
 		pr_err("%s : Failed to register switch device\n", __func__);
 		goto err_switch_dev_register;
 	}
 
+	INIT_WORK(&hi->work, sec_jack_detect_work);
+#ifdef CONFIG_HAS_WAKE_LOCK
 	wake_lock_init(&hi->det_wake_lock, WAKE_LOCK_SUSPEND, "sec_jack_det");
-
+#endif
 	hi->det_irq = gpio_to_irq(pdata->det_gpio);
-	ret = request_threaded_irq(hi->det_irq, NULL,
-				   sec_jack_detect_irq_thread,
-				   IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING |
-				   IRQF_ONESHOT, "sec_headset_detect", hi);
+	ret = request_irq(hi->det_irq, sec_jack_irq,
+				IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+				"sec_headset_detect", hi);
 	if (ret) {
 		pr_err("%s : Failed to request_irq.\n", __func__);
 		goto err_request_detect_irq;
@@ -294,9 +318,13 @@ static int sec_jack_probe(struct platform_device *pdev)
 err_enable_irq_wake:
 	free_irq(hi->det_irq, hi);
 err_request_detect_irq:
+#ifdef CONFIG_HAS_WAKE_LOCK
 	wake_lock_destroy(&hi->det_wake_lock);
+#endif
 	switch_dev_unregister(&switch_jack_detection);
 err_switch_dev_register:
+	destroy_workqueue(hi->workqueue);
+err_workqueue:
 	s3c_adc_release(hi->adc);
 err_adc_register:
 	gpio_free(pdata->det_gpio);
@@ -316,8 +344,11 @@ static int sec_jack_remove(struct platform_device *pdev)
 	pr_info("%s :\n", __func__);
 	disable_irq_wake(hi->det_irq);
 	free_irq(hi->det_irq, hi);
+	destroy_workqueue(hi->workqueue);
 	platform_device_unregister(hi->send_key_dev);
+#ifdef CONFIG_HAS_WAKE_LOCK
 	wake_lock_destroy(&hi->det_wake_lock);
+#endif
 	switch_dev_unregister(&switch_jack_detection);
 	s3c_adc_release(hi->adc);
 	gpio_free(hi->pdata->det_gpio);
@@ -327,13 +358,29 @@ static int sec_jack_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int sec_jack_resume(struct device *dev)
+{
+	struct sec_jack_info *hi = dev_get_drvdata(dev);
+#ifdef CONFIG_HAS_WAKE_LOCK
+	wake_lock(&hi->det_wake_lock);
+#endif
+	queue_work(hi->workqueue, &hi->work);
+
+	return 0;
+}
+
+static struct dev_pm_ops sec_jack_pm_ops = {
+	.resume = sec_jack_resume,
+};
+
 static struct platform_driver sec_jack_driver = {
 	.probe = sec_jack_probe,
 	.remove = sec_jack_remove,
 	.driver = {
-			.name = "sec_jack",
-			.owner = THIS_MODULE,
-		   },
+		.name = "sec_jack",
+		.owner = THIS_MODULE,
+		.pm = &sec_jack_pm_ops,
+	},
 };
 static int __init sec_jack_init(void)
 {
