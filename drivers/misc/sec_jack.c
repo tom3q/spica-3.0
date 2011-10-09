@@ -100,7 +100,7 @@ static void sec_jack_set_type(struct sec_jack_info *hi, int jack_type)
 	 * the type but then we get another interrupt and do it again
 	 */
 	if (jack_type == hi->cur_jack_type) {
-#ifdef CONFIG_HAS_WAKE_LOCK
+#ifdef CONFIG_HAS_WAKELOCK
 		wake_unlock(&hi->det_wake_lock);
 #endif
 		return;
@@ -128,7 +128,7 @@ static void sec_jack_set_type(struct sec_jack_info *hi, int jack_type)
 
 	hi->cur_jack_type = jack_type;
 	pr_info("%s : jack_type = %d\n", __func__, jack_type);
-#ifdef CONFIG_HAS_WAKE_LOCK
+#ifdef CONFIG_HAS_WAKELOCK
 	/* prevent suspend to allow user space to respond to switch */
 	wake_lock_timeout(&hi->det_wake_lock, WAKE_LOCK_TIME);
 #endif
@@ -212,7 +212,7 @@ static void sec_jack_detect_work(struct work_struct *work)
 static irqreturn_t sec_jack_irq(int irq, void *dev_id)
 {
 	struct sec_jack_info *hi = dev_id;
-#ifdef CONFIG_HAS_WAKE_LOCK
+#ifdef CONFIG_HAS_WAKELOCK
 	wake_lock(&hi->det_wake_lock);
 #endif
 	queue_work(hi->workqueue, &hi->work);
@@ -292,7 +292,7 @@ static int sec_jack_probe(struct platform_device *pdev)
 	}
 
 	INIT_WORK(&hi->work, sec_jack_detect_work);
-#ifdef CONFIG_HAS_WAKE_LOCK
+#ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_init(&hi->det_wake_lock, WAKE_LOCK_SUSPEND, "sec_jack_det");
 #endif
 	hi->det_irq = gpio_to_irq(pdata->det_gpio);
@@ -318,7 +318,7 @@ static int sec_jack_probe(struct platform_device *pdev)
 err_enable_irq_wake:
 	free_irq(hi->det_irq, hi);
 err_request_detect_irq:
-#ifdef CONFIG_HAS_WAKE_LOCK
+#ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&hi->det_wake_lock);
 #endif
 	switch_dev_unregister(&switch_jack_detection);
@@ -346,7 +346,7 @@ static int sec_jack_remove(struct platform_device *pdev)
 	free_irq(hi->det_irq, hi);
 	destroy_workqueue(hi->workqueue);
 	platform_device_unregister(hi->send_key_dev);
-#ifdef CONFIG_HAS_WAKE_LOCK
+#ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&hi->det_wake_lock);
 #endif
 	switch_dev_unregister(&switch_jack_detection);
@@ -361,7 +361,7 @@ static int sec_jack_remove(struct platform_device *pdev)
 static int sec_jack_resume(struct device *dev)
 {
 	struct sec_jack_info *hi = dev_get_drvdata(dev);
-#ifdef CONFIG_HAS_WAKE_LOCK
+#ifdef CONFIG_HAS_WAKELOCK
 	wake_lock(&hi->det_wake_lock);
 #endif
 	queue_work(hi->workqueue, &hi->work);
