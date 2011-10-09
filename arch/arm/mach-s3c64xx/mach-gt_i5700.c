@@ -1267,6 +1267,8 @@ static struct spica_battery_pdata spica_battery_pdata = {
 	.temp_lut		= spica_battery_temp_lut,
 	.temp_lut_cnt		= ARRAY_SIZE(spica_battery_temp_lut),
 
+	.calibration		= 2447,
+
 	.volt_channel		= 0,
 	.temp_channel		= 1,
 

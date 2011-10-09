@@ -208,6 +208,7 @@ struct spica_battery {
 	int chg_enable;
 	int compensation;
 	int compensation_flags;
+	int calibration;
 	enum spica_battery_supply supply;
 
 	unsigned int		interval;
@@ -637,6 +638,45 @@ static ssize_t batt_temp_adc_show(struct device *dev,
 }
 
 static DEVICE_ATTR(batt_temp_adc, S_IRUGO, batt_temp_adc_show, dummy_store);
+
+static ssize_t batt_vol_adc_cal_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct spica_battery *bat = dev_get_drvdata(dev->parent);
+	int val;
+
+	mutex_lock(&bat->mutex);
+
+	val = bat->calibration;
+
+	mutex_unlock(&bat->mutex);
+
+	return sprintf(buf, "%d\n", val);
+}
+
+static ssize_t batt_vol_adc_cal_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct spica_battery *bat = dev_get_drvdata(dev->parent);
+	int val;
+
+	if (sscanf(buf, "%d", &val) != 1)
+		return -EINVAL;
+
+	mutex_lock(&bat->mutex);
+
+	dev_info(bat->dev, "Setting battery calibration value to %d. (Was %d.)\n",
+							val, bat->calibration);
+
+	bat->compensation += bat->calibration - val;
+	bat->calibration = val;
+
+	mutex_unlock(&bat->mutex);
+
+	return count;
+}
+
+static DEVICE_ATTR(batt_vol_adc_cal, S_IRUGO | S_IWUGO,
 				batt_vol_adc_cal_show, batt_vol_adc_cal_store);
 
 static struct device_attribute *battery_attrs[] = {
@@ -646,6 +686,7 @@ static struct device_attribute *battery_attrs[] = {
 	&dev_attr_charging_source,
 	&dev_attr_batt_vol_adc,
 	&dev_attr_batt_temp_adc,
+	&dev_attr_batt_vol_adc_cal,
 	&dev_attr_compensation,
 	&dev_attr_compensation_flags,
 };
@@ -927,6 +968,7 @@ static int spica_battery_probe(struct platform_device *pdev)
 	bat->health = POWER_SUPPLY_HEALTH_GOOD;
 	bat->supply = SPICA_BATTERY_NONE;
 	bat->interval = BAT_POLL_INTERVAL;
+	bat->calibration = pdata->calibration;
 
 	ret = create_lookup_table(pdata->percent_lut,
 				pdata->percent_lut_cnt, &bat->percent_lookup);

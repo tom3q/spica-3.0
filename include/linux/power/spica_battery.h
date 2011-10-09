@@ -45,6 +45,9 @@ struct spica_battery_pdata {
 	const struct spica_battery_threshold *temp_lut;
 	unsigned int temp_lut_cnt;
 
+	/* Battery calibration ADC value */
+	int calibration;
+
 	/* Overheat temperature in 0.001*C */
 	int low_temp_enter;
 	int low_temp_exit;
