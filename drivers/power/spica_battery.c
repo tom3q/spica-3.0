@@ -587,6 +587,23 @@ static ssize_t talk_gsm_store(struct device *dev, struct device_attribute *attr,
 
 static DEVICE_ATTR(talk_gsm, S_IWUGO, dummy_show, talk_gsm_store);
 
+static ssize_t charging_source_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct spica_battery *bat = dev_get_drvdata(dev->parent);
+	int source;
+
+	mutex_lock(&bat->mutex);
+
+	source = bat->supply;
+
+	mutex_unlock(&bat->mutex);
+
+	return sprintf(buf, "%d\n", source + 1);
+}
+
+static DEVICE_ATTR(charging_source, S_IRUGO, charging_source_show, dummy_store);
+
 static ssize_t batt_vol_adc_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
@@ -626,6 +643,7 @@ static struct device_attribute *battery_attrs[] = {
 	&dev_attr_data_call,
 	&dev_attr_talk_wcdma,
 	&dev_attr_talk_gsm,
+	&dev_attr_charging_source,
 	&dev_attr_batt_vol_adc,
 	&dev_attr_batt_temp_adc,
 	&dev_attr_compensation,
