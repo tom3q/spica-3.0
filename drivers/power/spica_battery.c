@@ -199,6 +199,8 @@ struct spica_battery {
 	int percent_value;
 	int volt_value;
 	int temp_value;
+	int vol_adc;
+	int temp_adc;
 	int status;
 	int health;
 	int online[SPICA_BATTERY_NUM];
@@ -290,6 +292,7 @@ static void spica_battery_poll(struct work_struct *work)
 		goto error;
 	}
 	volt_sample += bat->compensation;
+	bat->vol_adc = volt_sample;
 	volt_sample = put_sample_get_avg(&bat->volt_avg, volt_sample);
 	volt_value = lookup_value(&bat->volt_lookup, volt_sample);
 	percent_value = lookup_value(&bat->percent_lookup, volt_sample);
@@ -301,6 +304,7 @@ static void spica_battery_poll(struct work_struct *work)
 		bat->health = POWER_SUPPLY_HEALTH_UNKNOWN;
 		goto error;
 	}
+	bat->temp_adc = temp_sample;
 	temp_sample = put_sample_get_avg(&bat->temp_avg, temp_sample);
 	temp_value = lookup_value(&bat->temp_lookup, temp_sample);
 
@@ -583,10 +587,47 @@ static ssize_t talk_gsm_store(struct device *dev, struct device_attribute *attr,
 
 static DEVICE_ATTR(talk_gsm, S_IWUGO, dummy_show, talk_gsm_store);
 
+static ssize_t batt_vol_adc_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct spica_battery *bat = dev_get_drvdata(dev->parent);
+	int val;
+
+	mutex_lock(&bat->mutex);
+
+	val = bat->vol_adc;
+
+	mutex_unlock(&bat->mutex);
+
+	return sprintf(buf, "%d\n", val);
+}
+
+static DEVICE_ATTR(batt_vol_adc, S_IRUGO, batt_vol_adc_show, dummy_store);
+
+static ssize_t batt_temp_adc_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct spica_battery *bat = dev_get_drvdata(dev->parent);
+	int val;
+
+	mutex_lock(&bat->mutex);
+
+	val = bat->temp_adc;
+
+	mutex_unlock(&bat->mutex);
+
+	return sprintf(buf, "%d\n", val);
+}
+
+static DEVICE_ATTR(batt_temp_adc, S_IRUGO, batt_temp_adc_show, dummy_store);
+				batt_vol_adc_cal_show, batt_vol_adc_cal_store);
+
 static struct device_attribute *battery_attrs[] = {
 	&dev_attr_data_call,
 	&dev_attr_talk_wcdma,
 	&dev_attr_talk_gsm,
+	&dev_attr_batt_vol_adc,
+	&dev_attr_batt_temp_adc,
 	&dev_attr_compensation,
 	&dev_attr_compensation_flags,
 };
@@ -914,6 +955,7 @@ static int spica_battery_probe(struct platform_device *pdev)
 			continue;
 		}
 		sample += bat->compensation;
+		bat->vol_adc = sample;
 		/* Put the sample and get the new average */
 		bat->volt_value = put_sample_get_avg(&bat->volt_avg, sample);
 		/* Get a temperature sample from the ADC */
@@ -922,6 +964,7 @@ static int spica_battery_probe(struct platform_device *pdev)
 			dev_warn(&pdev->dev, "Failed to get ADC sample.\n");
 			continue;
 		}
+		bat->temp_adc = sample;
 		/* Put the sample and get the new average */
 		bat->temp_value = put_sample_get_avg(&bat->temp_avg, sample);
 	}
@@ -1171,6 +1214,7 @@ static void spica_battery_complete(struct device *dev)
 			continue;
 		}
 		sample += bat->compensation;
+		bat->vol_adc = sample;
 		/* Put the sample and get the new average */
 		volt_value = put_sample_get_avg(&bat->volt_avg, sample);
 		/* Get a temperature sample from the ADC */
@@ -1179,6 +1223,7 @@ static void spica_battery_complete(struct device *dev)
 			dev_warn(dev, "Failed to get ADC sample.\n");
 			continue;
 		}
+		bat->temp_adc = sample;
 		/* Put the sample and get the new average */
 		temp_value = put_sample_get_avg(&bat->temp_avg, sample);
 	}
