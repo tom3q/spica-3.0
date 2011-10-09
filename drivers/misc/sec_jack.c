@@ -45,6 +45,7 @@ struct sec_jack_info {
 	struct work_struct work;
 	struct workqueue_struct *workqueue;
 	struct wake_lock det_wake_lock;
+	struct wake_lock user_wake_lock;
 	struct sec_jack_zone *zone;
 	struct s3c_adc_client *adc;
 	int det_irq;
@@ -130,7 +131,8 @@ static void sec_jack_set_type(struct sec_jack_info *hi, int jack_type)
 	pr_info("%s : jack_type = %d\n", __func__, jack_type);
 #ifdef CONFIG_HAS_WAKELOCK
 	/* prevent suspend to allow user space to respond to switch */
-	wake_lock_timeout(&hi->det_wake_lock, WAKE_LOCK_TIME);
+	wake_lock_timeout(&hi->user_wake_lock, WAKE_LOCK_TIME);
+	wake_unlock(&hi->det_wake_lock);
 #endif
 	switch_set_state(&switch_jack_detection, jack_type);
 }
@@ -294,6 +296,7 @@ static int sec_jack_probe(struct platform_device *pdev)
 	INIT_WORK(&hi->work, sec_jack_detect_work);
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_init(&hi->det_wake_lock, WAKE_LOCK_SUSPEND, "sec_jack_det");
+	wake_lock_init(&hi->user_wake_lock, WAKE_LOCK_SUSPEND, "sec_jack_user");
 #endif
 	hi->det_irq = gpio_to_irq(pdata->det_gpio);
 	ret = request_irq(hi->det_irq, sec_jack_irq,
@@ -320,6 +323,7 @@ err_enable_irq_wake:
 err_request_detect_irq:
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&hi->det_wake_lock);
+	wake_lock_destroy(&hi->user_wake_lock);
 #endif
 	switch_dev_unregister(&switch_jack_detection);
 err_switch_dev_register:
@@ -348,6 +352,7 @@ static int sec_jack_remove(struct platform_device *pdev)
 	platform_device_unregister(hi->send_key_dev);
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&hi->det_wake_lock);
+	wake_lock_destroy(&hi->user_wake_lock);
 #endif
 	switch_dev_unregister(&switch_jack_detection);
 	s3c_adc_release(hi->adc);
