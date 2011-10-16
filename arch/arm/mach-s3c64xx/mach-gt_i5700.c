@@ -1006,6 +1006,7 @@ static struct samsung_keypad_platdata spica_keypad_pdata __initdata = {
 	.rows		= 4,
 	.cols		= 4,
 	.no_autorepeat	= 1,
+	.wakeup		= 1,
 };
 
 /*
