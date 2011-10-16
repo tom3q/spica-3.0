@@ -1103,9 +1103,9 @@ static struct mtd_partition spica_onenand_parts[] = {
 		.offset		= 0x09ec0000,
 	},
 	[7] = {
-		.name		= "xbin",
-		.size		= SZ_16M + SZ_8M,
-		.offset		= 0x1b540000,
+		.name		= "oops",
+		.size		= SZ_8M,
+		.offset		= 0x1c540000,
 	},
 	[8] = {
 		.name		= "cache",
