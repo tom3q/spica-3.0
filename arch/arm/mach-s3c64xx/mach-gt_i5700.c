@@ -972,7 +972,7 @@ static struct s3c_fb_platdata spica_lcd_pdata __initdata = {
 static struct resource spica_ram_console_resources[] = {
 	{
 		.start	= RAM_CONSOLE_START,
-		.end	= RAM_CONSOLE_START + RAM_CONSOLE_SIZE - 1,
+		.end	= RAM_CONSOLE_START + SZ_1M - 1,
 		.flags	= IORESOURCE_MEM,
 	}
 };
