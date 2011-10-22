@@ -838,9 +838,8 @@ static struct platform_device spica_s6d05a = {
 
 static struct s3c_sdhci_platdata spica_hsmmc0_pdata = {
 	.max_width		= 4,
-	.host_caps		= MMC_CAP_4_BIT_DATA |
-				MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED |
-				MMC_CAP_DISABLE,
+	.host_caps		= MMC_CAP_4_BIT_DATA
+				| MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED,
 	.cd_type		= S3C_SDHCI_CD_GPIO,
 	.ext_cd_gpio		= GPIO_TF_DETECT,
 	.ext_cd_gpio_invert	= 1,
@@ -870,9 +869,8 @@ static int spica_wlan_cd_cleanup(void (*notify_func)(struct platform_device *,
 
 static struct s3c_sdhci_platdata spica_hsmmc2_pdata = {
 	.max_width		= 4,
-	.host_caps		= MMC_CAP_4_BIT_DATA |
-				MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED |
-				MMC_CAP_DISABLE,
+	.host_caps		= MMC_CAP_4_BIT_DATA
+				| MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED,
 	.cd_type		= S3C_SDHCI_CD_EXTERNAL,
 	.ext_cd_init		= spica_wlan_cd_init,
 	.ext_cd_cleanup		= spica_wlan_cd_cleanup,
