@@ -874,6 +874,7 @@ static struct s3c_sdhci_platdata spica_hsmmc2_pdata = {
 	.cd_type		= S3C_SDHCI_CD_EXTERNAL,
 	.ext_cd_init		= spica_wlan_cd_init,
 	.ext_cd_cleanup		= spica_wlan_cd_cleanup,
+	.built_in		= 1,
 };
 
 static struct regulator_consumer_supply mmc2_supplies[] = {
