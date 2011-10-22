@@ -1416,7 +1416,6 @@ static int spica_wlan_set_power(int val)
 		s3c_gpio_setpull(GPIO_WLAN_HOST_WAKE, S3C_GPIO_PULL_DOWN);
 		gpio_set_value(GPIO_WLAN_RST_N, 0);
 		spica_wifi_bt_power_dec();
-		wake_unlock(&wlan_wakelock);
 	}
 
 	spica_wlan_power = val;
