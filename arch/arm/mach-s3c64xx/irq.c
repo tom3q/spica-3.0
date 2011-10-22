@@ -50,7 +50,8 @@ static struct s3c_uart_irq uart_irqs[] = {
 
 /* setup the sources the vic should advertise resume for, even though it
  * is not doing the wake (set_irq_wake needs to be valid) */
-#define IRQ_VIC0_RESUME (1 << (IRQ_RTC_TIC - IRQ_VIC0_BASE))
+#define IRQ_VIC0_RESUME (1 << (IRQ_RTC_TIC - IRQ_VIC0_BASE) | \
+			 1 << (IRQ_KEYPAD - IRQ_VIC0_BASE))
 #define IRQ_VIC1_RESUME (1 << (IRQ_RTC_ALARM - IRQ_VIC1_BASE) |	\
 			 1 << (IRQ_PENDN - IRQ_VIC1_BASE) |	\
 			 1 << (IRQ_HSMMC0 - IRQ_VIC1_BASE) |	\
