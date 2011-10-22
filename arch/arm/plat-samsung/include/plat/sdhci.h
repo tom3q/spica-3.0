@@ -84,6 +84,9 @@ struct s3c_sdhci_platdata {
 			    void __iomem *regbase,
 			    struct mmc_ios *ios,
 			    struct mmc_card *card);
+
+        /* add to deal with non-removable device */
+        int     built_in;
 };
 
 /**

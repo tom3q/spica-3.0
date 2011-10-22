@@ -538,6 +538,11 @@ static int __devinit sdhci_s3c_probe(struct platform_device *pdev)
 	if (pdata->host_caps)
 		host->mmc->caps |= pdata->host_caps;
 
+	/* Set pm_flags for built_in device */
+	host->mmc->pm_caps = MMC_PM_KEEP_POWER | MMC_PM_IGNORE_PM_NOTIFY;
+	if (pdata->built_in)
+		host->mmc->pm_flags = MMC_PM_KEEP_POWER | MMC_PM_IGNORE_PM_NOTIFY;
+
 	ret = sdhci_add_host(host);
 	if (ret) {
 		dev_err(dev, "sdhci_add_host() failed\n");
@@ -617,15 +622,25 @@ static int __devexit sdhci_s3c_remove(struct platform_device *pdev)
 static int sdhci_s3c_suspend(struct platform_device *dev, pm_message_t pm)
 {
 	struct sdhci_host *host = platform_get_drvdata(dev);
+	struct s3c_sdhci_platdata *pdata = dev->dev.platform_data;
 
-	return sdhci_suspend_host(host, pm);
+	struct mmc_host *mmc = host->mmc;
+
+	if (mmc->card && pdata->built_in)
+		mmc->pm_flags |= MMC_PM_KEEP_POWER;
+
+	sdhci_suspend_host(host, pm);
+
+	return 0;
 }
 
 static int sdhci_s3c_resume(struct platform_device *dev)
 {
 	struct sdhci_host *host = platform_get_drvdata(dev);
 
-	return sdhci_resume_host(host);
+	sdhci_resume_host(host);
+
+	return 0;
 }
 
 #else
