@@ -993,15 +993,15 @@ static int __devexit qt5480_remove(struct i2c_client *client)
 {
 	struct qt5480 *qt = i2c_get_clientdata(client);
 
-	i2c_set_clientdata(client, 0);
-
+	free_irq(qt->irq, qt);
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	unregister_early_suspend(&qt->early_suspend);
-#endif  // End of CONFIG_HAS_EARLYSUSPEND
+#endif
+	i2c_set_clientdata(client, 0);
 
-	free_irq(qt->irq, qt);
 	input_unregister_device(qt->input_dev);
 	input_free_device(qt->input_dev);
+
 	kfree(qt->config);
 	kfree(qt);
 
