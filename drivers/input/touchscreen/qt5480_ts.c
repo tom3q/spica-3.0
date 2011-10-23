@@ -32,7 +32,192 @@
 
 #include <linux/input/qt5480_ts.h>
 
-#include "qt5480_ts.h"
+/*
+ * QT5480 register definitions
+ */
+
+#define REG_CLASS(reg)		((reg) >> 2)
+#define REG_OFFS(reg)		((reg) & 3)
+
+/* Control registers */
+
+#define	REG_CHIP_ID				0	// byte
+#define	REG_CODE_VERSION			1	// byte
+#define	REG_CALIBRATE				2	// byte
+#define	REG_RESET				3	// byte
+#define	REG_BACKUP_REQUEST			4	// byte
+#define	REG_ADDRESS_POINTER			5	// byte
+#define	REG_EEPROM_CHKSUM_L			6	// byte
+#define REG_EEPROM_CHKSUM_H			7	// byte
+#define	REG_KEY_STATUS_1			8	// byte
+/* Unknown 9 - 13 */
+#define	REG_GENERAL_STATUS_1			14	// byte
+#define	REG_GENERAL_STATUS_2			15	// byte
+#define	REG_TOUCHSCR_0_X			16	// word
+#define	REG_TOUCHSCR_0_Y			18	// word
+#define	REG_TOUCHSCR_1_X			20	// word
+#define	REG_TOUCHSCR_1_Y			22	// word
+#define	REG_SLIDER_POS				20	// 6 bytes
+#define	REG_FORCE_MESURE			26	// byte
+#define	REG_CHANNEL_GATING_INPUT_STATUS		27	// byte
+/* Unknown 28 - 36 */
+#define	REG_MINOR_VERSION			37	// byte
+/* Unknown 38 - 255 */
+#define	REG_CHANNEL_0_DELTA			256	// 48 words
+#define	REG_CHANNEL_0_REFERENCE			352	// 48 words
+/* Unknown 448 - 511 */
+
+/* Setup data */
+
+#define	REG_CHANNEL_CONTROL			512	// 48 bytes
+#define	REG_CHANNEL_NEGATIVE_THRESHHOLD		560	// 48 bytes
+#define	REG_CHANNEL_BURST_LENGTH		608	// 48 bytes
+#define	REG_LP_MODE				656	// byte
+#define	REG_MIN_CYCLE_TIME			657	// byte
+#define	REG_AWAKE_TIMEOUT			658	// byte
+#define	REG_TRIGGER_CONTROL			659	// byte
+#define	REG_GUARD_CHANNEL_ENABLE		660	// byte
+#define	REG_TOUCHSCREEN_SETUP			661	// byte
+#define	REG_TOUCHSCREEN_LENGTH			662	// byte
+#define	REG_SLIDER_SETUP			662	// 6 bytes
+#define	REG_TOUCHSCREEN_HYSTERESIS		668	// 6 bytes
+#define	REG_SLIDER_HYSTERESIS			668	// 6 bytes
+#define	REG_GPO_CONTROL				674	// byte
+#define	REG_NDRIFT_SETTING			675	// byte
+#define	REG_PDRIFT_SETTING			676	// byte
+#define	REG_NDIL_SETTING			677	// byte
+#define	REG_SDIL_SETTING			678	// byte
+#define	REG_NEGATIVE_RECALIBRATION_DELAY	679	// byte
+#define	REG_DRIFT_HOLD_TIME			680	// byte
+#define	REG_FORCE_SENSOR_THRESHHOLD		681	// byte
+#define	REG_POSITION_CLIPPING_LIMITS		682	// 2 bytes
+#define	REG_LINEAR_X_OFFSET			684	// 2 bytes
+#define	REG_LINEAR_X_SEGMENTS			686	// 16 bytes
+#define	REG_LINEAR_Y_OFFSET			702	// 2 bytes
+#define	REG_LINEAR_Y_SEGMENTS			704	// 16 bytes
+#define	REG_BURST_CONTROL			720	// byte
+#define	REG_STATUS_MASK				721	// byte
+#define	REG_POSITION_FILTER_CONTROL		722	// byte
+#define	REG_TOUCH_SIZE_RESOLUTION_CONTROL	723	// byte
+#define	REG_TOUCHSCREEN_PLATEAU_CONTROL		724	// byte
+#define	REG_SLEW_RATE_FILTER_CONTROL		725	// byte
+#define	REG_MEDIAN_FILTER_LENGTH		726	// byte
+#define	REG_IIR_FILTER_CONTROL			727	// byte
+#define	REG_TOUCHDOWN_HYSTERESIS		728	// byte
+#define	REG_GESTURE_CONFIG_REGISTERS		734	// 14 bytes
+
+/*
+ * QT5480 register configuration
+ */
+
+static u8 qt5480_default_config[] = {
+	// REG_CHANNEL_CONTROL
+	0,	0,	0,	0,
+	0,	0,	0,	0,
+	0,	0,	0,	0,
+	0,	0,	0,	0,
+	0,	0,	0,	0,
+	0,	0,	0,	0,
+	0,	0,	0,	0,
+	0,	0,	0,	0,
+	0,	0,	0,	0,
+	0,	0,	0,	0,
+	0,	0,	0,	0,
+	0,	0,	0,	0,
+
+	// REG_CHANNEL_NEGATIVE_THRESHHOLD
+	48,	48,	48,	48,
+	48,	48,	49,	49,
+	48,	48,	48,	48,
+	48,	48,	49,	49,
+	48,	48,	48,	48,
+	48,	48,	48,	48,
+	48,	48,	48,	48,
+	48,	48,	48,	48,
+	48,	48,	48,	48,
+	48,	48,	49,	49,
+	48,	48,	48,	48,
+	48,	48,	49,	49,
+
+	// REG_CHANNEL_BURST_LENGTH
+	56,	44,	48,	48,
+	48,	48,	48,	60,
+	56,	36,	40,	40,
+	40,	40,	40,	60,
+	56,	40,	44,	44,
+	44,	44,	44,	60,
+	56,	40,	44,	44,
+	44,	44,	44,	60,
+	56,	40,	44,	44,
+	44,	44,	44,	60,
+	60,	52,	56,	56,
+	56,	56,	56,	72,
+
+	20,	// REG_LP_MODE
+	255,	// REG_MIN_CYCLE_TIME
+	50,	// REG_AWAKE_TIMEOUT
+	0,	// REG_TRIGGER_CONTROL
+	48,	// REG_GUARD_CHANNEL_ENABLE
+	22,	// REG_TOUCHSCREEN_SETUP
+
+	// REG_TOUCHSCREEN_LENGTH / REG_SLIDER_SETUP
+	8,	0,	0,	0,	0,	0,
+
+	// REG_TOUCHSCREEN_HYSTERESIS / REG_SLIDER_HYSTERESIS
+	0,	0,	0,	0,	0,	0,
+
+	0,	// REG_GPO_CONTROL
+	12,	// REG_NDRIFT_SETTING
+	1,	// REG_PDRIFT_SETTING
+	2,	// REG_NDIL_SETTING
+	0,	// REG_SDIL_SETTING
+	150,	// REG_NEGATIVE_RECALIBRATION_DELAY
+	5,	// REG_DRIFT_HOLD_TIME
+	255,	// REG_FORCE_SENSOR_THRESHHOLD
+
+	// REG_POSITION_CLIPPING_LIMITS
+	0,	0,
+
+	// REG_LINEAR_X_OFFSET
+	0,	0,
+
+	// REG_LINEAR_X_SEGMENTS
+	64,	64,	64,	64,
+	64,	64,	64,	64,
+	64,	64,	64,	64,
+	64,	64,	64,	64,
+
+	// REG_LINEAR_Y_OFFSET
+	0,	0,
+
+	// REG_LINEAR_Y_SEGMENTS
+	64,	64,	64,	64,
+	64,	64,	64,	64,
+	64,	64,	64,	64,
+	64,	64,	64,	64,
+
+	2,	// REG_BURST_CONTROL
+	14,	// REG_STATUS_MASK
+	8,	// REG_POSITION_FILTER_CONTROL
+	3,	// REG_TOUCH_SIZE_RESOLUTION_CONTROL
+	0,	// REG_TOUCHSCREEN_PLATEAU_CONTROL
+	0,	// REG_SLEW_RATE_FILTER_CONTROL
+	1,	// REG_MEDIAN_FILTER_LENGTH
+	0,	// REG_IIR_FILTER_CONTROL
+	0,	// REG_TOUCHDOWN_HYSTERESIS
+
+	// 729 - 733 (Unknown)
+	0,	25,	0,	0,	26,
+
+	// REG_GESTURE_CONFIG_REGISTERS
+	0,	6,	16,	6,	16,	16,	16,
+	0,	75,	0,	50,	0,	0,	0,
+
+	// 748++ (Unknown)
+	13,	10,	0,	0,	0
+};
+
+#define QT5480_CONFIG_REGS	(sizeof(qt5480_default_config))
 
 /*
  * Debugging macros
@@ -346,144 +531,6 @@ static int qt5480_write_config(struct qt5480 *qt)
 	return 0;
 }
 
-
-static int qt5480_reset(struct qt5480 *qt)
-{
-	int ret = 0, timeout = 100;
-	struct qt5480_ctrl_word ctrl;
-
-	// H/W reset
-	gpio_set_value(qt->pdata->rst_gpio, qt->pdata->rst_inverted);
-	msleep(QT5480_RESET_ASSERT_TIME);
-
-	gpio_set_value(qt->pdata->rst_gpio, !qt->pdata->rst_inverted);
-	msleep(QT5480_RESET_TIME);
-
-	// check if the device responds
-	ctrl.class = REG_CLASS(REG_CHIP_ID);
-	do {
-		msleep(1);
-		ret = qt5480_i2c_read_regs(qt, &ctrl);
-	} while(--timeout && (ret < 0 || ctrl.data[0] != QT5480_CHIP_ID));
-
-	if (ret < 0 || ctrl.data[0] != QT5480_CHIP_ID)
-		return -EIO;
-
-	return 0;
-}
-
-static int qt5480_update_firmware(struct qt5480 *qt)
-{
-	u8 wbuf[4] = { 0x00, 0xDC, 0xAA, 0x55 };
-	int ret, size;
-	u8 status;
-	struct i2c_msg rmsg = {
-		.addr = QT5480_BL_I2C_ADDR, .flags = I2C_M_RD,
-		.len = 1, .buf = &status
-	};
-	struct i2c_msg wmsg = {
-		.addr = QT5480_BL_I2C_ADDR, .flags = 0
-	};
-	u8 *data = qt5480_firmware;
-
-	dev_info(qt->dev, "Updating firmware...\n");
-
-	// Enter the bootloader mode
-	ret = i2c_master_send(qt->client, wbuf, sizeof(wbuf));
-	if (ret < 0) {
-		dev_err(qt->dev, "Failed to enter bootloader mode.\n");
-		return ret;
-	}
-
-	// Wait for the chip to enter bootloader mode
-	msleep(5);
-
-	// Write the firmware data
-	do {
-		ret = i2c_transfer(qt->client->adapter, &rmsg, 1);
-		if(ret < 0) {
-			dev_err(qt->dev, "Status read failed, aborting.\n");
-			qt5480_reset(qt);
-			return ret;
-		}
-
-		// do something according to the current status
-		switch(status) {
-		case 0x0:
-			// POWER ON
-			// do nothing
-			break;
-
-		case 0x1:
-			// WAITING FRAME DATA
-			// send the firmware data
-
-			size = 16*data[0] + data[1] + 2;
-			if(size == 2) {
-				// reset TSP
-				qt5480_reset(qt);
-				return 0;
-			}
-
-			wmsg.len = size;
-			wmsg.buf = data;
-
-			ret = i2c_transfer(qt->client->adapter, &wmsg, 1);
-			if(ret < 0) {
-				dev_err(qt->dev,
-					"Firmware data write failed.\n");
-				return ret;
-			}
-
-			data += size;
-			break;
-
-		case 0x2:
-			// FRAME CRC CHECK
-			// do nothing
-			break;
-
-		case 0x3:
-			// FRAME CRC ERROR
-			// resend
-
-			data -= size;
-			dev_warn(qt->dev,
-					"CRC error at offset %d, resending.\n",
-					data - qt5480_firmware);
-			break;
-
-		case 0x4:
-			// FRAME CRC PASS
-			// update finished if last frame
-
-			if(data[0] == 0 && data[1] == 0) {
-				dev_info(qt->dev,
-					"Firmware updated successfully.\n");
-
-				// wait for the chip to finish
-				// processing the firmware
-				msleep(100);
-
-				// reset TSP
-				qt5480_reset(qt);
-				return 0;
-			}
-			break;
-
-		default:
-			// APP CRC FAIL
-			// firmware CRC check failed
-
-			dev_err(qt->dev, "Firmware CRC check failed.\n");
-			qt5480_reset(qt);
-			return -EIO;
-		}
-	} while(1);
-
-	return -EIO;
-}
-
 static int qt5480_get_fw_version(struct qt5480 *qt)
 {
 	int ret;
@@ -542,11 +589,10 @@ static int qt5480_init_hw(struct qt5480 *qt)
 	}
 
 	if (ret < QT5480_MIN_FW_VERSION) {
-		dev_info(qt->dev, "Firmware too old, upgrading...\n");
-		if ((ret = qt5480_update_firmware(qt)) != 0) {
-			dev_err(qt->dev, "Failed to upgrade firmware\n");
-			return ret;
-		}
+		dev_err(qt->dev, "Incompatible firmware version found. "
+					"Expected at least %04x, got %04x.\n",
+					QT5480_MIN_FW_VERSION, ret);
+		return -ENODEV;
 	}
 
 	if ((ret = qt5480_write_config(qt)) != 0) {
@@ -800,66 +846,9 @@ static irqreturn_t qt5480_irq_handler(int irq, void *dev_id)
 }
 
 /*
- * Sysfs entries
- */
-
-static ssize_t config_show(struct device *dev,
-				struct device_attribute *attr, char *buf)
-{
-	struct qt5480 *qt = dev_get_drvdata(dev);
-	int i;
-	char *ptr = buf;
-	u8 *reg = qt->config;
-
-	for(i = 0; i < QT5480_CONFIG_REGS; ++i) {
-		ptr += sprintf(ptr, "%02x ", *(reg++));
-		if (i % 8 == 7)
-			ptr += sprintf(ptr, "\n");
-	}
-
-	if (i % 8)
-		ptr += sprintf(ptr, "\n");
-
-	return ptr - buf;
-}
-
-static ssize_t config_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
-{
-	struct qt5480 *qt = dev_get_drvdata(dev);
-	unsigned long reg, val;
-	char *next = 0;
-
-	reg = simple_strtoul(buf, &next, 0);
-	if (reg >= QT5480_CONFIG_REGS)
-		return -EINVAL;
-
-	val = simple_strtoul(next, 0, 0);
-	if (val > 255)
-		return -EINVAL;
-
-	qt->config[512 + reg] = val;
-	qt5480_i2c_write(qt, 512 + reg, val);
-
-	return size;
-}
-
-static DEVICE_ATTR(config, S_IRUGO | S_IWUSR, config_show, config_store);
-
-static struct attribute *qt5480_attrs[] = {
-	&dev_attr_config.attr,
-	NULL
-};
-
-static const struct attribute_group qt5480_attr_group = {
-	.attrs = qt5480_attrs,
-};
-
-/*
  * Power management
  */
 
-#ifdef CONFIG_PM
 static int qt5480_do_suspend(struct qt5480 *qt)
 {
 	int ret = 0;
@@ -981,8 +970,6 @@ static void qt5480_late_resume(struct early_suspend *h)
 }
 
 static const struct dev_pm_ops qt5480_pm_ops = {
-	.suspend	= 0,
-	.resume		= 0,
 };
 #else /* CONFIG_HAS_EARLYSUSPEND */
 static int qt5480_suspend(struct device *dev)
@@ -1006,7 +993,6 @@ static const struct dev_pm_ops qt5480_pm_ops = {
 	.resume		= qt5480_resume,
 };
 #endif /* CONFIG_HAS_EARLYSUSPEND */
-#endif /* CONFIG_PM */
 
 /*
  * I2C Driver
@@ -1086,22 +1072,14 @@ static int __devinit qt5480_probe(struct i2c_client *client,
 		dev_err(qt->dev, "Failed to request interrupt\n");
 		goto err_irq;
 	}
-
-	ret = sysfs_create_group(&client->dev.kobj, &qt5480_attr_group);
-	if (ret)
-		goto err_sysfs;
-
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	qt->early_suspend.level		= EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	qt->early_suspend.suspend	= qt5480_early_suspend;
 	qt->early_suspend.resume	= qt5480_late_resume;
 	register_early_suspend(&qt->early_suspend);
-#endif  /* CONFIG_HAS_EARLYSUSPEND */
-
+#endif
 	return 0;
 
-err_sysfs:
-	free_irq(client->irq, qt);
 err_irq:
 	input_unregister_device(input_dev);
 err_input_register:
@@ -1145,9 +1123,7 @@ static struct i2c_driver qt5480_driver = {
 	.driver = {
 		.name	= "qt5480_ts",
 		.owner	= THIS_MODULE,
-#ifdef CONFIG_PM
 		.pm	= &qt5480_pm_ops,
-#endif
 	},
 	.probe		= qt5480_probe,
 	.remove		= __devexit_p(qt5480_remove),
