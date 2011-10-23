@@ -262,10 +262,18 @@ static u8 qt5480_default_config[] = {
 #define QT5480_MAX_YC			1023
 #define QT5480_MAX_ZC			63
 #define QT5480_MAX_WIDTH		63
-#define QT5480_MAX_TOUCH_ID		1
+#define QT5480_MAX_FINGER		2
 #define QT5480_RESET_TIME		100
 #define QT5480_RESET_ASSERT_TIME	10
 #define QT5480_MIN_FW_VERSION		0x5502
+
+/*
+ * Touch states
+ */
+
+#define QT5480_NONE		0
+#define QT5480_MOVE		1
+#define QT5480_RELEASE		2
 
 /*
  * QT5480 only be able to send a data packet consists of five bytes
@@ -280,18 +288,12 @@ static u8 qt5480_default_config[] = {
 #define SINGLETOUCH_FLAG	0x01
 #define MULTITOUCH_FLAG		0x02
 
-struct qt5480_report {
-	int contact;	//finger on screen
-	int pos_x;	//x coordinate
-	int pos_y;	//y coordinate
-	int pressure;	//pressure
-	int width;	//touch width
-};
-
 struct qt5480_touch {
-	int ready;		//new data ready
-	struct qt5480_report curr;	//current status (to be reported)
-	struct qt5480_report prev;	//last reported status
+	int status;
+	int pos_x;
+	int pos_y;
+	int pressure;
+	int width;
 };
 
 struct qt5480 {
@@ -617,9 +619,39 @@ static int qt5480_init_hw(struct qt5480 *qt)
  * Input events processing
  */
 
+static void qt5480_report_input(struct qt5480 *qt, int single_id)
+{
+	struct qt5480_touch *touch = qt->touch;
+	struct input_dev* dev = qt->input_dev;
+	int id;
+
+	for (id = 0; id < QT5480_MAX_FINGER; ++id) {
+		if (!touch[id].status)
+			continue;
+
+		if (touch[id].status != QT5480_RELEASE) {
+			input_report_abs(dev, ABS_MT_TOUCH_MAJOR,
+							touch[id].width);
+			input_report_abs(dev, ABS_MT_POSITION_X,
+							touch[id].pos_x);
+			input_report_abs(dev, ABS_MT_POSITION_Y,
+							touch[id].pos_y);
+			input_report_abs(dev, ABS_MT_TRACKING_ID, id);
+		} else {
+			input_report_abs(dev, ABS_MT_TOUCH_MAJOR, 0);
+			touch[id].status = 0;
+		}
+
+		input_mt_sync(dev);
+	}
+
+	input_sync(dev);
+}
+
 static void qt5480_handle_data(struct qt5480 *qt, struct qt5480_ctrl_word *ctrl)
 {
 	struct qt5480_touch *touch = qt->touch;
+	int id;
 
 	switch (ctrl->class) {
 	case 3:
@@ -644,173 +676,41 @@ static void qt5480_handle_data(struct qt5480 *qt, struct qt5480_ctrl_word *ctrl)
 		}
 
 		/* contacts */
-		touch[0].curr.contact = !!(ctrl->data[3] & 0x01);
-		touch[1].curr.contact = !!(ctrl->data[3] & 0x02);
-
-		if(touch[0].curr.contact == 0) {
-			touch[0].ready = 1;
-			if(touch[1].prev.contact)
-				touch[1].ready = 1;
+		if (!(ctrl->data[3] & 0x01)) {
+			touch[0].status = QT5480_RELEASE;
+			qt5480_report_input(qt, 0);
 		}
 
-		if(touch[1].curr.contact == 0) {
-			touch[1].ready = 1;
-			if(touch[0].prev.contact)
-				touch[0].ready = 1;
+		if (!(ctrl->data[3] & 0x02)) {
+			touch[1].status = QT5480_RELEASE;
+			qt5480_report_input(qt, 1);
 		}
 
 		/* Error bit */
-		if(ctrl->data[3] & 0x20) {
-			touch[0].curr.contact = 0;
-			touch[1].curr.contact = 0;
-			touch[0].ready = 1;
-			touch[1].ready = 1;
+		if (ctrl->data[3] & 0x20) {
+			touch[0].status = 0;
+			touch[1].status = 0;
 		}
 
 		break;
 
 	case 4:
-		if(qt->ignore)
-			return;
-
-		touch[0].curr.pos_y = ctrl->data[0] * 4 + ctrl->data[1] / 64;
-		touch[0].curr.pos_x = ctrl->data[2] * 4 + ctrl->data[3] / 64;
-		touch[0].curr.width = (ctrl->data[1] & 63);
-		touch[0].curr.pressure = (ctrl->data[3] & 63);
-		touch[0].ready = 1;
-
-		if (!touch[1].curr.contact)
-			touch[1].ready = 1;
-
-		break;
-
 	case 5:
 		if(qt->ignore)
 			return;
 
-		touch[1].curr.pos_y = ctrl->data[0] * 4 + ctrl->data[1] / 64;
-		touch[1].curr.pos_x = ctrl->data[2] * 4 + ctrl->data[3] / 64;
-		touch[1].curr.width = (ctrl->data[1] & 63);
-		touch[1].curr.pressure = (ctrl->data[3] & 63);
-		touch[1].ready = 1;
+		id = ctrl->class - 4;
 
-		if (!touch[0].curr.contact)
-			touch[0].ready = 1;
+		touch[id].status = QT5480_MOVE;
+		touch[id].pos_y = (ctrl->data[0] << 2) | (ctrl->data[1] >> 6);
+		touch[id].pos_x = (ctrl->data[2] << 2) | (ctrl->data[3] >> 6);
+		touch[id].width = (ctrl->data[1] & 0x3f);
+		touch[id].pressure = (ctrl->data[3] & 0x3f);
 
-		break;
-
-	case 255: //ERROR
-		touch[0].curr.contact = 0;
-		touch[1].curr.contact = 0;
-		touch[0].ready = 1;
-		touch[1].ready = 1;
+		qt5480_report_input(qt, id);
 
 		break;
 	}
-}
-
-static void qt5480_report_input(struct qt5480 *qt)
-{
-	struct qt5480_touch *touch = qt->touch;
-	struct input_dev* dev = qt->input_dev;
-	int changed = 0;
-
-	/* leave if both touches are not ready yet*/
-	if(!touch[0].ready || !touch[1].ready)
-		return;
-
-	/* leave if there are no changes*/
-	changed |= (touch[0].curr.contact != touch[0].prev.contact);
-	changed |= (touch[1].curr.contact != touch[1].prev.contact);
-
-	if(touch[0].curr.contact) {
-		changed |= (touch[0].curr.pos_x != touch[0].prev.pos_x);
-		changed |= (touch[0].curr.pos_y != touch[0].prev.pos_y);
-		changed |= (touch[0].curr.width != touch[0].prev.width);
-		changed |= (touch[0].curr.pressure != touch[0].prev.pressure);
-	}
-
-	if(touch[1].curr.contact) {
-		changed |= (touch[1].curr.pos_x != touch[1].prev.pos_x);
-		changed |= (touch[1].curr.pos_y != touch[1].prev.pos_y);
-		changed |= (touch[1].curr.width != touch[1].prev.width);
-		changed |= (touch[1].curr.pressure != touch[1].prev.pressure);
-	}
-
-	if(!changed)
-		return;
-
-	/* report the last contact first */
-	if(!qt->first && (touch[1].curr.contact || touch[1].prev.contact)) {
-		/* report touch[1] only on contact or on leaving */
-		input_report_abs(dev, ABS_MT_TOUCH_MAJOR,
-					(touch[1].curr.contact)
-					? touch[1].curr.width : 0);
-		input_report_abs(dev, ABS_MT_POSITION_X,
-						touch[1].curr.pos_x);
-		input_report_abs(dev, ABS_MT_POSITION_Y,
-						touch[1].curr.pos_y);
-
-		DBG_DEV("TOUCH_1:%d @%d:%d (w=%d,p=%d)\n",
-			touch[1].curr.contact, touch[1].curr.pos_x,
-			touch[1].curr.pos_y, touch[1].curr.width,
-			touch[1].curr.pressure);
-
-		input_mt_sync(dev);
-
-		DBG_DEV("MT_SYNC\n");
-	}
-
-	/* report touch[0] only on contact or on leaving */
-	if(touch[0].curr.contact || touch[0].prev.contact) {
-		input_report_abs(dev, ABS_MT_TOUCH_MAJOR,
-					(touch[0].curr.contact)
-					? touch[0].curr.width : 0);
-		input_report_abs(dev, ABS_MT_POSITION_X, touch[0].curr.pos_x);
-		input_report_abs(dev, ABS_MT_POSITION_Y, touch[0].curr.pos_y);
-
-		DBG_DEV("TOUCH_0:%d @%d:%d (w=%d,p=%d)\n",
-			touch[0].curr.contact, touch[0].curr.pos_x,
-			touch[0].curr.pos_y, touch[0].curr.width,
-			touch[0].curr.pressure);
-
-		input_mt_sync(dev);
-
-		DBG_DEV("MT_SYNC\n");
-	}
-
-	/* report the first contact last */
-	if(qt->first && (touch[1].curr.contact || touch[1].prev.contact)) {
-		/* report touch[1] only on contact or on leaving */
-		input_report_abs(dev, ABS_MT_TOUCH_MAJOR,
-						(touch[1].curr.contact)
-						? touch[1].curr.width : 0);
-		input_report_abs(dev, ABS_MT_POSITION_X, touch[1].curr.pos_x);
-		input_report_abs(dev, ABS_MT_POSITION_Y, touch[1].curr.pos_y);
-
-		DBG_DEV("TOUCH_1:%d @%d:%d (w=%d,p=%d)\n",
-			touch[1].curr.contact, touch[1].curr.pos_x,
-			touch[1].curr.pos_y, touch[1].curr.width,
-			touch[1].curr.pressure);
-
-		input_mt_sync(dev);
-
-		DBG_DEV("MT_SYNC\n");
-	}
-
-	input_sync(dev);
-
-	DBG_DEV("SYNC\n");
-
-	if(!touch[1].curr.contact)
-		qt->first = 0;
-	else if (!touch[0].curr.contact)
-		qt->first = 1;
-
-	touch[0].ready = 0;
-	touch[0].prev = touch[0].curr;
-	touch[1].ready = 0;
-	touch[1].prev = touch[1].curr;
 }
 
 static irqreturn_t qt5480_irq_handler(int irq, void *dev_id)
@@ -837,9 +737,6 @@ static irqreturn_t qt5480_irq_handler(int irq, void *dev_id)
 				ctrl.data[2], ctrl.data[3]);
 
 		qt5480_handle_data(qt, &ctrl);
-
-		/* handle input device */
-		qt5480_report_input(qt);
 	} while (1);
 
 	return IRQ_HANDLED;
@@ -1025,16 +922,14 @@ static int __devinit qt5480_probe(struct i2c_client *client,
 
 	set_bit(EV_ABS, input_dev->evbit);
 
-	input_set_abs_params(input_dev, ABS_MT_POSITION_X, 0,
-						QT5480_MAX_XC, 0, 0);
-	input_set_abs_params(input_dev, ABS_MT_POSITION_Y, 0,
-						QT5480_MAX_YC, 0, 0);
-	input_set_abs_params(input_dev, ABS_MT_PRESSURE, 0,
-						QT5480_MAX_ZC, 0, 0);
-	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR, 0,
-						QT5480_MAX_WIDTH, 0, 0);
+	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR,
+						0, QT5480_MAX_WIDTH, 0, 0);
+	input_set_abs_params(input_dev, ABS_MT_POSITION_X,
+						0, QT5480_MAX_XC, 0, 0);
+	input_set_abs_params(input_dev, ABS_MT_POSITION_Y,
+						0, QT5480_MAX_YC, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_TRACKING_ID, 0,
-						QT5480_MAX_TOUCH_ID, 0, 0);
+						QT5480_MAX_FINGER - 1, 0, 0);
 
 	input_set_drvdata(input_dev, qt);
 
