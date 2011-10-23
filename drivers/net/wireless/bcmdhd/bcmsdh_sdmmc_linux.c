@@ -202,6 +202,7 @@ static int dhd_resume (void)
 
 	if ( NULL != dhd_pub_local ) {
 		wake_lock_timeout(&wlan_host_wakelock_resume, 2*HZ);
+		dhdsdio_bussleep(dhd_pub_global, FALSE);
 		dhd_os_proto_unblock(dhd_get_dhd_pub());
 		printk("[WIFI] %s: RESUME Done.\n", __FUNCTION__);
 		/* dhdsdio_bussleep_hack(dhd_pub_global,0); */
