@@ -879,6 +879,24 @@ static int spica_wlan_cd_cleanup(void (*notify_func)(struct platform_device *,
 	return 0;
 }
 
+static void spica_sdhci2_cfg_card(struct platform_device *dev,
+				  void __iomem *r,
+				  struct mmc_ios *ios,
+				  struct mmc_card *card)
+{
+	unsigned long flags;
+	u32 reg;
+
+	local_irq_save(flags);
+	reg = __raw_readl(S3C64XX_SPCON);
+	reg &= ~S3C64XX_SPCON_DRVCON_HSMMC_MASK;
+	reg |= S3C64XX_SPCON_DRVCON_HSMMC_2mA;
+	__raw_writel(reg, S3C64XX_SPCON);
+	local_irq_restore(flags);
+
+	s3c6400_setup_sdhci_cfg_card(dev, r, ios, card);
+}
+
 static struct s3c_sdhci_platdata spica_hsmmc2_pdata = {
 	.max_width		= 4,
 	.host_caps		= MMC_CAP_4_BIT_DATA
@@ -887,6 +905,7 @@ static struct s3c_sdhci_platdata spica_hsmmc2_pdata = {
 	.ext_cd_init		= spica_wlan_cd_init,
 	.ext_cd_cleanup		= spica_wlan_cd_cleanup,
 	.built_in		= 1,
+	.cfg_card		= spica_sdhci2_cfg_card,
 };
 
 static struct regulator_consumer_supply mmc2_supplies[] = {
