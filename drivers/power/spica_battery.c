@@ -35,7 +35,7 @@
 #include <mach/irqs.h>
 
 /* Time between samples (in milliseconds) */
-#define BAT_POLL_INTERVAL	10000
+#define BAT_POLL_INTERVAL	15000
 
 /* Time to wake up phone and recheck battery after (in seconds) */
 #define SUSPEND_INTERVAL	3600
