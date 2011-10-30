@@ -706,8 +706,8 @@ static void qt5480_handle_data(struct qt5480 *qt, struct qt5480_ctrl_word *ctrl)
 		touch[id].status = QT5480_MOVE;
 		touch[id].pos_y = (ctrl->data[0] << 2) | (ctrl->data[1] >> 6);
 		touch[id].pos_x = (ctrl->data[2] << 2) | (ctrl->data[3] >> 6);
-		touch[id].width = (ctrl->data[1] & 0x3f);
-		touch[id].pressure = (ctrl->data[3] & 0x3f);
+		touch[id].pressure = (ctrl->data[1] & 0x3f);
+		touch[id].width = (ctrl->data[3] & 0x3f);
 
 		qt5480_report_input(qt);
 
