@@ -1450,6 +1450,26 @@ static void __init spica_bt_lpm_init(void)
 static int spica_wlan_power = 0;
 static struct wake_lock wlan_wakelock;
 
+static struct s3c_pin_cfg_entry spica_wlan_pin_config_on[] = {
+	S3C64XX_GPC4_MMC2_CMD, S3C_PIN_PULL(NONE),
+	S3C64XX_GPC5_MMC2_CLK, S3C_PIN_PULL(NONE),
+	S3C64XX_GPH6_MMC2_DATA0, S3C_PIN_PULL(NONE),
+	S3C64XX_GPH7_MMC2_DATA1, S3C_PIN_PULL(NONE),
+	S3C64XX_GPH8_MMC2_DATA2, S3C_PIN_PULL(NONE),
+	S3C64XX_GPH9_MMC2_DATA3, S3C_PIN_PULL(NONE),
+	S3C_PIN(GPIO_WLAN_HOST_WAKE), S3C_PIN_PULL(NONE),
+};
+
+static struct s3c_pin_cfg_entry spica_wlan_pin_config_off[] = {
+	S3C64XX_PIN(GPC(4)), S3C_PIN_IN, S3C_PIN_PULL(NONE), /* CMD */
+	S3C64XX_PIN(GPC(5)), S3C_PIN_IN, S3C_PIN_PULL(DOWN), /* CLK */
+	S3C64XX_PIN(GPH(6)), S3C_PIN_IN, S3C_PIN_PULL(NONE), /* DATA0 */
+	S3C64XX_PIN(GPH(7)), S3C_PIN_IN, S3C_PIN_PULL(NONE), /* DATA1 */
+	S3C64XX_PIN(GPH(8)), S3C_PIN_IN, S3C_PIN_PULL(NONE), /* DATA2 */
+	S3C64XX_PIN(GPH(9)), S3C_PIN_IN, S3C_PIN_PULL(NONE), /* DATA3 */
+	S3C_PIN(GPIO_WLAN_HOST_WAKE), S3C_PIN_PULL(DOWN),
+};
+
 static int spica_wlan_set_power(int val)
 {
 	printk("%s = %d\n", __func__, val);
@@ -1462,9 +1482,11 @@ static int spica_wlan_set_power(int val)
 		spica_wifi_bt_power_inc();
 		msleep(150);
 		gpio_set_value(GPIO_WLAN_RST_N, 1);
-		s3c_gpio_setpull(GPIO_WLAN_HOST_WAKE, S3C_GPIO_PULL_NONE);
+		s3c_pin_config(spica_wlan_pin_config_on,
+					ARRAY_SIZE(spica_wlan_pin_config_on));
 	} else {
-		s3c_gpio_setpull(GPIO_WLAN_HOST_WAKE, S3C_GPIO_PULL_DOWN);
+		s3c_pin_config(spica_wlan_pin_config_off,
+					ARRAY_SIZE(spica_wlan_pin_config_off));
 		gpio_set_value(GPIO_WLAN_RST_N, 0);
 		spica_wifi_bt_power_dec();
 	}
@@ -2120,13 +2142,13 @@ static struct s3c_pin_cfg_entry spica_pin_config[] __initdata = {
 	S3C6410_GPB5_I2C0_SCL, S3C_PIN_PULL(UP),
 	S3C6410_GPB6_I2C0_SDA, S3C_PIN_PULL(UP),
 
-	/* MMC 2 (WLAN) */
-	S3C64XX_GPC4_MMC2_CMD, S3C_PIN_PULL(NONE),
-	S3C64XX_GPC5_MMC2_CLK, S3C_PIN_PULL(NONE),
-	S3C64XX_GPH6_MMC2_DATA0, S3C_PIN_PULL(NONE),
-	S3C64XX_GPH7_MMC2_DATA1, S3C_PIN_PULL(NONE),
-	S3C64XX_GPH8_MMC2_DATA2, S3C_PIN_PULL(NONE),
-	S3C64XX_GPH9_MMC2_DATA3, S3C_PIN_PULL(NONE),
+	/* MMC 2 (WLAN) - off by default (see WLAN power control) */
+	S3C64XX_PIN(GPC(4)), S3C_PIN_IN, S3C_PIN_PULL(NONE), /* CMD */
+	S3C64XX_PIN(GPC(5)), S3C_PIN_IN, S3C_PIN_PULL(DOWN), /* CLK */
+	S3C64XX_PIN(GPH(6)), S3C_PIN_IN, S3C_PIN_PULL(NONE), /* DATA0 */
+	S3C64XX_PIN(GPH(7)), S3C_PIN_IN, S3C_PIN_PULL(NONE), /* DATA1 */
+	S3C64XX_PIN(GPH(8)), S3C_PIN_IN, S3C_PIN_PULL(NONE), /* DATA2 */
+	S3C64XX_PIN(GPH(9)), S3C_PIN_IN, S3C_PIN_PULL(NONE), /* DATA3 */
 
 	/* I2S 0 */
 	S3C64XX_GPD0_I2S0_CLK, S3C_PIN_PULL(UP),
