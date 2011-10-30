@@ -918,7 +918,7 @@ static int __devinit qt5480_probe(struct i2c_client *client,
 		goto err_alloc_input;
 	}
 
-	input_dev->name = "AT42QT5480 Touchscreen";
+	input_dev->name = "qt5480_ts_input";
 	input_dev->id.bustype = BUS_I2C;
 	input_dev->dev.parent = &client->dev;
 
