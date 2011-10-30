@@ -1360,6 +1360,20 @@ static void spica_wifi_bt_power_dec(void)
  * Bluetooth
  */
 
+static struct s3c_pin_cfg_entry spica_bt_pin_config_on[] = {
+	S3C64XX_GPA4_UART1_RXD, S3C_PIN_PULL(NONE),
+	S3C64XX_GPA5_UART1_TXD, S3C_PIN_PULL(NONE),
+	S3C64XX_GPA6_UART1_CTSN, S3C_PIN_PULL(NONE),
+	S3C64XX_GPA7_UART1_RTSN, S3C_PIN_PULL(NONE),
+};
+
+static struct s3c_pin_cfg_entry spica_bt_pin_config_off[] = {
+	S3C64XX_PIN(GPA(4)), S3C_PIN_IN, S3C_PIN_PULL(DOWN),
+	S3C64XX_PIN(GPA(5)), S3C_PIN_IN, S3C_PIN_PULL(DOWN),
+	S3C64XX_PIN(GPA(6)), S3C_PIN_IN, S3C_PIN_PULL(DOWN),
+	S3C64XX_PIN(GPA(7)), S3C_PIN_IN, S3C_PIN_PULL(DOWN),
+};
+
 static int spica_bt_power = 0;
 
 static void spica_bt_set_power(int val)
@@ -1373,7 +1387,11 @@ static void spica_bt_set_power(int val)
 		msleep(100);
 		gpio_set_value(GPIO_BT_RST_N, 1);
 		msleep(50);
+		s3c_pin_config(spica_bt_pin_config_on,
+					ARRAY_SIZE(spica_bt_pin_config_on));
 	} else {
+		s3c_pin_config(spica_bt_pin_config_off,
+					ARRAY_SIZE(spica_bt_pin_config_off));
 		gpio_set_value(GPIO_BT_RST_N, 0);
 		spica_wifi_bt_power_dec();
 	}
@@ -2084,11 +2102,11 @@ static struct s3c_pin_cfg_entry spica_pin_config[] __initdata = {
 	S3C64XX_GPA0_UART0_RXD, S3C_PIN_PULL(NONE),
 	S3C64XX_GPA1_UART0_TXD, S3C_PIN_PULL(NONE),
 
-	/* UART 1 (Bluetooth) */
-	S3C64XX_GPA4_UART1_RXD, S3C_PIN_PULL(NONE),
-	S3C64XX_GPA5_UART1_TXD, S3C_PIN_PULL(NONE),
-	S3C64XX_GPA6_UART1_CTSN, S3C_PIN_PULL(NONE),
-	S3C64XX_GPA7_UART1_RTSN, S3C_PIN_PULL(NONE),
+	/* UART 1 (Bluetooth) - off by default (see BT power control) */
+	S3C64XX_PIN(GPA(4)), S3C_PIN_IN, S3C_PIN_PULL(DOWN),
+	S3C64XX_PIN(GPA(5)), S3C_PIN_IN, S3C_PIN_PULL(DOWN),
+	S3C64XX_PIN(GPA(6)), S3C_PIN_IN, S3C_PIN_PULL(DOWN),
+	S3C64XX_PIN(GPA(7)), S3C_PIN_IN, S3C_PIN_PULL(DOWN),
 
 	/* UART 2 (External) */
 	S3C64XX_GPB0_UART2_RXD, S3C_PIN_PULL(NONE),
