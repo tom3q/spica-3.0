@@ -43,6 +43,9 @@
 /* Number of samples for averaging (a power of two!) */
 #define NUM_SAMPLES		4
 
+/* Number of samples for a single read */
+#define ADC_SAMPLE_COUNT	4
+
 /* Battery compensation */
 #define TALK_GSM_COMPENSATION	(13)
 #define TALK_GSM_FLAG		(1 << 2)
@@ -274,6 +277,39 @@ static irqreturn_t spica_battery_fault_irq(int irq, void *dev_id)
 }
 
 /* Polling function */
+static int spica_battery_adc_read(struct s3c_adc_client *client,
+							unsigned int channel)
+{
+	int i;
+	int sum;
+	int sample;
+	int min, max;
+
+	sample = s3c_adc_read(client, channel);
+	if (sample < 0)
+		return sample;
+
+	sum = sample;
+	min = sample;
+	max = sample;
+
+	for (i = 0; i < ADC_SAMPLE_COUNT + 1; ++i) {
+		sample = s3c_adc_read(client, channel);
+		if (sample < 0)
+			return sample;
+		if (sample < min)
+			min = sample;
+		if (sample > max)
+			max = sample;
+		sum += sample;
+	}
+
+	sum -= min;
+	sum -= max;
+
+	return sum / ADC_SAMPLE_COUNT;
+}
+
 static void spica_battery_poll(struct work_struct *work)
 {
 	struct delayed_work *dwrk = to_delayed_work(work);
@@ -286,7 +322,7 @@ static void spica_battery_poll(struct work_struct *work)
 	mutex_lock(&bat->mutex);
 
 	/* Get a voltage sample from the ADC */
-	volt_sample = s3c_adc_read(bat->client, bat->pdata->volt_channel);
+	volt_sample = spica_battery_adc_read(bat->client, bat->pdata->volt_channel);
 	if (volt_sample < 0) {
 		dev_warn(bat->dev, "Failed to get ADC sample.\n");
 		bat->health = POWER_SUPPLY_HEALTH_UNKNOWN;
@@ -299,7 +335,7 @@ static void spica_battery_poll(struct work_struct *work)
 	percent_value = lookup_value(&bat->percent_lookup, volt_sample);
 
 	/* Get a temperature sample from the ADC */
-	temp_sample = s3c_adc_read(bat->client, bat->pdata->temp_channel);
+	temp_sample = spica_battery_adc_read(bat->client, bat->pdata->temp_channel);
 	if (temp_sample < 0) {
 		dev_warn(bat->dev, "Failed to get ADC sample.\n");
 		bat->health = POWER_SUPPLY_HEALTH_UNKNOWN;
@@ -1009,7 +1045,7 @@ static int spica_battery_probe(struct platform_device *pdev)
 	for (i = 0; i < NUM_SAMPLES; ++i) {
 		int sample;
 		/* Get a voltage sample from the ADC */
-		sample = s3c_adc_read(bat->client, bat->pdata->volt_channel);
+		sample = spica_battery_adc_read(bat->client, bat->pdata->volt_channel);
 		if (sample < 0) {
 			dev_warn(&pdev->dev, "Failed to get ADC sample.\n");
 			continue;
@@ -1019,7 +1055,7 @@ static int spica_battery_probe(struct platform_device *pdev)
 		/* Put the sample and get the new average */
 		bat->volt_value = put_sample_get_avg(&bat->volt_avg, sample);
 		/* Get a temperature sample from the ADC */
-		sample = s3c_adc_read(bat->client, bat->pdata->temp_channel);
+		sample = spica_battery_adc_read(bat->client, bat->pdata->temp_channel);
 		if (sample < 0) {
 			dev_warn(&pdev->dev, "Failed to get ADC sample.\n");
 			continue;
@@ -1268,7 +1304,7 @@ static void spica_battery_complete(struct device *dev)
 	for (i = 0; i < NUM_SAMPLES; ++i) {
 		int sample;
 		/* Get a voltage sample from the ADC */
-		sample = s3c_adc_read(bat->client, bat->pdata->volt_channel);
+		sample = spica_battery_adc_read(bat->client, bat->pdata->volt_channel);
 		if (sample < 0) {
 			dev_warn(dev, "Failed to get ADC sample.\n");
 			continue;
@@ -1278,7 +1314,7 @@ static void spica_battery_complete(struct device *dev)
 		/* Put the sample and get the new average */
 		volt_value = put_sample_get_avg(&bat->volt_avg, sample);
 		/* Get a temperature sample from the ADC */
-		sample = s3c_adc_read(bat->client, bat->pdata->temp_channel);
+		sample = spica_battery_adc_read(bat->client, bat->pdata->temp_channel);
 		if (sample < 0) {
 			dev_warn(dev, "Failed to get ADC sample.\n");
 			continue;
