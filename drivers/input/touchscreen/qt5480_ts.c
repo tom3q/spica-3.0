@@ -619,7 +619,7 @@ static int qt5480_init_hw(struct qt5480 *qt)
  * Input events processing
  */
 
-static void qt5480_report_input(struct qt5480 *qt, int single_id)
+static void qt5480_report_input(struct qt5480 *qt)
 {
 	struct qt5480_touch *touch = qt->touch;
 	struct input_dev* dev = qt->input_dev;
@@ -630,18 +630,20 @@ static void qt5480_report_input(struct qt5480 *qt, int single_id)
 			continue;
 
 		if (touch[id].status != QT5480_RELEASE) {
-			input_report_abs(dev, ABS_MT_TOUCH_MAJOR,
+			input_report_abs(dev, ABS_MT_PRESSURE,
+							touch[id].pressure);
+			input_report_abs(dev, ABS_MT_WIDTH_MAJOR,
 							touch[id].width);
 			input_report_abs(dev, ABS_MT_POSITION_X,
 							touch[id].pos_x);
 			input_report_abs(dev, ABS_MT_POSITION_Y,
 							touch[id].pos_y);
-			input_report_abs(dev, ABS_MT_TRACKING_ID, id);
 		} else {
-			input_report_abs(dev, ABS_MT_TOUCH_MAJOR, 0);
+			input_report_abs(dev, ABS_MT_PRESSURE, 0);
 			touch[id].status = 0;
 		}
 
+		input_report_abs(dev, ABS_MT_TRACKING_ID, id);
 		input_mt_sync(dev);
 	}
 
@@ -678,12 +680,12 @@ static void qt5480_handle_data(struct qt5480 *qt, struct qt5480_ctrl_word *ctrl)
 		/* contacts */
 		if (!(ctrl->data[3] & 0x01)) {
 			touch[0].status = QT5480_RELEASE;
-			qt5480_report_input(qt, 0);
+			qt5480_report_input(qt);
 		}
 
 		if (!(ctrl->data[3] & 0x02)) {
 			touch[1].status = QT5480_RELEASE;
-			qt5480_report_input(qt, 1);
+			qt5480_report_input(qt);
 		}
 
 		/* Error bit */
@@ -707,7 +709,7 @@ static void qt5480_handle_data(struct qt5480 *qt, struct qt5480_ctrl_word *ctrl)
 		touch[id].width = (ctrl->data[1] & 0x3f);
 		touch[id].pressure = (ctrl->data[3] & 0x3f);
 
-		qt5480_report_input(qt, id);
+		qt5480_report_input(qt);
 
 		break;
 	}
@@ -922,8 +924,10 @@ static int __devinit qt5480_probe(struct i2c_client *client,
 
 	set_bit(EV_ABS, input_dev->evbit);
 
-	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR,
+	input_set_abs_params(input_dev, ABS_MT_WIDTH_MAJOR,
 						0, QT5480_MAX_WIDTH, 0, 0);
+	input_set_abs_params(input_dev, ABS_MT_PRESSURE,
+						0, QT5480_MAX_ZC, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_POSITION_X,
 						0, QT5480_MAX_XC, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_POSITION_Y,
