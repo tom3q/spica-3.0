@@ -73,6 +73,7 @@
 #include <asm/mach-types.h>
 #include <asm/setup.h>
 
+#include <plat/regs-sdhci.h>
 #include <plat/regs-serial.h>
 #include <plat/iic.h>
 #include <plat/fb.h>
@@ -836,6 +837,16 @@ static struct platform_device spica_s6d05a = {
  * SDHCI platform data
  */
 
+static void spica_sdhci0_cfg_card(struct platform_device *dev,
+				  void __iomem *r,
+				  struct mmc_ios *ios,
+				  struct mmc_card *card)
+{
+	writel(S3C64XX_SDHCI_CONTROL4_DRIVE_4mA, r + S3C64XX_SDHCI_CONTROL4);
+
+	s3c6400_setup_sdhci_cfg_card(dev, r, ios, card);
+}
+
 static struct s3c_sdhci_platdata spica_hsmmc0_pdata = {
 	.max_width		= 4,
 	.host_caps		= MMC_CAP_4_BIT_DATA
@@ -843,6 +854,7 @@ static struct s3c_sdhci_platdata spica_hsmmc0_pdata = {
 	.cd_type		= S3C_SDHCI_CD_GPIO,
 	.ext_cd_gpio		= GPIO_TF_DETECT,
 	.ext_cd_gpio_invert	= 1,
+	.cfg_card		= spica_sdhci0_cfg_card,
 };
 
 static int spica_wlan_cd_state = 0;
