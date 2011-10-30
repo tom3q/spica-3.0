@@ -1249,6 +1249,7 @@ static struct spica_battery_threshold spica_battery_volt_lut[] = {
 	{ 2635, 3864100 },
 	{ 2800, 4100000 },
 	{ 2853, 4176000 },
+	{ 3080, 4500000 },
 };
 
 static struct spica_battery_threshold spica_battery_temp_lut[] = {
