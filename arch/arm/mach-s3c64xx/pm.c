@@ -69,10 +69,8 @@ static struct sleep_save core_save[] = {
 	SAVE_ITEM(S3C64XX_MEM0DRVCON),
 	SAVE_ITEM(S3C64XX_MEM1DRVCON),
 
-#ifndef CONFIG_CPU_FREQ
 	SAVE_ITEM(S3C_APLL_CON),
 	SAVE_ITEM(S3C_MPLL_CON),
-#endif
 };
 
 static struct sleep_save misc_save[] = {
