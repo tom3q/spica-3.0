@@ -6,7 +6,7 @@
  * 	Copyright (C) 2009 Samsung Electronics Co. Ltd.
  * Multitouch:
  * 	Copyright (C) 2010 Lambertus Gorter <l.gorter@gmail.com>
- * Driver cleanup and optimization:
+ * Complete rewrite:
  * 	Copyright (C) 2011 Tomasz Figa <tomasz.figa at gmail.com>
  *
  * This software is licensed under the terms of the GNU General Public
