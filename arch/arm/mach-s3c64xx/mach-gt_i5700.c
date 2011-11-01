@@ -68,6 +68,8 @@
 #include <mach/s3c6410.h>
 #include <mach/pd.h>
 #include <mach/regs-gpio.h>
+#include <mach/regs-sys.h>
+#include <mach/regs-clock.h>
 
 #include <asm/irq.h>
 #include <asm/mach-types.h>
@@ -2458,7 +2460,25 @@ static void __init spica_fixup(struct machine_desc *desc,
 
 static void __init spica_map_io(void)
 {
+#ifdef CONFIG_SPICA_AHB_166
+	u32 reg;
+#endif
 	s3c64xx_init_io(spica_iodesc, ARRAY_SIZE(spica_iodesc));
+#ifdef CONFIG_SPICA_AHB_166
+	reg = __raw_readl(S3C64XX_OTHERS);
+	reg &= ~S3C64XX_OTHERS_SYNCMODE;
+	reg &= ~S3C64XX_OTHERS_SYNCMUXSEL;
+	__raw_writel(reg, S3C64XX_OTHERS);
+
+	while (__raw_readl(S3C64XX_OTHERS) & S3C64XX_OTHERS_SYNCACK_MASK);
+
+	reg = __raw_readl(S3C_CLK_DIV0);
+	reg &= ~S3C6400_CLKDIV0_HCLK2_MASK;
+	reg |= 0x0 << S3C6400_CLKDIV0_HCLK2_SHIFT;
+	__raw_writel(reg, S3C_CLK_DIV0);
+
+	__raw_writel(0xc14d0302, S3C_MPLL_CON);
+#endif
 	s3c24xx_init_clocks(12000000);
 	s3c24xx_init_uarts(spica_uartcfgs, ARRAY_SIZE(spica_uartcfgs));
 }
@@ -2470,19 +2490,30 @@ static void spica_poweroff(void)
 	while(1);
 }
 
+#ifdef CONFIG_SPICA_AHB_166
+#define AHB_CLOCK	166500000
+#else
+#define AHB_CLOCK	133000000
+#endif
+
 static void __init spica_machine_init(void)
 {
 	struct clk *uclk1;
 	struct clk *dout_mpll;
+	struct clk *mfc_sclk;
 
 	/* Setup DOUT MPLL frequency */
 	dout_mpll = clk_get(NULL, "dout_mpll");
-	clk_set_rate(dout_mpll, 133000000);
+	clk_set_rate(dout_mpll, AHB_CLOCK);
+
+	mfc_sclk = clk_get(NULL, "mfc_sclk");
+	clk_set_rate(mfc_sclk, AHB_CLOCK);
+	clk_put(mfc_sclk);
 
 	/* Setup UCLK1 frequency */
 	uclk1 = clk_get(NULL, "uclk1");
 	clk_set_parent(uclk1, dout_mpll);
-	clk_set_rate(uclk1, 133000000);
+	clk_set_rate(uclk1, AHB_CLOCK);
 
 	/* Put the clocks */
 	clk_put(uclk1);

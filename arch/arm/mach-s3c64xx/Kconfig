@@ -324,3 +324,14 @@ config MACH_GT_I5700
 
 	help
 	  Machine support for the Samsung Galaxy Spica GT-i5700 phone.
+
+config SPICA_AHB_166
+	bool "Enable 166 MHz AHB overclock"
+	depends on MACH_GT_I5700
+	default n
+
+	help
+	  This option makes the kernel reconfigure the system for asynchronous
+	  mode operation with bus clocks generated from MPLL clocked at 333 MHz.
+	  Effectively this overclocks AHB bus (and all components using it to
+	  clock themselves) to 166 MHz. PCLK is kept at stock 66 MHz.
