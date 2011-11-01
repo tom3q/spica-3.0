@@ -255,8 +255,6 @@ static u8 qt5480_default_config[] = {
  * Helper definitions
  */
 
-#define QT5480_I2C_ADDR			0x60
-#define QT5480_BL_I2C_ADDR		0x4A
 #define QT5480_CHIP_ID			0x0F
 #define QT5480_MAX_XC			1023
 #define QT5480_MAX_YC			1023
@@ -276,18 +274,8 @@ static u8 qt5480_default_config[] = {
 #define QT5480_RELEASE		2
 
 /*
- * QT5480 only be able to send a data packet consists of five bytes
- */
-
-#define BASIC_READ_COUNT	5
-
-/*
  * Driver data
  */
-
-#define SINGLETOUCH_FLAG	0x01
-#define MULTITOUCH_FLAG		0x02
-
 struct qt5480_touch {
 	int status;
 	int pos_x;
@@ -435,13 +423,6 @@ static void qt5480_power_up(struct qt5480 *qt)
 	if (ret < 0 || ctrl.data[0] != QT5480_CHIP_ID)
 		dev_err(qt->dev, "Device power up timed out\n");
 }
-
-#if 0 /* Unused yet */
-static void qt5480_power_down(struct qt5480 *qt)
-{
-	gpio_set_value(qt->pdata->en_gpio, qt->pdata->en_inverted);
-}
-#endif
 
 static int qt5480_check_chip_id(struct qt5480 *qt)
 {
