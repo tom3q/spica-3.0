@@ -35,12 +35,10 @@
 /*
  * QT5480 register definitions
  */
-
 #define REG_CLASS(reg)		((reg) >> 2)
 #define REG_OFFS(reg)		((reg) & 3)
 
 /* Control registers */
-
 #define	REG_CHIP_ID				0	/* byte */
 #define	REG_CODE_VERSION			1	/* byte */
 #define	REG_CALIBRATE				2	/* byte */
@@ -68,7 +66,6 @@
 /* Unknown 448 - 511 */
 
 /* Setup data */
-
 #define	REG_CHANNEL_CONTROL			512	/* 48 bytes */
 #define	REG_CHANNEL_NEGATIVE_THRESHHOLD		560	/* 48 bytes */
 #define	REG_CHANNEL_BURST_LENGTH		608	/* 48 bytes */
@@ -109,7 +106,6 @@
 /*
  * QT5480 register configuration
  */
-
 static u8 qt5480_default_config[] = {
 	/* REG_CHANNEL_CONTROL */
 	0,	0,	0,	0,
@@ -222,7 +218,6 @@ static u8 qt5480_default_config[] = {
 /*
  * Debugging macros
  */
-
 //#define QT5480_DEBUG
 //#define QT5480_DEBUG_I2C
 //#define QT5480_DEBUG_DEV
@@ -254,7 +249,6 @@ static u8 qt5480_default_config[] = {
 /*
  * Helper definitions
  */
-
 #define QT5480_CHIP_ID			0x0F
 #define QT5480_MAX_XC			1023
 #define QT5480_MAX_YC			1023
@@ -313,7 +307,6 @@ struct qt5480_ctrl_word {
 /*
  * Helper routines
  */
-
 static u16 qt5480_calc_crc16(u8 val, u16 prev)
 {
 	const u32 crc_poly = 0x00008005;
@@ -346,7 +339,6 @@ static u16 qt5480_calc_cfg_chksum(u8 *data)
 /*
  * I2C device access
  */
-
 static inline int qt5480_i2c_write(struct qt5480 *qt, u16 reg, u8 data)
 {
 	u8 wbuf[3] = { reg & 0xFF, reg >> 8, data };
@@ -399,7 +391,6 @@ static inline int qt5480_i2c_read_regs(struct qt5480 *qt,
 /*
  * Hardware configuration
  */
-
 static void qt5480_power_up(struct qt5480 *qt)
 {
 	int timeout = 100, ret;
@@ -599,7 +590,6 @@ static int qt5480_init_hw(struct qt5480 *qt)
 /*
  * Input events processing
  */
-
 static void qt5480_report_input(struct qt5480 *qt)
 {
 	struct qt5480_touch *touch = qt->touch;
@@ -740,7 +730,6 @@ static irqreturn_t qt5480_irq_handler(int irq, void *dev_id)
 /*
  * Power management
  */
-
 static int qt5480_do_suspend(struct qt5480 *qt)
 {
 	int ret = 0;
@@ -851,7 +840,6 @@ static const struct dev_pm_ops qt5480_pm_ops = {
 /*
  * I2C Driver
  */
-
 static int __devinit qt5480_probe(struct i2c_client *client,
 						const struct i2c_device_id *id)
 {
@@ -987,7 +975,6 @@ static struct i2c_driver qt5480_driver = {
 /*
  * Module
  */
-
 static int __init qt5480_init(void)
 {
 	return i2c_add_driver(&qt5480_driver);
