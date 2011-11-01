@@ -97,14 +97,29 @@ void s3c_pm_configure_extint(void)
 	__raw_writel(s3c_irqwake_eintmask, S3C64XX_EINT_MASK);
 }
 
+static u32 s3c64xx_others_save;
+
 void s3c_pm_restore_core(void)
 {
 	u32 pclkgate, tmp;
 	int i;
+	u32 reg, val;
 
 	__raw_writel(0, S3C64XX_EINT_MASK);
 
 	s3c_pm_debug_smdkled(1 << 2, 0);
+
+	__raw_writel(s3c64xx_others_save, S3C64XX_OTHERS);
+
+	if (s3c64xx_others_save & S3C64XX_OTHERS_SYNCMUXSEL)
+		val = S3C64XX_OTHERS_SYNCACK_MASK;
+	else
+		val = 0;
+
+	do {
+		reg = __raw_readl(S3C64XX_OTHERS);
+		reg &= S3C64XX_OTHERS_SYNCACK_MASK;
+	} while (reg != val);
 
 	s3c_pm_do_restore_core(core_save, ARRAY_SIZE(core_save));
 	s3c_pm_do_restore(misc_save, ARRAY_SIZE(misc_save));
@@ -141,6 +156,7 @@ void s3c_pm_save_core(void)
 {
 	s3c_pm_do_save(misc_save, ARRAY_SIZE(misc_save));
 	s3c_pm_do_save(core_save, ARRAY_SIZE(core_save));
+	s3c64xx_others_save = __raw_readl(S3C64XX_OTHERS);
 }
 
 /* since both s3c6400 and s3c6410 share the same sleep pm calls, we
