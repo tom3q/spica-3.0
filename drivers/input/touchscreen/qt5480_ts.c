@@ -654,6 +654,7 @@ static void qt5480_handle_data(struct qt5480 *qt, struct qt5480_ctrl_word *ctrl)
 {
 	struct qt5480_touch *touch = qt->touch;
 	int id;
+	int report = 0;
 
 	switch (ctrl->class) {
 	case 3:
@@ -680,19 +681,28 @@ static void qt5480_handle_data(struct qt5480 *qt, struct qt5480_ctrl_word *ctrl)
 		/* contacts */
 		if (!(ctrl->data[3] & 0x01)) {
 			touch[0].status = QT5480_RELEASE;
-			qt5480_report_input(qt);
+			report = 1;
 		}
 
 		if (!(ctrl->data[3] & 0x02)) {
 			touch[1].status = QT5480_RELEASE;
-			qt5480_report_input(qt);
+			report = 1;
 		}
 
 		/* Error bit */
 		if (ctrl->data[3] & 0x20) {
-			touch[0].status = 0;
-			touch[1].status = 0;
+			if (touch[0].status) {
+				touch[0].status = QT5480_RELEASE;
+				report = 1;
+			}
+			if (touch[1].status) {
+				touch[1].status = QT5480_RELEASE;
+				report = 1;
+			}
 		}
+
+		if (report)
+			qt5480_report_input(qt);
 
 		break;
 
