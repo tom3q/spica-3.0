@@ -763,9 +763,6 @@ static irqreturn_t qt5480_irq_handler(int irq, void *dev_id)
 static int qt5480_do_suspend(struct qt5480 *qt)
 {
 	int ret = 0;
-#ifdef DEBUG_REGISTER_WRITES
-	struct qt5480_ctrl_word ctrl;
-#endif
 
 	// Disable interrupts
 	ret = qt5480_i2c_write(qt, REG_STATUS_MASK, 0);
@@ -781,47 +778,12 @@ static int qt5480_do_suspend(struct qt5480 *qt)
 		return ret;
 	}
 
-#ifdef DEBUG_REGISTER_WRITES
-	// Verify Awake Timeout register
-	ctrl.class = REG_CLASS(REG_AWAKE_TIMEOUT);
-	ret = qt5480_i2c_read_regs(qt, &ctrl);
-	if(ret < 0) {
-		dev_err(qt->dev, "Failed to read awake timeout register\n");
-		return ret;
-	}
-
-	DBG("Awake Timeout read: (%x)\n", read_buf[3]);
-
-	if (ctrl.data[REG_OFFS(REG_AWAKE_TIMEOUT)] != 5) {
-		dev_err(qt->dev, "Failed to write awake timeout register\n");
-		return -EIO;
-	}
-#endif
-
 	// Enter LP mode
 	ret = qt5480_i2c_write(qt, REG_LP_MODE, 0); // LP Mode
 	if(ret < 0) {
 		dev_err(qt->dev, "Failed to write LP mode register\n");
 		return ret;
 	}
-
-
-#ifdef DEBUG_REGISTER_WRITES
-	// Verify Awake Timeout register
-	ctrl.class = REG_CLASS(REG_LP_MODE);
-	ret = qt5480_i2c_read_regs(qt, &ctrl);
-	if(ret < 0) {
-		dev_err(qt->dev, "Failed to read LP mode register\n");
-		return ret;
-	}
-
-	DBG("Awake Timeout read: (%x)\n", read_buf[3]);
-
-	if (ctrl.data[REG_OFFS(REG_LP_MODE)] != 0) {
-		dev_err(qt->dev, "Failed to write LP mode register\n");
-		return -EIO;
-	}
-#endif
 
 	return 0;
 }
