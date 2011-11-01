@@ -262,13 +262,12 @@ static u8 qt5480_default_config[] = {
 /*
  * Touch states
  */
-
 #define QT5480_NONE		0
 #define QT5480_MOVE		1
 #define QT5480_RELEASE		2
 
 /*
- * Driver data
+ * Structures used by the driver
  */
 struct qt5480_touch {
 	int status;
