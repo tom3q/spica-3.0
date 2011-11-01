@@ -668,8 +668,10 @@ static void qt5480_handle_data(struct qt5480 *qt, struct qt5480_ctrl_word *ctrl)
 		}
 
 		if (qt->palm_touch) {
+			qt->ignore = 1;
 			qt->palm_touch = 0;
 			qt5480_i2c_write(qt, REG_CALIBRATE, 0x55);
+			return;
 		}
 
 		/* Tracking lost or calibrating*/
