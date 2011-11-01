@@ -1490,6 +1490,7 @@ static int spica_wlan_set_power(int val)
 					ARRAY_SIZE(spica_wlan_pin_config_off));
 		gpio_set_value(GPIO_WLAN_RST_N, 0);
 		spica_wifi_bt_power_dec();
+		wake_unlock(&wlan_wakelock);
 	}
 
 	spica_wlan_power = val;
