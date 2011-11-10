@@ -26,7 +26,7 @@
 
 #include <typedefs.h>
 #include <bcmutils.h>
-#include <sdio.h>	/* SDIO Device and Protocol Specs */
+#include <sdio.h>	/* SDIO Specs */
 #include <bcmsdbus.h>	/* bcmsdh to/from specific controller APIs */
 #include <sdiovar.h>	/* to get msglevel bit values */
 
@@ -133,11 +133,6 @@ static void bcmsdh_sdmmc_remove(struct sdio_func *func)
 	if (func->num == 2) {
 		sd_trace(("F2 found, calling bcmsdh_remove...\n"));
 		bcmsdh_remove(&func->dev);
-	} else if (func->num == 1) {
-		sdio_claim_host(func);
-		sdio_disable_func(func);
-		sdio_release_host(func);
-		gInstance->func[1] = NULL;
 	}
 }
 
@@ -263,6 +258,7 @@ int sdio_function_init(void)
 		return -ENOMEM;
 
 	error = sdio_register_driver(&bcmsdh_sdmmc_driver);
+
 
 	return error;
 }
