@@ -5459,10 +5459,8 @@ void wl_cfg80211_detach(void)
 
 static void wl_wakeup_event(struct wl_priv *wl)
 {
-	if (wl->event_tsk.thr_pid >= 0) {
-		DHD_OS_WAKE_LOCK(wl->pub);
+	if (wl->event_tsk.thr_pid >= 0)
 		up(&wl->event_tsk.sema);
-	}
 }
 
 static s32 wl_event_handler(void *data)
@@ -5482,7 +5480,6 @@ static s32 wl_event_handler(void *data)
 		e = wl_deq_event(wl);
 		if (unlikely(!e)) {
 			WL_ERR(("equeue empty..\n"));
-			DHD_OS_WAKE_UNLOCK(wl->pub);
 			return 0;
 		}
 		WL_DBG(("event type (%d), if idx: %d\n", e->etype, e->emsg.ifidx));
@@ -5495,7 +5492,6 @@ static s32 wl_event_handler(void *data)
 			WL_DBG(("Unknown Event (%d): ignoring\n", e->etype));
 		}
 		wl_put_event(e);
-		DHD_OS_WAKE_UNLOCK(wl->pub);
 	}
 	WL_DBG(("%s was terminated\n", __func__));
 	complete_and_exit(&tsk->completed, 0);
