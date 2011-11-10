@@ -582,9 +582,6 @@ void bcmsdh_oob_intr_set(bool enable)
 	static bool curstate = 1;
 	unsigned long flags;
 
-	if (!sdhcinfo)
-		return;
-
 	spin_lock_irqsave(&sdhcinfo->irq_lock, flags);
 	if (curstate != enable) {
 		if (enable)

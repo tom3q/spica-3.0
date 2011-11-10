@@ -29,8 +29,6 @@
 #include <sdio.h>	/* SDIO Device and Protocol Specs */
 #include <bcmsdbus.h>	/* bcmsdh to/from specific controller APIs */
 #include <sdiovar.h>	/* to get msglevel bit values */
-#include <dngl_stats.h>
-#include <dhd.h>
 
 #include <linux/sched.h>	/* request_irq() */
 
@@ -38,9 +36,6 @@
 #include <linux/mmc/card.h>
 #include <linux/mmc/sdio_func.h>
 #include <linux/mmc/sdio_ids.h>
-
-/* Use suspend/resume instead of card removal */
-#define USE_SUSPEND_RESUME
 
 #if !defined(SDIO_VENDOR_ID_BROADCOM)
 #define SDIO_VENDOR_ID_BROADCOM		0x02d0
@@ -89,8 +84,6 @@ PBCMSDH_SDMMC_INSTANCE gInstance;
 /* Maximum number of bcmsdh_sdmmc devices supported by driver */
 #define BCMSDH_SDMMC_MAX_DEVICES 1
 
-struct wake_lock wlan_host_wakelock_resume;
-
 extern int bcmsdh_probe(struct device *dev);
 extern int bcmsdh_remove(struct device *dev);
 
@@ -124,10 +117,6 @@ static int bcmsdh_sdmmc_probe(struct sdio_func *func,
 #endif
 		sd_trace(("F2 found, calling bcmsdh_probe...\n"));
 		ret = bcmsdh_probe(&func->dev);
-
-		if (!ret)
-			wake_lock_init(&wlan_host_wakelock_resume,
-				WAKE_LOCK_SUSPEND, "WLAN_HOST_WAKE_RESUME");
 	}
 
 	return ret;
@@ -141,114 +130,16 @@ static void bcmsdh_sdmmc_remove(struct sdio_func *func)
 	sd_info(("sdio_device: 0x%04x\n", func->device));
 	sd_info(("Function#: 0x%04x\n", func->num));
 
-	if (gInstance->func[2]) {
+	if (func->num == 2) {
 		sd_trace(("F2 found, calling bcmsdh_remove...\n"));
-		bcmsdh_remove(&gInstance->func[2]->dev);
-		gInstance->func[2] = NULL;
-		wake_lock_destroy(&wlan_host_wakelock_resume);
+		bcmsdh_remove(&func->dev);
+	} else if (func->num == 1) {
+		sdio_claim_host(func);
+		sdio_disable_func(func);
+		sdio_release_host(func);
+		gInstance->func[1] = NULL;
 	}
 }
-
-#ifdef USE_SUSPEND_RESUME
-extern struct dhd_bus *dhd_pub_global;
-
-extern void *dhd_get_dhd_pub ( void );
-extern void *dhd_get_dhd_bus_sdh ( void );
-
-extern int dhdsdio_bussleep(struct dhd_bus *bus, bool sleep);
-
-static int dhd_suspend (void)
-{
-	int bus_state;
-	int max_tries = 3;
-
-	printk(KERN_DEBUG "[WIFI] %s: SUSPEND Enter\n", __FUNCTION__);
-
-	if (NULL != dhd_pub_global) {
-		dhd_os_proto_block(dhd_get_dhd_pub());
-
-		do {
-			bus_state = dhdsdio_bussleep(dhd_pub_global, TRUE);
-			if ( bus_state == BCME_BUSY)
-			{
-				pr_err("%s: BUS BUSY so trying again \n",
-								__FUNCTION__);
-				msleep(250);
-			}
-		} while (( bus_state == BCME_BUSY) && (max_tries-- > 0) );
-
-		if(max_tries <= 0)
-		{
-			pr_err("[WIFI] BUS BUSY!! Couldn't sleep.\n");
-			dhd_os_proto_unblock(dhd_get_dhd_pub());
-			/* This value should be returned to mmc_suspend*/
-			return -1;
-		}
-
-		printk("[WIFI] %s: SUSPEND Done. BusState->%d\n",
-							__FUNCTION__, bus_state);
-	} else {
-		printk("%s dhd_pub_global is NULL!! \n", __FUNCTION__);
-	}
-
-	return 0;
-}
-
-static int dhd_resume (void)
-{
-	struct dhd_bus *dhd_pub_local = (struct dhd_bus *)dhd_pub_global;
-
-	printk(KERN_DEBUG "[WIFI] %s: Enter\n", __FUNCTION__);
-
-	if ( NULL != dhd_pub_local ) {
-		wake_lock_timeout(&wlan_host_wakelock_resume, 2*HZ);
-		dhd_os_proto_unblock(dhd_get_dhd_pub());
-		printk("[WIFI] %s: RESUME Done.\n", __FUNCTION__);
-		/* dhdsdio_bussleep_hack(dhd_pub_global,0); */
-	} else {
-		printk("%s dhd_pub_local is NULL!!\n", __FUNCTION__);
-	}
-
-	return 0;
-}
-
-static int bcmsdh_sdmmc_resume(struct device *dev)
-{
-	int ret = 0;
-	struct sdio_func *func = dev_to_sdio_func(dev);
-	sd_trace(("bcmsdh_sdmmc: %s Enter\n", __FUNCTION__));
-	sd_trace(("sdio_bcmsdh: func->class=%x\n", func->class));
-	sd_trace(("sdio_vendor: 0x%04x\n", func->vendor));
-	sd_trace(("sdio_device: 0x%04x\n", func->device));
-	sd_trace(("Function#: 0x%04x\n", func->num));
-
-	gInstance->func[func->num] = func;
-
-	if (func->num == 2)
-		dhd_resume();
-
-	return ret;
-}
-
-static int bcmsdh_sdmmc_suspend(struct device *dev)
-{
-	struct sdio_func *func = dev_to_sdio_func(dev);
-
-	sd_trace(("bcmsdh_sdmmc: %s Enter\n", __FUNCTION__));
-	sd_info(("sdio_bcmsdh: func->class=%x\n", func->class));
-	sd_info(("sdio_vendor: 0x%04x\n", func->vendor));
-	sd_info(("sdio_device: 0x%04x\n", func->device));
-	sd_info(("Function#: 0x%04x\n", func->num));
-
-	if (gInstance->func[2]) {
-		gInstance->func[2] = NULL;
-
-		dhd_suspend();
-	}
-
-	return 0;
-}
-#endif
 
 /* devices we support, null terminated */
 static const struct sdio_device_id bcmsdh_sdmmc_ids[] = {
@@ -263,24 +154,12 @@ static const struct sdio_device_id bcmsdh_sdmmc_ids[] = {
 
 MODULE_DEVICE_TABLE(sdio, bcmsdh_sdmmc_ids);
 
-#ifdef USE_SUSPEND_RESUME
-static struct dev_pm_ops bcmsdh_sdmmc_pm_ops = {
-	.suspend	= bcmsdh_sdmmc_suspend,
-	.resume		= bcmsdh_sdmmc_resume,
-};
-#endif
-
 static struct sdio_driver bcmsdh_sdmmc_driver = {
 	.probe		= bcmsdh_sdmmc_probe,
 	.remove		= bcmsdh_sdmmc_remove,
 	.name		= "bcmsdh_sdmmc",
 	.id_table	= bcmsdh_sdmmc_ids,
-#ifdef USE_SUSPEND_RESUME
-	.drv		= {
-		.pm	= &bcmsdh_sdmmc_pm_ops,
-	},
-#endif
-};
+	};
 
 struct sdos_info {
 	sdioh_info_t *sd;
