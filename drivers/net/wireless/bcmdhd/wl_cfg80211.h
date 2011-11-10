@@ -127,9 +127,8 @@ do {									\
 #define WL_AP_MAX	256	/* virtually unlimitted as long
 				 * as kernel memory allows
 				 */
-#define WL_FILE_NAME_MAX	256
-#define WL_DWELL_TIME		200
-#define WL_LONG_DWELL_TIME	1000
+#define WL_FILE_NAME_MAX		256
+#define WL_DWELL_TIME 	200
 #define VWDEV_CNT 3
 
 #define WL_SCAN_TIMER_INTERVAL_MS	8000 /* Scan timeout */
