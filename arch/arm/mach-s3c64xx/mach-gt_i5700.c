@@ -2498,6 +2498,11 @@ static void __init spica_machine_init(void)
 	__raw_writel(0x88888888, S3C64XX_EINT0FLTCON1);
 	__raw_writel(0x88888888, S3C64XX_EINT0FLTCON2);
 	__raw_writel(0x00008888, S3C64XX_EINT0FLTCON3);
+	__raw_writel(0x00848484, S3C64XX_EINT12FLTCON);
+	__raw_writel(0x84848484, S3C64XX_EINT34FLTCON);
+	__raw_writel(0x84848484, S3C64XX_EINT56FLTCON);
+	__raw_writel(0x84848484, S3C64XX_EINT78FLTCON);
+	__raw_writel(0x00000084, S3C64XX_EINT9FLTCON);
 
 	/* Setup sleep mode settings */
 	__raw_writel(0x1020, S3C64XX_SPCONSLP);
