@@ -168,7 +168,7 @@ static int bcmsdh_sdmmc_suspend(struct device *pdev)
 		return 0;
 	if (dhd_os_check_wakelock(bcmsdh_get_drvdata()))
 		return -EBUSY;
-#if defined(OOB_INTR_ONLY)
+#if defined(OOB_INTR_ONLY) && defined(DISABLE_WAKE)
 	bcmsdh_oob_intr_set(0);
 #endif
 	dhd_mmc_suspend = TRUE;
@@ -184,7 +184,7 @@ static int bcmsdh_sdmmc_resume(struct device *pdev)
 	if (func->num != 2)
 		return 0;
 	dhd_mmc_suspend = FALSE;
-#if defined(OOB_INTR_ONLY)
+#if defined(OOB_INTR_ONLY) && defined(DISABLE_WAKE)
 	if (dhd_os_check_if_up(bcmsdh_get_drvdata()))
 		bcmsdh_oob_intr_set(1);
 #endif
