@@ -68,7 +68,9 @@
 #include <mach/s3c6410.h>
 #include <mach/pd.h>
 #include <mach/regs-gpio.h>
+#include <mach/regs-gpio-memport.h>
 #include <mach/regs-sys.h>
+#include <mach/regs-syscon-power.h>
 #include <mach/regs-clock.h>
 
 #include <asm/irq.h>
@@ -2524,6 +2526,13 @@ static void __init spica_machine_init(void)
 	__raw_writel(0x88888888, S3C64XX_EINT0FLTCON1);
 	__raw_writel(0x88888888, S3C64XX_EINT0FLTCON2);
 	__raw_writel(0x00008888, S3C64XX_EINT0FLTCON3);
+
+	/* Setup sleep mode settings */
+	__raw_writel(0x1020, S3C64XX_SPCONSLP);
+	__raw_writel(0x00005000, S3C64XX_MEM0CONSLP0);
+	__raw_writel(0x01041595, S3C64XX_MEM0CONSLP1);
+	__raw_writel(0x10055000, S3C64XX_MEM1CONSLP);
+	__raw_writel(__raw_readl(S3C64XX_SLEEP_CFG) & ~0x61, S3C64XX_SLEEP_CFG);
 
 	/* Configure GPIO pins */
 	s3c_pin_config(spica_pin_config, ARRAY_SIZE(spica_pin_config));
