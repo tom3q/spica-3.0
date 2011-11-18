@@ -388,7 +388,6 @@ static struct regulator_init_data spica_ldo4_data = {
 		.min_uV			= 3300000,
 		.max_uV			= 3300000,
 		.apply_uV		= 0,
-		.always_on		= 1,
 		.valid_ops_mask 	= REGULATOR_CHANGE_STATUS,
 		.valid_modes_mask	= REGULATOR_MODE_NORMAL,
 		.state_mem		= {
