@@ -7559,7 +7559,19 @@ wl_iw_set_priv(
 			set_ap_mac_list(dev, (extra + PROFILE_OFFSET));
 		}
 #endif
-	    else {
+		else if (strnicmp(extra, RXFILTER_START_CMD, strlen(RXFILTER_START_CMD)) == 0)
+			ret = net_os_set_packet_filter(dev, 1);
+		else if (strnicmp(extra, RXFILTER_STOP_CMD, strlen(RXFILTER_STOP_CMD)) == 0)
+			ret = net_os_set_packet_filter(dev, 0);
+		else if (strnicmp(extra, RXFILTER_ADD_CMD, strlen(RXFILTER_ADD_CMD)) == 0) {
+			int filter_num = *(extra + strlen(RXFILTER_ADD_CMD) + 1) - '0';
+			ret = net_os_rxfilter_add_remove(dev, TRUE, filter_num);
+		}
+		else if (strnicmp(extra, RXFILTER_REMOVE_CMD, strlen(RXFILTER_REMOVE_CMD)) == 0) {
+			int filter_num = *(extra + strlen(RXFILTER_REMOVE_CMD) + 1) - '0';
+			ret = net_os_rxfilter_add_remove(dev, FALSE, filter_num);
+		}
+		else {
 			WL_ERROR(("Unknown PRIVATE command %s - ignored\n", extra));
 			snprintf(extra, MAX_WX_STRING, "OK");
 			dwrq->length = strlen("OK") + 1;
