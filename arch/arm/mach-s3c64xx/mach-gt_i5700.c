@@ -47,7 +47,7 @@
 #include <linux/input/qt5480_ts.h>
 #include <linux/wlan_plat.h>
 #include <linux/akm8973.h>
-#include <linux/i2c/bma023.h>
+#include <linux/bma150.h>
 #include <linux/spica_bt.h>
 #include <linux/sec_jack.h>
 #include <linux/vibetonz.h>
@@ -313,7 +313,6 @@ static struct i2c_board_info spica_misc_i2c_devs[] __initdata = {
 	}, {
 		.type		= "bma023",
 		.addr		= 0x38,
-		.irq		= IRQ_BMA023,
 	}, {
 		.type		= "akm8973",
 		.addr		= 0x1c,
