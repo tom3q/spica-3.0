@@ -213,6 +213,8 @@ static enum hrtimer_restart tiny6410_1wire_timer(struct hrtimer *timer)
 	ret = hrtimer_forward(&bus->timer, ktime_get(),
 					ktime_set(0, TINY6410_1WIRE_DELAY));
 	if (ret > 1) {
+		gpio_direction_output(pdata->gpio_pin, 1);
+		bus->state = TINY6410_1WIRE_STOP;
 		bus->error = -ETIMEDOUT;
 		complete(&bus->completion);
 		return HRTIMER_NORESTART;
