@@ -254,10 +254,10 @@ static struct s3c2410_uartcfg spica_uartcfgs[] __initdata = {
  *			BMA023 (accelerometer),
  * 			AK8973B (magnetometer) */
 static struct s3c2410_platform_i2c spica_misc_i2c __initdata = {
-	.flags		= 0,
+	.flags		= S3C_IICFLG_FILTER,
 	.slave_addr	= 0x10,
-	.frequency	= 100*1000,
-	.sda_delay	= 100,
+	.frequency	= 250*1000,
+	.sda_delay	= 50,
 	.bus_num	= 0,
 };
 
