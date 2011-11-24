@@ -208,9 +208,6 @@ static enum hrtimer_restart tiny6410_1wire_timer(struct hrtimer *timer)
 			return HRTIMER_NORESTART;
 		}
 		break;
-
-	default:
-		BUG();
 	}
 
 	ret = hrtimer_forward(&bus->timer, ktime_get(),
