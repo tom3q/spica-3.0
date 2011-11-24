@@ -24,20 +24,19 @@
 #include <linux/mfd/tiny6410_1wire.h>
 
 #define TINY6410_BUS_CLOCK	(9600)
-#define TINY6410_1WIRE_DELAY	((NSEC_PER_SEC / TINY6410_BUS_CLOCK) - 500)
+#define TINY6410_1WIRE_DELAY	((NSEC_PER_SEC / TINY6410_BUS_CLOCK) - 100)
 
 /*
  * Driver data
  */
 
 enum tiny6410_1wire_state {
-	TINY6410_1WIRE_IDLE = 0,
+	TINY6410_1WIRE_STOP = 0,
 	TINY6410_1WIRE_RESET,
 	TINY6410_1WIRE_TX,
 	TINY6410_1WIRE_WAIT1,
 	TINY6410_1WIRE_WAIT2,
 	TINY6410_1WIRE_RX,
-	TINY6410_1WIRE_STOP,
 };
 
 struct tiny6410_1wire {
@@ -200,7 +199,6 @@ static enum hrtimer_restart tiny6410_1wire_timer(struct hrtimer *timer)
 	case TINY6410_1WIRE_STOP:
 		/* Stop condition */
 		if (--bus->bits_left == 0) {
-			bus->state = TINY6410_1WIRE_IDLE;
 			complete(&bus->completion);
 			return HRTIMER_NORESTART;
 		}
