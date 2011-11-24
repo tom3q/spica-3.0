@@ -140,9 +140,14 @@ restart:
 		crc = crc8_tab[0xac ^ ((rx >> 24) & 0xff)];
 		crc = crc8_tab[crc ^ ((rx >> 16) & 0xff)];
 		crc = crc8_tab[crc ^ ((rx >> 8) & 0xff)];
-		if (crc != (rx & 0xff))
+		if (crc != (rx & 0xff)) {
 			ret = -EBADMSG;
+			dev_err(bus->dev, "CRC error in received data\n");
+		}
 	}
+
+	if (ret == -ETIMEDOUT)
+		dev_err(bus->dev, "Transfer timed out\n");
 
 	if (ret && ++retry <= 10)
 		goto restart;
