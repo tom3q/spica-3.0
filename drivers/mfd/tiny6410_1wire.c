@@ -49,7 +49,6 @@ struct tiny6410_1wire {
 	u16		tx_data;
 	u32		rx_data;
 	int		error;
-	ktime_t		next_event;
 	int		bits_left;
 
 	struct tiny6410_1wire_platform_data	*pdata;
@@ -105,6 +104,7 @@ int tiny6410_1wire_transfer(struct tiny6410_1wire *bus,
 	u32 rx;
 	u8 crc;
 	int retry = 0;
+	ktime_t time;
 
 	/* Calculate CRC8 checksum */
 	crc = crc8_tab[0xac ^ tx_data];
@@ -122,8 +122,8 @@ restart:
 	bus->state = TINY6410_1WIRE_RESET;
 
 	/* Schedule the timer */
-	bus->next_event = ktime_add_ns(ktime_get(), TINY6410_1WIRE_DELAY);
-	hrtimer_start(&bus->timer, bus->next_event, HRTIMER_MODE_ABS);
+	time = ktime_add_ns(ktime_get(), TINY6410_1WIRE_DELAY);
+	hrtimer_start(&bus->timer, time, HRTIMER_MODE_ABS);
 
 	/* Wait for the transfer to finish */
 	ret = wait_for_completion_interruptible(&bus->completion);
@@ -208,7 +208,7 @@ static enum hrtimer_restart tiny6410_1wire_timer(struct hrtimer *timer)
 		BUG();
 	}
 
-	ret = hrtimer_forward(&bus->timer, bus->next_event,
+	ret = hrtimer_forward(&bus->timer, ktime_get(),
 					ktime_set(0, TINY6410_1WIRE_DELAY));
 	if (ret > 1) {
 		bus->error = -ETIMEDOUT;
@@ -216,7 +216,6 @@ static enum hrtimer_restart tiny6410_1wire_timer(struct hrtimer *timer)
 		return HRTIMER_NORESTART;
 	}
 
-	bus->next_event = hrtimer_get_expires(&bus->timer);
 
 	return HRTIMER_RESTART;
 }
