@@ -847,6 +847,40 @@ static struct platform_device spica_s6d05a = {
  * SDHCI platform data
  */
 
+static void spica_setup_sdhci_cfg_card(struct platform_device *dev,
+				    void __iomem *r,
+				    struct mmc_ios *ios,
+				    struct mmc_card *card)
+{
+	u32 ctrl2 = 0, ctrl3 = 0;
+
+	/* don't need to alter anything acording to card-type */
+
+	writel(S3C64XX_SDHCI_CONTROL4_DRIVE_4mA, r + S3C64XX_SDHCI_CONTROL4);
+
+	ctrl2 = readl(r + S3C_SDHCI_CONTROL2);
+	ctrl2 &= S3C_SDHCI_CTRL2_SELBASECLK_MASK;
+	ctrl2 |= (S3C64XX_SDHCI_CTRL2_ENSTAASYNCCLR |
+		S3C64XX_SDHCI_CTRL2_ENCMDCNFMSK |
+		//S3C_SDHCI_CTRL2_ENFBCLKRX |
+		S3C_SDHCI_CTRL2_DFCNT_NONE |
+		S3C_SDHCI_CTRL2_ENCLKOUTHOLD);
+
+	if (ios->clock < 25 * 1000000)
+	{
+		ctrl3 = (S3C_SDHCI_CTRL3_FCSEL3 |
+			 S3C_SDHCI_CTRL3_FCSEL2 |
+			 S3C_SDHCI_CTRL3_FCSEL1 |
+			 S3C_SDHCI_CTRL3_FCSEL0);
+	}
+	else
+	{
+		ctrl3 = S3C_SDHCI_CTRL3_FCSEL0;
+	}
+	writel(ctrl2, r + S3C_SDHCI_CONTROL2);
+	writel(ctrl3, r + S3C_SDHCI_CONTROL3);
+}
+
 static struct s3c_sdhci_platdata spica_hsmmc0_pdata = {
 	.max_width		= 4,
 	.host_caps		= MMC_CAP_4_BIT_DATA
@@ -854,7 +888,7 @@ static struct s3c_sdhci_platdata spica_hsmmc0_pdata = {
 	.cd_type		= S3C_SDHCI_CD_GPIO,
 	.ext_cd_gpio		= GPIO_TF_DETECT,
 	.ext_cd_gpio_invert	= 1,
-	.cfg_card		= s3c6400_setup_sdhci_cfg_card,
+	.cfg_card		= spica_setup_sdhci_cfg_card,
 };
 
 static int spica_wlan_cd_state = 0;
@@ -879,6 +913,11 @@ static int spica_wlan_cd_cleanup(void (*notify_func)(struct platform_device *,
 	return 0;
 }
 
+void spica_setup_sdhci2_cfg_gpio(struct platform_device *dev, int width)
+{
+	/* Nothing to do here */
+}
+
 static struct s3c_sdhci_platdata spica_hsmmc2_pdata = {
 	.max_width		= 4,
 	.host_caps		= MMC_CAP_4_BIT_DATA
@@ -887,7 +926,8 @@ static struct s3c_sdhci_platdata spica_hsmmc2_pdata = {
 	.ext_cd_init		= spica_wlan_cd_init,
 	.ext_cd_cleanup		= spica_wlan_cd_cleanup,
 	.built_in		= 1,
-	.cfg_card		= s3c6400_setup_sdhci_cfg_card,
+	.cfg_card		= spica_setup_sdhci_cfg_card,
+	.cfg_gpio               = spica_setup_sdhci2_cfg_gpio,
 };
 
 static struct regulator_consumer_supply mmc2_supplies[] = {
