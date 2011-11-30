@@ -501,10 +501,10 @@ static int __devinit sdhci_s3c_probe(struct platform_device *pdev)
 	 * transfers, not sure if this is a problem with this specific
 	 * SDHCI block, or a missing configuration that needs to be set. */
 	host->quirks |= SDHCI_QUIRK_NO_BUSY_IRQ;
-
+#if 0
 	/* This host supports the Auto CMD12 */
 	host->quirks |= SDHCI_QUIRK_MULTIBLOCK_READ_ACMD12;
-
+#endif
 	/* Samsung SoCs need BROKEN_ADMA_ZEROLEN_DESC */
 	host->quirks |= SDHCI_QUIRK_BROKEN_ADMA_ZEROLEN_DESC;
 
