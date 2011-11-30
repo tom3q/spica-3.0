@@ -51,6 +51,7 @@
 #include <linux/spica_bt.h>
 #include <linux/sec_jack.h>
 #include <linux/vibetonz.h>
+#include <linux/leds-regulator.h>
 
 #include <sound/gt_i5700.h>
 #include <sound/ak4671.h>
@@ -381,18 +382,25 @@ static struct regulator_init_data spica_ldo3_data = {
 	.consumer_supplies	= ldo3_consumer,
 };
 
+static struct regulator_consumer_supply ldo4_consumer[] = {
+	REGULATOR_SUPPLY("vled", "leds-regulator")
+};
+
 static struct regulator_init_data spica_ldo4_data = {
 	.constraints	= {
 		.name			= "VLED_3.3V",
-		.min_uV			= 3300000,
-		.max_uV			= 3300000,
+		.min_uV			= 1600000,
+		.max_uV			= 3600000,
 		.apply_uV		= 0,
-		.valid_ops_mask 	= REGULATOR_CHANGE_STATUS,
+		.valid_ops_mask 	= REGULATOR_CHANGE_VOLTAGE
+					| REGULATOR_CHANGE_STATUS,
 		.valid_modes_mask	= REGULATOR_MODE_NORMAL,
 		.state_mem		= {
 			.disabled = 1,
 		},
 	},
+	.num_consumer_supplies	= ARRAY_SIZE(ldo4_consumer),
+	.consumer_supplies	= ldo4_consumer,
 };
 
 static struct regulator_consumer_supply ldo5_consumer[] = {
@@ -1879,6 +1887,22 @@ static struct s3c_audio_pdata spica_i2s_pdata = {
 };
 
 /*
+ * LED (optional hardware mod)
+ */
+
+static struct led_regulator_platform_data spica_led_pdata = {
+	.name   = "led",
+};
+
+static struct platform_device spica_led = {
+	.name = "leds-regulator",
+	.id   = -1,
+	.dev  = {
+		.platform_data = &spica_led_pdata,
+	},
+};
+
+/*
  * Platform devices
  */
 
@@ -1914,6 +1938,7 @@ static struct platform_device *spica_devices[] __initdata = {
 	&spica_jack_device,
 	&spica_audio_device,
 	&spica_bml_device,
+	&spica_led,
 };
 
 /*
