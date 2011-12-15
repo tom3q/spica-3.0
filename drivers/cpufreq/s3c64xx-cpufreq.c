@@ -256,6 +256,8 @@ static int s3c64xx_cpufreq_driver_init(struct cpufreq_policy *policy)
 	 */
 	policy->cpuinfo.transition_latency = (100 * 1000) + regulator_latency;
 
+	cpufreq_frequency_table_get_attr(s3c64xx_freq_table, policy->cpu);
+
 	ret = cpufreq_frequency_table_cpuinfo(policy, s3c64xx_freq_table);
 	if (ret != 0) {
 		pr_err("cpufreq: Failed to configure frequency table: %d\n",
