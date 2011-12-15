@@ -37,6 +37,7 @@
 #include <linux/io.h>
 
 #include <asm/irq.h>
+#include <asm/mach-types.h>
 
 #include <plat/regs-iic.h>
 #include <plat/iic.h>
@@ -469,6 +470,17 @@ static int s3c24xx_i2c_set_master(struct s3c24xx_i2c *i2c)
 		msleep(1);
 	}
 
+	if (machine_is_gt_i5700()) {
+		/*
+		* Workaround for... I'm not sure.
+		* - Broken brains of hardware engineers?
+		* - No hardware quality control?
+		*/
+		iicstat = readl(i2c->regs + S3C2410_IICSTAT);
+		iicstat &= ~S3C2410_IICSTAT_BUSBUSY;
+		writel(iicstat, i2c->regs + S3C2410_IICSTAT);
+	}
+
 	return -ETIMEDOUT;
 }
 
@@ -490,6 +502,21 @@ static int s3c24xx_i2c_doxfer(struct s3c24xx_i2c *i2c,
 	ret = s3c24xx_i2c_set_master(i2c);
 	if (ret != 0) {
 		dev_err(i2c->dev, "cannot get bus (error %d)\n", ret);
+
+		if (machine_is_gt_i5700()) {
+			/*
+			* Workaround for... I'm not sure.
+			* - Broken brains of hardware engineers?
+			* - No hardware quality control?
+			*/
+			iicstat = readl(i2c->regs + S3C2410_IICSTAT);
+			if ((iicstat & S3C2410_IICSTAT_BUSBUSY)) {
+				iicstat &= ~S3C2410_IICSTAT_TXRXEN;
+				iicstat &= ~S3C2410_IICSTAT_BUSBUSY;
+				writel(iicstat, i2c->regs + S3C2410_IICSTAT);
+			}
+		}
+
 		ret = -EAGAIN;
 		goto out;
 	}
