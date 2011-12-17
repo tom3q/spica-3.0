@@ -410,10 +410,11 @@ static struct regulator_consumer_supply ldo5_consumer[] = {
 static struct regulator_init_data spica_ldo5_data = {
 	.constraints	= {
 		.name			= "VTF_3.0V",
-		.min_uV			= 3000000,
-		.max_uV			= 3000000,
-		.apply_uV		= 0,
-		.valid_ops_mask 	= REGULATOR_CHANGE_STATUS,
+		.min_uV			= 3300000,
+		.max_uV			= 3300000,
+		.apply_uV		= 1,
+		.valid_ops_mask 	= REGULATOR_CHANGE_VOLTAGE
+					| REGULATOR_CHANGE_STATUS,
 		.valid_modes_mask	= REGULATOR_MODE_NORMAL,
 		.state_mem		= {
 			.disabled = 1,
