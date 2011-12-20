@@ -655,39 +655,14 @@ static struct i2c_board_info spica_touch_i2c_devs[] __initdata = {
 #define DRAM_END_ADDR 			(PHYS_OFFSET + PHYS_SIZE)
 #define RESERVED_PMEM_END_ADDR 		(DRAM_END_ADDR)
 
-#define RESERVED_MEM_CMM		(SZ_2M + SZ_1M)
-#define RESERVED_MEM_MFC		(SZ_4M + SZ_2M)
-/* PMEM_PIC and MFC use share area */
-#define RESERVED_PMEM_PICTURE		(SZ_4M + SZ_2M)
-#define RESERVED_PMEM_JPEG		(SZ_2M + SZ_1M)
-#define RESERVED_PMEM_PREVIEW		(SZ_2M)
-#define RESERVED_PMEM_RENDER	  	(SZ_2M)
-#define RESERVED_PMEM_STREAM	  	(SZ_2M)
-/* G3D is shared with uppper memory areas */
 #define RAM_CONSOLE_SIZE		(SZ_2M)
-#define RESERVED_G3D			(SZ_16M + SZ_8M + SZ_4M + SZ_2M)
-#define RESERVED_PMEM_GPU1		(RESERVED_G3D)
+#define RESERVED_PMEM_GPU1		(SZ_16M + SZ_8M + SZ_4M + SZ_2M)
 #define RESERVED_PMEM			(SZ_8M)
 
-#define CMM_RESERVED_MEM_START		(RESERVED_PMEM_END_ADDR \
-					- RESERVED_MEM_CMM)
-#define MFC_RESERVED_MEM_START		(CMM_RESERVED_MEM_START \
-					- RESERVED_MEM_MFC)
-#define PICTURE_RESERVED_PMEM_START	(MFC_RESERVED_MEM_START)
-#define JPEG_RESERVED_PMEM_START	(MFC_RESERVED_MEM_START \
-					- RESERVED_PMEM_JPEG)
-#define PREVIEW_RESERVED_PMEM_START	(JPEG_RESERVED_PMEM_START \
-					- RESERVED_PMEM_PREVIEW)
-#define RENDER_RESERVED_PMEM_START	(PREVIEW_RESERVED_PMEM_START \
-					- RESERVED_PMEM_RENDER)
-#define STREAM_RESERVED_PMEM_START	(RENDER_RESERVED_PMEM_START \
-					- RESERVED_PMEM_STREAM)
-/* G3D is shared with uppper memory areas */
 #define RAM_CONSOLE_START		(RESERVED_PMEM_END_ADDR \
 					- RAM_CONSOLE_SIZE)
-#define G3D_RESERVED_START		(RAM_CONSOLE_START \
-					- RESERVED_G3D)
-#define GPU1_RESERVED_PMEM_START	(G3D_RESERVED_START)
+#define GPU1_RESERVED_PMEM_START	(RAM_CONSOLE_START \
+					- RESERVED_PMEM_GPU1)
 #define RESERVED_PMEM_START		(GPU1_RESERVED_PMEM_START \
 					- RESERVED_PMEM)
 #define PHYS_UNRESERVED_SIZE		(RESERVED_PMEM_START - PHYS_OFFSET)
@@ -712,49 +687,7 @@ static struct android_pmem_platform_data pmem_gpu1_pdata = {
 	.cached		= 1,
 	.buffered	= 1,
 	.start		= GPU1_RESERVED_PMEM_START,
-#ifndef USE_SAMSUNG_G3D
 	.size		= RESERVED_PMEM_GPU1,
-#endif
-};
-
-static struct android_pmem_platform_data pmem_render_pdata = {
-	.name		= "pmem_render",
-	.no_allocator	= 1,
-	.cached		= 0,
-	.start		= RENDER_RESERVED_PMEM_START,
-	.size		= RESERVED_PMEM_RENDER,
-};
-
-static struct android_pmem_platform_data pmem_stream_pdata = {
-	.name		= "pmem_stream",
-	.no_allocator	= 1,
-	.cached		= 0,
-	.start		= STREAM_RESERVED_PMEM_START,
-	.size		= RESERVED_PMEM_STREAM,
-};
-
-static struct android_pmem_platform_data pmem_preview_pdata = {
-	.name		= "pmem_preview",
-	.no_allocator	= 1,
-	.cached		= 0,
-        .start		= PREVIEW_RESERVED_PMEM_START,
-        .size		= RESERVED_PMEM_PREVIEW,
-};
-
-static struct android_pmem_platform_data pmem_picture_pdata = {
-	.name		= "pmem_picture",
-	.no_allocator	= 1,
-	.cached		= 0,
-        .start		= PICTURE_RESERVED_PMEM_START,
-        .size		= RESERVED_PMEM_PICTURE,
-};
-
-static struct android_pmem_platform_data pmem_jpeg_pdata = {
-	.name		= "pmem_jpeg",
-	.no_allocator	= 1,
-	.cached		= 0,
-        .start		= JPEG_RESERVED_PMEM_START,
-        .size		= RESERVED_PMEM_JPEG,
 };
 
 static struct platform_device pmem_device = {
@@ -762,51 +695,16 @@ static struct platform_device pmem_device = {
 	.id		= 0,
 	.dev		= { .platform_data = &pmem_pdata },
 };
- 
+
 static struct platform_device pmem_gpu1_device = {
 	.name		= "android_pmem",
 	.id		= 1,
 	.dev		= { .platform_data = &pmem_gpu1_pdata },
 };
 
-static struct platform_device pmem_render_device = {
-	.name		= "android_pmem",
-	.id		= 2,
-	.dev		= { .platform_data = &pmem_render_pdata },
-};
-
-static struct platform_device pmem_stream_device = {
-	.name		= "android_pmem",
-	.id		= 3,
-	.dev		= { .platform_data = &pmem_stream_pdata },
-};
-
-static struct platform_device pmem_preview_device = {
-	.name		= "android_pmem",
-	.id		= 5,
-	.dev		= { .platform_data = &pmem_preview_pdata },
-};
-
-static struct platform_device pmem_picture_device = {
-	.name		= "android_pmem",
-	.id		= 6,
-	.dev		= { .platform_data = &pmem_picture_pdata },
-};
-
-static struct platform_device pmem_jpeg_device = {
-	.name		= "android_pmem",
-	.id		= 7,
-	.dev		= { .platform_data = &pmem_jpeg_pdata },
-};
-
 static struct platform_device *pmem_devices[] = {
 	&pmem_device,
 	&pmem_gpu1_device,
-	&pmem_render_device,
-	&pmem_stream_device,
-	&pmem_preview_device,
-	&pmem_picture_device,
-	&pmem_jpeg_device,
 };
 
 static void __init spica_add_mem_devices(void)
@@ -1993,13 +1891,6 @@ static struct resource s3c_g3d_resource[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-#ifdef USE_SAMSUNG_G3D
-		.start	= G3D_RESERVED_START,
-		.end	= G3D_RESERVED_START + RESERVED_G3D - 1,
-		.flags	= IORESOURCE_MEM,
-	},
-	[2] = {
-#endif
 		.start = IRQ_S3C6410_G3D,
 		.end   = IRQ_S3C6410_G3D,
 		.flags = IORESOURCE_IRQ,
