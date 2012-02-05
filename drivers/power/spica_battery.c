@@ -41,7 +41,7 @@
 #define SUSPEND_INTERVAL	3600
 
 /* Number of samples for averaging (a power of two!) */
-#define NUM_SAMPLES		8
+#define NUM_SAMPLES		4
 
 /* Number of samples for a single read */
 #define ADC_SAMPLE_COUNT	4
