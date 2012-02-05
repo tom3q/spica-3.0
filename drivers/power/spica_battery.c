@@ -214,6 +214,7 @@ struct spica_battery {
 	int calibration;
 	enum spica_battery_supply supply;
 
+	ktime_t			last_sample;
 	unsigned int		interval;
 	struct average_data	volt_avg;
 	struct average_data	temp_avg;
@@ -351,6 +352,7 @@ static void spica_battery_poll(struct work_struct *work)
 	bat->volt_value = volt_value;
 	bat->percent_value = percent_value;
 	bat->temp_value = temp_value;
+	bat->last_sample = ktime_get();
 
 	health = bat->health;
 
@@ -390,6 +392,7 @@ static void spica_battery_work(struct work_struct *work)
 	int is_plugged, is_healthy, chg_enable;
 	enum spica_battery_supply type;
 	int i;
+	ktime_t now, diff;
 
 	/* Cancel any pending works */
 	cancel_delayed_work_sync(&bat->poll_work);
@@ -462,7 +465,13 @@ no_change:
 	mutex_unlock(&bat->mutex);
 
 	/* Update the values and spin the polling loop */
-	spica_battery_poll(&bat->poll_work.work);
+	now = ktime_get();
+	diff = ktime_sub(now, bat->last_sample);
+	if (ktime_to_ms(diff) > bat->interval)
+		spica_battery_poll(&bat->poll_work.work);
+	else
+		queue_delayed_work(bat->workqueue, &bat->poll_work,
+					msecs_to_jiffies(bat->interval));
 
 	/* Notify anyone interested */
 	power_supply_changed(&bat->bat);
@@ -1068,6 +1077,7 @@ static int spica_battery_probe(struct platform_device *pdev)
 	bat->percent_value = lookup_value(&bat->percent_lookup, bat->volt_value);
 	bat->volt_value = lookup_value(&bat->volt_lookup, bat->volt_value);
 	bat->temp_value = lookup_value(&bat->temp_lookup, bat->temp_value);
+	bat->last_sample = ktime_get();
 
 	/* Register the power supplies */
 	for (i = 0; i < SPICA_BATTERY_NUM; ++i) {
@@ -1292,46 +1302,12 @@ static int spica_battery_prepare(struct device *dev)
 static void spica_battery_complete(struct device *dev)
 {
 	struct spica_battery *bat = dev_get_drvdata(dev);
-	int volt_value = -1, temp_value = -1;
-	int i;
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock(&bat->wakelock);
 #endif
 #ifdef CONFIG_RTC_INTF_ALARM
 	alarm_cancel(&bat->alarm);
 #endif
-	/* Get some initial data for averaging */
-	for (i = 0; i < NUM_SAMPLES; ++i) {
-		int sample;
-		/* Get a voltage sample from the ADC */
-		sample = spica_battery_adc_read(bat->client, bat->pdata->volt_channel);
-		if (sample < 0) {
-			dev_warn(dev, "Failed to get ADC sample.\n");
-			continue;
-		}
-		sample += bat->compensation;
-		bat->vol_adc = sample;
-		/* Put the sample and get the new average */
-		volt_value = put_sample_get_avg(&bat->volt_avg, sample);
-		/* Get a temperature sample from the ADC */
-		sample = spica_battery_adc_read(bat->client, bat->pdata->temp_channel);
-		if (sample < 0) {
-			dev_warn(dev, "Failed to get ADC sample.\n");
-			continue;
-		}
-		bat->temp_adc = sample;
-		/* Put the sample and get the new average */
-		temp_value = put_sample_get_avg(&bat->temp_avg, sample);
-	}
-
-	if (volt_value > 0) {
-		bat->percent_value = lookup_value(&bat->percent_lookup, volt_value);
-		bat->volt_value = lookup_value(&bat->volt_lookup, volt_value);
-	}
-
-	if (temp_value > 0)
-		bat->temp_value = lookup_value(&bat->temp_lookup, temp_value);
-
 	/* Schedule timer to check current status */
 	queue_work(bat->workqueue, &bat->work);
 }
