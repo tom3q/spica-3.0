@@ -350,7 +350,11 @@ static void spica_battery_poll(struct work_struct *work)
 		bat->health = POWER_SUPPLY_HEALTH_GOOD;
 
 	bat->volt_value = volt_value;
-	bat->percent_value = percent_value;
+
+	if (bat->percent_value >= percent_value
+	    || bat->status != POWER_SUPPLY_STATUS_DISCHARGING)
+		bat->percent_value = percent_value;
+
 	bat->temp_value = temp_value;
 	bat->last_sample = ktime_get_boottime();
 
