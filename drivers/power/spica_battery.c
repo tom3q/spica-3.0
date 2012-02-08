@@ -352,7 +352,7 @@ static void spica_battery_poll(struct work_struct *work)
 	bat->volt_value = volt_value;
 	bat->percent_value = percent_value;
 	bat->temp_value = temp_value;
-	bat->last_sample = ktime_get();
+	bat->last_sample = ktime_get_boottime();
 
 	health = bat->health;
 
@@ -465,7 +465,7 @@ no_change:
 	mutex_unlock(&bat->mutex);
 
 	/* Update the values and spin the polling loop */
-	now = ktime_get();
+	now = ktime_get_boottime();
 	diff = ktime_sub(now, bat->last_sample);
 	if (ktime_to_ms(diff) > bat->interval)
 		spica_battery_poll(&bat->poll_work.work);
@@ -1077,7 +1077,7 @@ static int spica_battery_probe(struct platform_device *pdev)
 	bat->percent_value = lookup_value(&bat->percent_lookup, bat->volt_value);
 	bat->volt_value = lookup_value(&bat->volt_lookup, bat->volt_value);
 	bat->temp_value = lookup_value(&bat->temp_lookup, bat->temp_value);
-	bat->last_sample = ktime_get();
+	bat->last_sample = ktime_get_boottime();
 
 	/* Register the power supplies */
 	for (i = 0; i < SPICA_BATTERY_NUM; ++i) {
