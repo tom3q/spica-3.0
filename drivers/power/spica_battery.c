@@ -197,7 +197,6 @@ struct spica_battery {
 	struct alarm		alarm;
 #endif
 	unsigned int irq_pok;
-	unsigned int irq_chg;
 
 	int percent_value;
 	int volt_value;
@@ -375,6 +374,13 @@ static void spica_battery_poll(struct work_struct *work)
 		update = 1;
 	}
 
+	if (bat->chg_enable) {
+		if (gpio_get_value(pdata->gpio_chg) ^ pdata->gpio_chg_inverted)
+			bat->status = POWER_SUPPLY_STATUS_CHARGING;
+		else
+			bat->status = POWER_SUPPLY_STATUS_FULL;
+	}
+
 error:
 	mutex_unlock(&bat->mutex);
 
@@ -432,6 +438,7 @@ static void spica_battery_work(struct work_struct *work)
 		goto no_change;
 
 	if (chg_enable) {
+		bat->status = POWER_SUPPLY_STATUS_CHARGING;
 #ifdef CONFIG_HAS_WAKELOCK
 		wake_lock(&bat->chg_wakelock);
 #endif
@@ -458,13 +465,6 @@ static void spica_battery_work(struct work_struct *work)
 	bat->chg_enable = chg_enable;
 
 no_change:
-	if (chg_enable) {
-		if (gpio_get_value(pdata->gpio_chg) ^ pdata->gpio_chg_inverted)
-			bat->status = POWER_SUPPLY_STATUS_CHARGING;
-		else
-			bat->status = POWER_SUPPLY_STATUS_FULL;
-	}
-
 	/* We're no longer accessing shared data */
 	mutex_unlock(&bat->mutex);
 
@@ -1154,31 +1154,15 @@ static int spica_battery_probe(struct platform_device *pdev)
 		goto err_destroy_workqueue;
 	}
 
-	irq = gpio_to_irq(pdata->gpio_chg);
-	if (irq <= 0) {
-		dev_err(&pdev->dev, "CHG irq invalid.\n");
-		goto err_pok_irq_free;
-	}
-	bat->irq_chg = irq;
-
-	ret = request_irq(irq, spica_charger_irq,
-				IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
-				dev_name(&pdev->dev), bat);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to request CHG irq (%d)\n", ret);
-		goto err_pok_irq_free;
-	}
-
 	ret = request_irq(IRQ_BATF, spica_battery_fault_irq,
 						0, dev_name(&pdev->dev), bat);
 	if (ret) {
 		dev_err(&pdev->dev,
 			"Failed to request battery fault irq (%d)\n", ret);
-		goto err_chg_irq_free;
+		goto err_pok_irq_free;
 	}
 
 	enable_irq_wake(bat->irq_pok);
-	enable_irq_wake(bat->irq_chg);
 
 	spica_battery_set_fault_enable(1);
 
@@ -1196,8 +1180,6 @@ static int spica_battery_probe(struct platform_device *pdev)
 
 	return 0;
 
-err_chg_irq_free:
-	free_irq(bat->irq_chg, bat);
 err_pok_irq_free:
 	free_irq(bat->irq_pok, bat);
 err_destroy_workqueue:
@@ -1247,10 +1229,8 @@ static int spica_battery_remove(struct platform_device *pdev)
 	int i;
 
 	disable_irq_wake(bat->irq_pok);
-	disable_irq_wake(bat->irq_chg);
 
 	free_irq(IRQ_BATF, bat);
-	free_irq(bat->irq_chg, bat);
 	free_irq(bat->irq_pok, bat);
 
 	if (pdata->supply_detect_cleanup)
