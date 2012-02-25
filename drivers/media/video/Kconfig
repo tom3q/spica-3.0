@@ -822,6 +822,12 @@ config SOC_CAMERA_MT9V022
 	help
 	  This driver supports MT9V022 cameras from Micron
 
+config SOC_CAMERA_S5K4CA
+	tristate "s5k4ca support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This driver supports S5K4CA cameras from Samsung
+
 config SOC_CAMERA_RJ54N1
 	tristate "rj54n1cb0c support"
 	depends on SOC_CAMERA && I2C
