@@ -58,6 +58,9 @@
 
 #include <video/s6d05a.h>
 
+#include <media/s5k4ca_platform.h>
+#include <media/s3c_fimc.h>
+
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
 #include <asm/mach/irq.h>
@@ -322,7 +325,7 @@ static struct i2c_board_info spica_misc_i2c_devs[] __initdata = {
 	}
 };
 
-/* I2C 1 (hardware) -	UNKNOWN (camera sensor) */
+/* I2C 1 (hardware) -	S5K4CA (camera sensor) */
 static struct s3c2410_platform_i2c spica_cam_i2c __initdata = {
 	.flags		= 0,
 	.slave_addr	= 0x10,
@@ -331,8 +334,49 @@ static struct s3c2410_platform_i2c spica_cam_i2c __initdata = {
 	.bus_num	= 1,
 };
 
-static struct i2c_board_info spica_cam_i2c_devs[] __initdata = {
-	/* TODO */
+static struct s3c_pin_cfg_entry spica_cam_pin_config_on[] = {
+	S3C6410_GPB2_I2C1_SCL, S3C_PIN_PULL(NONE),
+	S3C6410_GPB3_I2C1_SDA, S3C_PIN_PULL(NONE),
+};
+
+static struct s3c_pin_cfg_entry spica_cam_pin_config_off[] = {
+	S3C64XX_PIN(GPB(2)), S3C_PIN_IN, S3C_PIN_PULL(DOWN),
+	S3C64XX_PIN(GPB(3)), S3C_PIN_IN, S3C_PIN_PULL(DOWN),
+};
+
+static void spica_s5k4ca_set_power(int on)
+{
+	if (on) {
+		gpio_set_value(GPIO_CAM_3M_STBY_N, 1);
+		msleep(1);
+		gpio_set_value(GPIO_CAM_EN, 1);
+		msleep(1);
+		gpio_set_value(GPIO_MCAM_RST_N, 1);
+		msleep(40);
+		s3c_pin_config(spica_cam_pin_config_on,
+					ARRAY_SIZE(spica_cam_pin_config_on));
+	} else {
+		s3c_pin_config(spica_cam_pin_config_off,
+					ARRAY_SIZE(spica_cam_pin_config_off));
+		gpio_set_value(GPIO_MCAM_RST_N, 0);
+		gpio_set_value(GPIO_CAM_EN, 0);
+		gpio_set_value(GPIO_CAM_3M_STBY_N, 0);
+	}
+}
+
+static struct s5k4ca_platform_data spica_s5k4ca_pdata = {
+	.default_width	= 640,
+	.default_height	= 480,
+	.freq		= 24000000,
+	.set_power	= spica_s5k4ca_set_power,
+};
+
+static struct i2c_board_info spica_cam_i2c_devs[] = {
+	{
+		.type		= "s5k4ca",
+		.addr		= 0x3c,
+		.platform_data	= &spica_s5k4ca_pdata,
+	}
 };
 
 /* I2C 2 (GPIO) -	MAX8698EWO-T (voltage regulator) */
@@ -722,6 +766,53 @@ static void __init spica_add_mem_devices(void)
 #else
 static inline void spica_add_mem_devices(void) {}
 #endif
+
+/*
+ * Camera interface
+ */
+
+static struct resource s3c_fimc_resource[] = {
+	[0] = {
+		.start = S3C64XX_PA_CAMIF,
+		.end   = S3C64XX_PA_CAMIF + SZ_4M - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_CAMIF_C,
+		.end   = IRQ_CAMIF_C,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct s3c_fimc_isp_info spica_fimc_isp_infos[] = {
+	{
+		.board_info	= spica_cam_i2c_devs,
+		.clk_frequency	= 24000000,
+		.bus_type	= FIMC_ITU_601,
+		.i2c_bus_num	= 1,
+		.flags		= FIMC_CLK_INV_VSYNC,
+	}
+};
+
+static struct s3c_platform_fimc spica_fimc_pdata = {
+	.isp_info	= spica_fimc_isp_infos,
+	.num_clients	= ARRAY_SIZE(spica_fimc_isp_infos),
+};
+
+static u64 spica_fimc_dma_mask = DMA_BIT_MASK(32);
+
+static struct platform_device spica_fimc_device = {
+	.name		= "s3c64xx-fimc",
+	.id		= 0,
+	.resource	= s3c_fimc_resource,
+	.num_resources	= ARRAY_SIZE(s3c_fimc_resource),
+	.dev	= {
+		.platform_data	= &spica_fimc_pdata,
+		.parent		= &s3c64xx_device_pd[S3C64XX_DOMAIN_I].dev,
+		.dma_mask		= &spica_fimc_dma_mask,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
+	},
+};
 
 /*
  * LCD screen
@@ -1878,6 +1969,7 @@ static struct platform_device *spica_devices[] __initdata = {
 	&spica_audio_device,
 	&spica_bml_device,
 	&spica_led,
+	&spica_fimc_device,
 };
 
 /*
@@ -2075,8 +2167,8 @@ static struct s3c_pin_cfg_entry spica_pin_config[] __initdata = {
 	S3C64XX_GPB1_UART2_TXD, S3C_PIN_PULL(NONE),
 
 	/* I2C 1 */
-	S3C6410_GPB2_I2C1_SCL, S3C_PIN_PULL(UP),
-	S3C6410_GPB3_I2C1_SDA, S3C_PIN_PULL(UP),
+	S3C64XX_PIN(GPB(2)), S3C_PIN_IN, S3C_PIN_PULL(DOWN),
+	S3C64XX_PIN(GPB(3)), S3C_PIN_IN, S3C_PIN_PULL(DOWN),
 
 	/* I2C 0 */
 	S3C6410_GPB5_I2C0_SCL, S3C_PIN_PULL(NONE),
@@ -2497,8 +2589,6 @@ static void __init spica_machine_init(void)
 	i2c_register_board_info(spica_misc_i2c.bus_num, spica_misc_i2c_devs,
 					ARRAY_SIZE(spica_misc_i2c_devs));
 	s3c_i2c1_set_platdata(&spica_cam_i2c);
-	i2c_register_board_info(spica_cam_i2c.bus_num, spica_cam_i2c_devs,
-					ARRAY_SIZE(spica_cam_i2c_devs));
 	i2c_register_board_info(spica_pmic_i2c.id, spica_pmic_i2c_devs,
 					ARRAY_SIZE(spica_pmic_i2c_devs));
 	i2c_register_board_info(spica_audio_i2c.id, spica_audio_i2c_devs,
