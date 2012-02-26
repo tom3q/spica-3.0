@@ -23,7 +23,7 @@
 
 #include "s5k4ca.h"
 
-#define S5K4CA_DRIVER_NAME	"S5K4CA"
+#define S5K4CA_DRIVER_NAME	"s5k4ca"
 
 #define S5K4CA_USE_BURSTMODE
 
