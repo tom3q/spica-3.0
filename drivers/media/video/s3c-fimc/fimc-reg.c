@@ -30,7 +30,7 @@ void fimc_hw_reset(struct fimc_dev *dev)
 	cfg = readl(dev->regs + S3C_CIGCTRL);
 	cfg |= (S3C_CIGCTRL_SWRST | S3C_CIGCTRL_IRQ_LEVEL);
 	writel(cfg, dev->regs + S3C_CIGCTRL);
-	udelay(1000);
+	udelay(10);
 
 	cfg = readl(dev->regs + S3C_CIGCTRL);
 	cfg &= ~S3C_CIGCTRL_SWRST;
