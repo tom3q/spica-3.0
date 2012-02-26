@@ -763,14 +763,26 @@ static int s5k4ca_sensor_change_photometry(struct v4l2_subdev *sd, int type)
 	return ret;
 }
 
-static int s5k4ca_preview_set(struct v4l2_subdev *sd, int preview)
+static int s5k4ca_s_mbus_fmt(struct v4l2_subdev *sd,
+						struct v4l2_mbus_framefmt *fmt)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct s5k4ca_state *state = to_state(sd);
 	int ret = 0;
 	int delay;
+	int preview;
 
 	TRACE_CALL;
+
+	if (!state->powered)
+		return -EINVAL;
+
+	if (fmt->width == 2048 && fmt->height == 1536)
+		preview = 0;
+	else if (fmt->width == 1024 && fmt->height == 768)
+		preview = 1;
+	else
+		return -EINVAL;
 
 	printk("[CAM-SENSOR] =Sensor Mode ");
 
@@ -1165,9 +1177,6 @@ static int s5k4ca_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	printk("[S5k4CA] %s function ctrl->id : %d \n", __func__, ctrl->id);
 
 	switch (ctrl->id) {
-	case V4L2_CID_CAM_PREVIEW_ONOFF:
-		err = s5k4ca_preview_set(sd, ctrl->value);
-		break;
 	case V4L2_CID_CAMERA_FRAME_RATE:
 		err = s5k4ca_framerate_set(sd, ctrl->value);
 		break;	
@@ -1310,7 +1319,7 @@ static const struct v4l2_subdev_video_ops s5k4ca_video_ops = {
 	.enum_frameintervals = s5k4ca_enum_frameintervals,
 	.g_parm = s5k4ca_g_parm,
 	.s_parm = s5k4ca_s_parm,
-
+	.s_mbus_fmt = s5k4ca_s_mbus_fmt,
 };
 
 static const struct v4l2_subdev_ops s5k4ca_ops = {
