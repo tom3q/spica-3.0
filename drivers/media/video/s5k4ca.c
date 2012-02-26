@@ -1351,6 +1351,7 @@ static int s5k4ca_probe(struct i2c_client *client,
 	if (state == NULL)
 		return -ENOMEM;
 
+	state->pdata = pdata;
 	state->previous_scene_mode = -1;
 	sd = &state->sd;
 	strcpy(sd->name, S5K4CA_DRIVER_NAME);
