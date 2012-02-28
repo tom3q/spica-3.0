@@ -488,7 +488,7 @@ static int sync_capture_fmt(struct fimc_ctx *ctx)
 	fmt->height = ctx->d_frame.o_height;
 
 	ret = v4l2_subdev_call(fimc->vid_cap.sd, video, s_mbus_fmt, fmt);
-	if (ret == -ENOIOCTLCMD) {
+	if (ret < 0 && ret != -ENOIOCTLCMD) {
 		err("s_mbus_fmt failed");
 		return ret;
 	}
