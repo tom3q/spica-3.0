@@ -119,12 +119,82 @@ void fimc_hw_set_target_format(struct fimc_ctx *ctx)
 	writel(cfg, dev->regs + S3C_CITAREA);
 }
 
+static void fimc_get_burst_yuv422i(unsigned int hsize,
+				unsigned int *mburst, unsigned int *rburst)
+{
+	unsigned int tmp, wanted;
+
+	tmp = (hsize / 2) % 16;
+
+	switch (tmp) {
+	case 0:
+		wanted = 16;
+		break;
+
+	case 4:
+		wanted = 4;
+		break;
+
+	case 8:
+		wanted = 8;
+		break;
+
+	default:
+		wanted = 4;
+		break;
+	}
+
+	*mburst = (wanted >> 1);
+	*rburst = (wanted >> 1);
+}
+
+static void fimc_get_burst(unsigned int hsize,
+				unsigned int *mburst, unsigned int *rburst)
+{
+	unsigned int tmp;
+
+	tmp = (hsize / 4) % 16;
+
+	switch (tmp) {
+	case 0:
+		*mburst = 16;
+		*rburst = 16;
+		break;
+
+	case 4:
+		*mburst = 16;
+		*rburst = 4;
+		break;
+
+	case 8:
+		*mburst = 16;
+		*rburst = 8;
+		break;
+
+	default:
+		tmp = (hsize / 4) % 8;
+		if (tmp == 0) {
+			*mburst = 8;
+			*rburst = 8;
+		} else if (tmp == 4) {
+			*mburst = 8;
+			*rburst = 4;
+		} else {
+			tmp = (hsize / 4) % 4;
+			*mburst = 4;
+			*rburst = (tmp) ? tmp : 4;
+		}
+		break;
+	}
+}
+
 void fimc_hw_set_out_dma(struct fimc_ctx *ctx)
 {
 	u32 cfg;
 	struct fimc_dev *dev = ctx->fimc_dev;
 	struct fimc_frame *frame = &ctx->d_frame;
 	struct fimc_dma_offset *offset = &frame->dma_offset;
+	unsigned int yburst_m = 0, yburst_r = 0, cburst_m = 4, cburst_r = 2;
 
 	/* Set the input dma offsets. */
 	cfg = 0;
@@ -144,6 +214,48 @@ void fimc_hw_set_out_dma(struct fimc_ctx *ctx)
 
 	/* Configure chroma components order. */
 	cfg = readl(dev->regs + S3C_CIOCTRL);
+
+	cfg &= ~S3C_CIOCTRL_BURST_MASK;
+
+	switch (frame->fmt->color) {
+	case S3C_FIMC_RGB888:
+	case S3C_FIMC_RGB666:
+		WARN_ON(frame->width % 2);
+
+		fimc_get_burst(4*frame->width, &yburst_m, &yburst_r);
+		break;
+
+	case S3C_FIMC_RGB565:
+		WARN_ON(frame->width % 4);
+
+		fimc_get_burst(2*frame->width, &yburst_m, &yburst_r);
+		break;
+
+	case S3C_FIMC_YCBYCR422:
+	case S3C_FIMC_CBYCRY422:
+	case S3C_FIMC_CRYCBY422:
+	case S3C_FIMC_YCRYCB422:
+		WARN_ON(frame->width % 16);
+
+		fimc_get_burst_yuv422i(frame->width, &yburst_m, &yburst_r);
+		cburst_m = (yburst_m / 2);
+		cburst_r = (yburst_r / 2);
+		break;
+
+	default:
+		WARN_ON(frame->width % 16);
+
+		fimc_get_burst(frame->width, &yburst_m, &yburst_r);
+		fimc_get_burst(frame->width / 2, &cburst_m, &cburst_r);
+	}
+
+	dbg("y1burst = %d, y2burst = %d, c1burst = %d, c2burst = %d",
+				yburst_m, yburst_r, cburst_m, cburst_r);
+
+	cfg |= S3C_CIOCTRL_Y1BURST(yburst_m);
+	cfg |= S3C_CIOCTRL_C1BURST(cburst_m);
+	cfg |= S3C_CIOCTRL_Y2BURST(yburst_r);
+	cfg |= S3C_CIOCTRL_C2BURST(cburst_r);
 
 	cfg &= ~(S3C_CIOCTRL_ORDER422_MASK);
 

@@ -91,6 +91,11 @@
 
 /* Output DMA control */
 #define S3C_CIOCTRL			0x4c
+#define S3C_CIOCTRL_BURST_MASK		(0xfffff << 4)
+#define S3C_CIOCTRL_Y1BURST(x)		((x) << 19)
+#define S3C_CIOCTRL_Y2BURST(x)		((x) << 14)
+#define S3C_CIOCTRL_C1BURST(x)		((x) << 9)
+#define S3C_CIOCTRL_C2BURST(x)		((x) << 4)
 #define S3C_CIOCTRL_ORDER422_MASK	(3 << 0)
 #define S3C_CIOCTRL_ORDER422_CRYCBY	(0 << 0)
 #define S3C_CIOCTRL_ORDER422_CBYCRY	(1 << 0)
