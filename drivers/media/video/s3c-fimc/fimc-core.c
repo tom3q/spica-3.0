@@ -1798,9 +1798,11 @@ static int __devexit fimc_remove(struct platform_device *pdev)
 {
 	struct fimc_dev *fimc = platform_get_drvdata(pdev);
 
-	pm_runtime_disable(&pdev->dev);
-	fimc_runtime_suspend(&pdev->dev);
-	pm_runtime_set_suspended(&pdev->dev);
+	if (!pm_runtime_suspended(&pdev->dev)) {
+		pm_runtime_disable(&pdev->dev);
+		fimc_runtime_suspend(&pdev->dev);
+		pm_runtime_set_suspended(&pdev->dev);
+	}
 
 	fimc_unregister_m2m_device(fimc);
 	fimc_unregister_capture_device(fimc);
