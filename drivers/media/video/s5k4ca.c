@@ -777,12 +777,18 @@ static int s5k4ca_s_mbus_fmt(struct v4l2_subdev *sd,
 	if (!state->powered)
 		return -EINVAL;
 
-	if (fmt->width == 2048 && fmt->height == 1536)
-		preview = 0;
-	else if (fmt->width == 1024 && fmt->height == 768)
-		preview = 1;
-	else
+	if (fmt->width > 2048 || fmt->height > 1536)
 		return -EINVAL;
+
+	if (fmt->width <= 1024 && fmt->height <= 768) {
+		preview = 1;
+		fmt->width = 1024;
+		fmt->height = 768;
+	} else {
+		preview = 0;
+		fmt->width = 2048;
+		fmt->height = 1536;
+	}
 
 	printk("[CAM-SENSOR] =Sensor Mode ");
 
