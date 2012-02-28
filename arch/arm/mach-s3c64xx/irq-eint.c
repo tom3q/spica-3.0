@@ -70,6 +70,7 @@ static int s3c_irq_eint_set_type(struct irq_data *data, unsigned int type)
 	u32 ctrl, mask;
 	u32 newvalue = 0;
 	void __iomem *reg;
+	irq_flow_handler_t handler;
 
 	if (offs > 27)
 		return -EINVAL;
@@ -82,26 +83,32 @@ static int s3c_irq_eint_set_type(struct irq_data *data, unsigned int type)
 	switch (type) {
 	case IRQ_TYPE_NONE:
 		printk(KERN_WARNING "No edge setting!\n");
+		handler = handle_level_irq;
 		break;
 
 	case IRQ_TYPE_EDGE_RISING:
 		newvalue = S3C2410_EXTINT_RISEEDGE;
+		handler = handle_edge_irq;
 		break;
 
 	case IRQ_TYPE_EDGE_FALLING:
 		newvalue = S3C2410_EXTINT_FALLEDGE;
+		handler = handle_edge_irq;
 		break;
 
 	case IRQ_TYPE_EDGE_BOTH:
 		newvalue = S3C2410_EXTINT_BOTHEDGE;
+		handler = handle_edge_irq;
 		break;
 
 	case IRQ_TYPE_LEVEL_LOW:
 		newvalue = S3C2410_EXTINT_LOWLEV;
+		handler = handle_level_irq;
 		break;
 
 	case IRQ_TYPE_LEVEL_HIGH:
 		newvalue = S3C2410_EXTINT_HILEV;
+		handler = handle_level_irq;
 		break;
 
 	default:
@@ -134,6 +141,8 @@ static int s3c_irq_eint_set_type(struct irq_data *data, unsigned int type)
 	}
 
 	s3c_gpio_cfgpin(pin, pin_val);
+
+	__irq_set_handler_locked(data->irq, handler);
 
 	return 0;
 }
