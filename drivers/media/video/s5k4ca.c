@@ -790,6 +790,8 @@ static int s5k4ca_s_mbus_fmt(struct v4l2_subdev *sd,
 		fmt->height = 1536;
 	}
 
+	fmt->code = V4L2_MBUS_FMT_VYUY8_2X8;
+
 	printk("[CAM-SENSOR] =Sensor Mode ");
 
 	if (preview) {
