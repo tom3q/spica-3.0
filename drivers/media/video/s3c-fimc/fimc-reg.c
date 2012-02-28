@@ -531,6 +531,8 @@ int fimc_hw_set_camera_polarity(struct fimc_dev *fimc,
 	if (cam->flags & FIMC_CLK_INV_HREF)
 		cfg |= S3C_CIGCTRL_INVPOLHREF;
 
+	cfg |= S3C_CIGCTRL_FIELDMODE;
+
 	writel(cfg, fimc->regs + S3C_CIGCTRL);
 
 	return 0;

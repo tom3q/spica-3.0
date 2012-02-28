@@ -53,6 +53,7 @@
 #define S3C_CIGCTRL_HREF_MASK		(1 << 21)
 #define S3C_CIGCTRL_IRQ_LEVEL		(1 << 20)
 #define S3C_CIGCTRL_IRQ_CLR		(1 << 19)
+#define S3C_CIGCTRL_FIELDMODE		(1 << 2)
 #define S3C_CIGCTRL_INTERLACE		(1 << 0)
 
 /* Window offset 2 */
