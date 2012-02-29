@@ -119,43 +119,9 @@ void fimc_hw_set_target_format(struct fimc_ctx *ctx)
 	writel(cfg, dev->regs + S3C_CITAREA);
 }
 
-static void fimc_get_burst_yuv422i(unsigned int hsize,
-				unsigned int *mburst, unsigned int *rburst)
+static void fimc_get_burst(u32 hsize, u32 *mburst, u32 *rburst)
 {
-	unsigned int tmp, wanted;
-
-	tmp = (hsize / 2) % 16;
-
-	switch (tmp) {
-	case 0:
-		wanted = 16;
-		break;
-
-	case 4:
-		wanted = 4;
-		break;
-
-	case 8:
-		wanted = 8;
-		break;
-
-	default:
-		wanted = 4;
-		break;
-	}
-
-	*mburst = (wanted >> 1);
-	*rburst = (wanted >> 1);
-}
-
-static void fimc_get_burst(unsigned int hsize,
-				unsigned int *mburst, unsigned int *rburst)
-{
-	unsigned int tmp;
-
-	tmp = (hsize / 4) % 16;
-
-	switch (tmp) {
+	switch ((hsize / 4) % 16) {
 	case 0:
 		*mburst = 16;
 		*rburst = 16;
@@ -171,20 +137,14 @@ static void fimc_get_burst(unsigned int hsize,
 		*rburst = 8;
 		break;
 
-	default:
-		tmp = (hsize / 4) % 8;
-		if (tmp == 0) {
-			*mburst = 8;
-			*rburst = 8;
-		} else if (tmp == 4) {
-			*mburst = 8;
-			*rburst = 4;
-		} else {
-			tmp = (hsize / 4) % 4;
-			*mburst = 4;
-			*rburst = (tmp) ? tmp : 4;
-		}
+	case 12:
+		*mburst = 8;
+		*rburst = 4;
 		break;
+
+	default:
+		*mburst = 4;
+		*rburst = (hsize / 4) % 4;
 	}
 }
 
@@ -194,7 +154,7 @@ void fimc_hw_set_out_dma(struct fimc_ctx *ctx)
 	struct fimc_dev *dev = ctx->fimc_dev;
 	struct fimc_frame *frame = &ctx->d_frame;
 	struct fimc_dma_offset *offset = &frame->dma_offset;
-	unsigned int yburst_m = 0, yburst_r = 0, cburst_m = 4, cburst_r = 2;
+	u32 y1burst = 0, y2burst = 0, c1burst = 4, c2burst = 2;
 
 	/* Set the input dma offsets. */
 	cfg = 0;
@@ -222,40 +182,56 @@ void fimc_hw_set_out_dma(struct fimc_ctx *ctx)
 	case S3C_FIMC_RGB666:
 		WARN_ON(frame->width % 2);
 
-		fimc_get_burst(4*frame->width, &yburst_m, &yburst_r);
+		fimc_get_burst(4*frame->width, &y1burst, &y2burst);
 		break;
 
 	case S3C_FIMC_RGB565:
 		WARN_ON(frame->width % 4);
 
-		fimc_get_burst(2*frame->width, &yburst_m, &yburst_r);
+		fimc_get_burst(2*frame->width, &y1burst, &y2burst);
 		break;
 
 	case S3C_FIMC_YCBYCR422:
 	case S3C_FIMC_CBYCRY422:
 	case S3C_FIMC_CRYCBY422:
 	case S3C_FIMC_YCRYCB422:
-		WARN_ON(frame->width % 16);
+		WARN_ON(frame->width % 4);
 
-		fimc_get_burst_yuv422i(frame->width, &yburst_m, &yburst_r);
-		cburst_m = (yburst_m / 2);
-		cburst_r = (yburst_r / 2);
+		fimc_get_burst(2*frame->width, &y1burst, &y2burst);
+
+		/*
+		 * According to S3C6410 User's Manual:
+		 *
+		 * "When Codec output format is YCbCr 4:2:2 interleave,
+		 * ScalerBypass_Co = 0 and ScaleUp_V_Co = 1 , Wanted main
+		 * burst length = 16 and Wanted remained burst length != 16
+		 * is not allowed."
+		 *
+		 * So let's just disallow such configuration to be on safe side.
+		 */
+		if (y1burst == 16 && y2burst != 16)
+			y1burst = 8;
+
+		y1burst /= 2;
+		y2burst /= 2;
+		c1burst = y1burst / 2;
+		c2burst = y2burst / 2;
 		break;
 
 	default:
-		WARN_ON(frame->width % 16);
+		WARN_ON(frame->width % 8);
 
-		fimc_get_burst(frame->width, &yburst_m, &yburst_r);
-		fimc_get_burst(frame->width / 2, &cburst_m, &cburst_r);
+		fimc_get_burst(frame->width, &y1burst, &y2burst);
+		fimc_get_burst(frame->width / 2, &c1burst, &c2burst);
 	}
 
 	dbg("y1burst = %d, y2burst = %d, c1burst = %d, c2burst = %d",
-				yburst_m, yburst_r, cburst_m, cburst_r);
+				y1burst, y2burst, c1burst, c2burst);
 
-	cfg |= S3C_CIOCTRL_Y1BURST(yburst_m);
-	cfg |= S3C_CIOCTRL_C1BURST(cburst_m);
-	cfg |= S3C_CIOCTRL_Y2BURST(yburst_r);
-	cfg |= S3C_CIOCTRL_C2BURST(cburst_r);
+	cfg |= S3C_CIOCTRL_Y1BURST(y1burst);
+	cfg |= S3C_CIOCTRL_Y2BURST(y2burst);
+	cfg |= S3C_CIOCTRL_C1BURST(c1burst);
+	cfg |= S3C_CIOCTRL_C2BURST(c2burst);
 
 	cfg &= ~(S3C_CIOCTRL_ORDER422_MASK);
 
