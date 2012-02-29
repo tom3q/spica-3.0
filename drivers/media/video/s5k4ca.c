@@ -326,32 +326,32 @@ static int s5k4ca_sensor_change_wb(struct v4l2_subdev *sd, int type)
 	TRACE_CALL;
 
 	switch (type) {
-	case 0:
+	case WHITE_BALANCE_AUTO:
 	default:
 		state->previous_WB_mode = 0;
 		printk("-> WB auto mode\n");
 		ret = s5k4ba_write_regs(sd, s5k4ca_wb_auto,
 					ARRAY_SIZE(s5k4ca_wb_auto));
 		break;
-	case 1:
+	case WHITE_BALANCE_SUNNY:
 		state->previous_WB_mode = 1;
 		printk("-> WB Sunny mode\n");
 		ret = s5k4ba_write_regs(sd, s5k4ca_wb_sunny,
 					ARRAY_SIZE(s5k4ca_wb_sunny));
 		break;
-	case 2:
+	case WHITE_BALANCE_CLOUDY:
 		state->previous_WB_mode = 2;
 		printk("-> WB Cloudy mode\n");
 		ret = s5k4ba_write_regs(sd, s5k4ca_wb_cloudy,
 					ARRAY_SIZE(s5k4ca_wb_cloudy));
 		break;
-	case 3:
+	case WHITE_BALANCE_TUNGSTEN:
 		state->previous_WB_mode = 3;
 		printk("-> WB Tungsten mode\n");
 		ret = s5k4ba_write_regs(sd, s5k4ca_wb_tungsten,
 					ARRAY_SIZE(s5k4ca_wb_tungsten));
 		break;
-	case 4:
+	case WHITE_BALANCE_FLUORESCENT:
 		state->previous_WB_mode = 4;
 		printk("-> WB Flourescent mode\n");
 		ret = s5k4ba_write_regs(sd, s5k4ca_wb_fluorescent,
@@ -1191,7 +1191,7 @@ static int s5k4ca_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_FOCUS_AUTO:
 		err = s5k4ca_sensor_af_control(sd, ctrl->value);
 		break;
-	case V4L2_CID_AUTO_WHITE_BALANCE:
+	case V4L2_CID_CAMERA_WHITE_BALANCE:
 		err = s5k4ca_sensor_change_wb(sd, ctrl->value);
 		break;
 	case V4L2_CID_COLORFX:
