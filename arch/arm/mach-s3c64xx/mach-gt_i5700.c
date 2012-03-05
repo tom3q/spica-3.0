@@ -2574,6 +2574,10 @@ static void __init spica_machine_init(void)
 	clk_put(uclk1);
 	clk_put(dout_mpll);
 
+	/* Misc tweaks */
+	__raw_writel(0x7702, S3C64XX_QOS_OVERRIDE1);
+	__raw_writel(0x3ffff, S3C64XX_MISC_CON);
+
 	/* Setup interrupt filtering */
 	__raw_writel(0x88888888, S3C64XX_EINT0FLTCON0);
 	__raw_writel(0x88888888, S3C64XX_EINT0FLTCON1);
