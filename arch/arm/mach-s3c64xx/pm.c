@@ -90,6 +90,9 @@ static struct sleep_save misc_save[] = {
 	SAVE_ITEM(S3C64XX_SDMA_SEL),
 	SAVE_ITEM(S3C64XX_MODEM_MIFPCON),
 	SAVE_ITEM(S3C64XX_SLEEP_CFG),
+
+	SAVE_ITEM(S3C64XX_QOS_OVERRIDE1),
+	SAVE_ITEM(S3C64XX_MISC_CON),	
 };
 
 void s3c_pm_configure_extint(void)
