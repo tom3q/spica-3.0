@@ -334,4 +334,4 @@ config SPICA_AHB_166
 	  This option makes the kernel reconfigure the system for asynchronous
 	  mode operation with bus clocks generated from MPLL clocked at 333 MHz.
 	  Effectively this overclocks AHB bus (and all components using it to
-	  clock themselves) to 166 MHz. PCLK is kept at stock 66 MHz.
+	  clock themselves) to 166 MHz and APB bus to 83 MHz.
