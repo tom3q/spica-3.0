@@ -371,7 +371,6 @@ struct samsung_fimc_variant {
  */
 struct samsung_fimc_driverdata {
 	struct samsung_fimc_variant *variant[FIMC_MAX_DEVS];
-	unsigned long	lclk_frequency;
 	int		num_entities;
 };
 
