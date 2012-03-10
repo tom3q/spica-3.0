@@ -2645,7 +2645,7 @@ static void __init spica_machine_init(void)
 	platform_add_devices(spica_mod_devices, ARRAY_SIZE(spica_mod_devices));
 
 	/* Register PMEM devices */
-	spica_add_mem_devices();
+	spica_add_pmem_devices();
 
 	/* Indicate full regulator constraints */
 	regulator_has_full_constraints();
