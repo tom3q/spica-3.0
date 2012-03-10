@@ -2537,34 +2537,28 @@ static void spica_poweroff(void)
 	while(1);
 }
 
-#ifdef CONFIG_SPICA_AHB_166
-#define AHB_CLOCK	166500000
-#else
-#define AHB_CLOCK	133000000
-#endif
-
 static void __init spica_machine_init(void)
 {
-	struct clk *uclk1;
-	struct clk *dout_mpll;
-	struct clk *mfc_sclk;
+	struct clk *parent;
+	struct clk *clk;
+	unsigned long rate;
 
-	/* Setup DOUT MPLL frequency */
-	dout_mpll = clk_get(NULL, "dout_mpll");
-	clk_set_rate(dout_mpll, AHB_CLOCK);
+	/* Setup frequencies of some clocks */
+	clk = clk_get(NULL, "hclk");
+	rate = clk_get_rate(clk);
+	clk_put(clk);
 
-	mfc_sclk = clk_get(NULL, "mfc_sclk");
-	clk_set_rate(mfc_sclk, AHB_CLOCK);
-	clk_put(mfc_sclk);
+	parent = clk_get(NULL, "dout_mpll");
+	clk = clk_get(NULL, "uclk1");
+	clk_set_rate(parent, rate);
+	clk_set_parent(clk, parent);
+	clk_set_rate(clk, rate);
+	clk_put(clk);
+	clk_put(parent);
 
-	/* Setup UCLK1 frequency */
-	uclk1 = clk_get(NULL, "uclk1");
-	clk_set_parent(uclk1, dout_mpll);
-	clk_set_rate(uclk1, AHB_CLOCK);
-
-	/* Put the clocks */
-	clk_put(uclk1);
-	clk_put(dout_mpll);
+	clk = clk_get(NULL, "mfc_sclk");
+	clk_set_rate(clk, rate);
+	clk_put(clk);
 
 	/* Misc tweaks */
 	__raw_writel(0x7702, S3C64XX_QOS_OVERRIDE1);
