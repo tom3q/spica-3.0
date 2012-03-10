@@ -717,7 +717,8 @@ static ssize_t batt_vol_adc_cal_store(struct device *dev,
 	dev_info(bat->dev, "Setting battery calibration value to %d. (Was %d.)\n",
 							val, bat->calibration);
 
-	bat->compensation += bat->calibration - val;
+	bat->compensation -= bat->calibration;
+	bat->compensation += val;
 	bat->calibration = val;
 
 	mutex_unlock(&bat->mutex);
