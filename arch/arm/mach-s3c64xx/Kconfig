@@ -321,6 +321,7 @@ config MACH_GT_I5700
 	select S3C64XX_SETUP_KEYPAD
 	select I2C_GPIO
 	select HAVE_S3C2410_WATCHDOG if WATCHDOG
+	select GENERIC_ALLOCATOR
 
 	help
 	  Machine support for the Samsung Galaxy Spica GT-i5700 phone.

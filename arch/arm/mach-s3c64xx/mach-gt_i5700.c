@@ -52,6 +52,8 @@
 #include <linux/sec_jack.h>
 #include <linux/vibetonz.h>
 #include <linux/leds-regulator.h>
+#include <linux/memory_alloc.h>
+#include <linux/memblock.h>
 
 #include <sound/gt_i5700.h>
 #include <sound/ak4671.h>
@@ -715,47 +717,32 @@ static struct i2c_board_info spica_touch_i2c_devs[] __initdata = {
 };
 
 /*
- * Reserved memory (FIXME: Throw this shit away!)
+ * Memory configuration
  */
 
-#define	PHYS_SIZE			(SZ_128M + SZ_64M + SZ_16M)
+#define PHYS_SIZE			(208*1024*1024)
 
-#define DRAM_END_ADDR 			(PHYS_OFFSET + PHYS_SIZE)
-#define RESERVED_PMEM_END_ADDR 		(DRAM_END_ADDR)
+#define RAM_CONSOLE_SIZE		(1*1024*1024)
+#define PMEM_GPU1_SIZE			(32*1024*1024)
+#define PMEM_SIZE			(8*1024*1024)
 
-#define RAM_CONSOLE_SIZE		(SZ_2M)
-#define RESERVED_PMEM_GPU1		(SZ_16M + SZ_8M + SZ_4M + SZ_2M)
-#define RESERVED_PMEM			(SZ_8M)
-
-#define RAM_CONSOLE_START		(RESERVED_PMEM_END_ADDR \
-					- RAM_CONSOLE_SIZE)
-#define GPU1_RESERVED_PMEM_START	(RAM_CONSOLE_START \
-					- RESERVED_PMEM_GPU1)
-#define RESERVED_PMEM_START		(GPU1_RESERVED_PMEM_START \
-					- RESERVED_PMEM)
-#define PHYS_UNRESERVED_SIZE		(RESERVED_PMEM_START - PHYS_OFFSET)
-
-/*
- * Android PMEM
- */
+#define RESERVED_SIZE			(RAM_CONSOLE_SIZE \
+					+ PMEM_GPU1_SIZE \
+					+ PMEM_SIZE)
 
 #ifdef CONFIG_ANDROID_PMEM
 static struct android_pmem_platform_data pmem_pdata = {
 	.name		= "pmem",
-	.no_allocator	= 1,
+	.allocator_type	= PMEM_ALLOCATORTYPE_ALLORNOTHING,
 	.cached		= 1,
-	.buffered	= 1,
-	.start		= RESERVED_PMEM_START,
-	.size		= RESERVED_PMEM,
+	.size		= PMEM_SIZE,
 };
 
 static struct android_pmem_platform_data pmem_gpu1_pdata = {
 	.name		= "pmem_gpu1",
-	.no_allocator	= 0,
+	.allocator_type	= PMEM_ALLOCATORTYPE_BITMAP,
 	.cached		= 1,
-	.buffered	= 1,
-	.start		= GPU1_RESERVED_PMEM_START,
-	.size		= RESERVED_PMEM_GPU1,
+	.size		= PMEM_GPU1_SIZE,
 };
 
 static struct platform_device pmem_device = {
@@ -775,7 +762,7 @@ static struct platform_device *pmem_devices[] = {
 	&pmem_gpu1_device,
 };
 
-static void __init spica_add_mem_devices(void)
+static void __init spica_add_pmem_devices(void)
 {
 	unsigned i;
 	for (i = 0; i < ARRAY_SIZE(pmem_devices); ++i)
@@ -788,8 +775,25 @@ static void __init spica_add_mem_devices(void)
 		}
 }
 #else
-static inline void spica_add_mem_devices(void) {}
+static void __init spica_add_pmem_devices(void) {}
 #endif
+
+static void __init spica_reserve(void)
+{
+	unsigned long start = PHYS_OFFSET + PHYS_SIZE - RESERVED_SIZE;
+	unsigned long size = RESERVED_SIZE;
+	struct mem_pool *mpool;
+	int ret;
+
+	memory_pool_init();
+
+	ret = memblock_remove(start, size);
+	WARN_ON(ret);
+
+	mpool = initialize_memory_pool(start, size, 0);
+	if (!mpool)
+		pr_warning("failed to create mempool\n");
+}
 
 /*
  * Camera interface
@@ -1037,8 +1041,6 @@ static struct s3c_fb_platdata spica_lcd_pdata __initdata = {
 
 static struct resource spica_ram_console_resources[] = {
 	{
-		.start	= RAM_CONSOLE_START,
-		.end	= RAM_CONSOLE_START + SZ_1M - 1,
 		.flags	= IORESOURCE_MEM,
 	}
 };
@@ -2161,14 +2163,7 @@ static struct platform_device *spica_mod_devices[] __initdata = {
  */
 
 static struct map_desc spica_iodesc[] __initdata = {
-#ifdef CONFIG_ANDROID_RAM_CONSOLE_EARLY_INIT
-	{
-		.virtual	= (unsigned long)S3C_ADDR_CPU(0x00300000),
-		.pfn		= __phys_to_pfn(RAM_CONSOLE_START),
-		.length		= SZ_1M,
-		.type		= MT_DEVICE,
-	},
-#endif
+
 };
 
 /*
@@ -2504,13 +2499,10 @@ static struct s3c_pin_cfg_entry spica_slp_config[] __initdata = {
 static void __init spica_fixup(struct machine_desc *desc,
 		struct tag *tags, char **cmdline, struct meminfo *mi)
 {
-	mi->nr_banks = 2;
+	mi->nr_banks = 1;
 
 	mi->bank[0].start = PHYS_OFFSET;
-	mi->bank[0].size = SZ_128M;
-
-	mi->bank[1].start = PHYS_OFFSET + SZ_128M;
-	mi->bank[1].size = PHYS_UNRESERVED_SIZE - SZ_128M;
+	mi->bank[0].size = PHYS_SIZE;
 }
 
 static void __init spica_map_io(void)
@@ -2647,6 +2639,13 @@ static void __init spica_machine_init(void)
 	samsung_pd_set_persistent(&s3c64xx_device_pd[S3C64XX_DOMAIN_F]);
 	s3c64xx_add_pd_devices();
 
+	/* Setup RAM console */
+	spica_ram_console_resources[0].start =
+		allocate_contiguous_memory_nomap(RAM_CONSOLE_SIZE,
+								0, PAGE_SIZE);
+	spica_ram_console_resources[0].end = RAM_CONSOLE_SIZE +
+				spica_ram_console_resources[0].start - 1;
+
 	/* Register platform devices */
 	platform_add_devices(spica_devices, ARRAY_SIZE(spica_devices));
 	platform_add_devices(spica_mod_devices, ARRAY_SIZE(spica_mod_devices));
@@ -2672,6 +2671,7 @@ MACHINE_START(GT_I5700, "Spica")
 	.init_irq	= s3c6410_init_irq,
 	.fixup		= spica_fixup,
 	.map_io		= spica_map_io,
+	.reserve	= spica_reserve,
 	.init_machine	= spica_machine_init,
 	.timer		= &s3c64xx_timer,
 MACHINE_END
