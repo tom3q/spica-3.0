@@ -51,8 +51,11 @@ static struct cpufreq_frequency_table s3c64xx_freq_table[] = {
 	{ 4, 800000 },
 #else
 	{ 0, 133333 },
+	{ 1, 166500 },
 	{ 1, 266666 },
+	{ 2, 333000 },
 	{ 2, 400000 },
+	{ 3, 666000 },
 	{ 4, 800000 },
 #endif
 	{ 0, CPUFREQ_TABLE_END },
