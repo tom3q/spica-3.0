@@ -2507,11 +2507,11 @@ static void __init spica_fixup(struct machine_desc *desc,
 
 static void __init spica_map_io(void)
 {
-#ifdef CONFIG_SPICA_AHB_166
+#if defined(CONFIG_SPICA_AHB_166) || defined(CONFIG_SPICA_CPU_667_AHB_166)
 	u32 reg;
 #endif
 	s3c64xx_init_io(spica_iodesc, ARRAY_SIZE(spica_iodesc));
-#ifdef CONFIG_SPICA_AHB_166
+#if defined(CONFIG_SPICA_AHB_166)
 	reg = __raw_readl(S3C64XX_OTHERS);
 	reg &= ~S3C64XX_OTHERS_SYNCMODE;
 	reg &= ~S3C64XX_OTHERS_SYNCMUXSEL;
@@ -2525,6 +2525,30 @@ static void __init spica_map_io(void)
 	__raw_writel(reg, S3C_CLK_DIV0);
 
 	__raw_writel(0xc14d0302, S3C_MPLL_CON);
+#elif defined(CONFIG_SPICA_CPU_667_AHB_166)
+	reg = __raw_readl(S3C64XX_OTHERS);
+	reg &= ~S3C64XX_OTHERS_SYNCMODE;
+	reg &= ~S3C64XX_OTHERS_SYNCMUXSEL;
+	__raw_writel(reg, S3C64XX_OTHERS);
+
+	while (__raw_readl(S3C64XX_OTHERS) & S3C64XX_OTHERS_SYNCACK_MASK);
+
+	__raw_writel(0xc14d0301, S3C_APLL_CON);
+
+	reg = __raw_readl(S3C_CLK_DIV0);
+	reg &= ~S3C6400_CLKDIV0_HCLK2_MASK;
+	reg |= 0x1 << S3C6400_CLKDIV0_HCLK2_SHIFT;
+	__raw_writel(reg, S3C_CLK_DIV0);
+
+	reg = __raw_readl(S3C64XX_OTHERS);
+	reg |= S3C64XX_OTHERS_SYNCMODE;
+	reg |= S3C64XX_OTHERS_SYNCMUXSEL;
+	__raw_writel(reg, S3C64XX_OTHERS);
+
+	do {
+		reg = __raw_readl(S3C64XX_OTHERS);
+		reg &= S3C64XX_OTHERS_SYNCACK_MASK;
+	} while (reg != S3C64XX_OTHERS_SYNCACK_MASK);
 #endif
 	s3c24xx_init_clocks(12000000);
 	s3c24xx_init_uarts(spica_uartcfgs, ARRAY_SIZE(spica_uartcfgs));
