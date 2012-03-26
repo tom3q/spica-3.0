@@ -5023,7 +5023,7 @@ static struct s5k4ca_request s5k4ca_ae_awb_lock[] = {
 	S5K4CA_REG(0x0578),
 	S5K4CA_DATA(0x0075),
 };
-
+#endif
 
 static struct s5k4ca_request s5k4ca_af_low_lux_val[] = {
 	S5K4CA_BANK(0xD000),
@@ -5079,7 +5079,6 @@ static struct s5k4ca_request s5k4ca_af_normal_lux_val[] = {
 	S5K4CA_REG(0x165A),	/* below address 7000163E */
 	S5K4CA_DATA(0x0016),	/* AF lens step number */
 };
-#endif
 
 static struct s5k4ca_request s5k4ca_focus_mode_macro[] = {
 	/* Set addresses */
