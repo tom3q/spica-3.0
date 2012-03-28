@@ -638,10 +638,14 @@ static int fimc_cap_streamon(struct file *file, void *priv,
 static int fimc_cap_streamoff(struct file *file, void *priv,
 			    enum v4l2_buf_type type)
 {
+	int ret;
 	struct fimc_ctx *ctx = priv;
 	struct fimc_dev *fimc = ctx->fimc_dev;
 
-	return vb2_streamoff(&fimc->vid_cap.vbq, type);
+	ret = vb2_streamoff(&fimc->vid_cap.vbq, type);
+	vb2_queue_release(&fimc->vid_cap.vbq);
+
+	return ret;
 }
 
 static int fimc_cap_reqbufs(struct file *file, void *priv,
