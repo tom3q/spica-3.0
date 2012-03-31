@@ -193,7 +193,7 @@ static int bcmsdh_sdmmc_suspend(struct device *pdev)
 
 static int bcmsdh_sdmmc_resume(struct device *pdev)
 {
-#if defined(OOB_INTR_ONLY)
+#if defined(OOB_INTR_ONLY) && defined(DISABLE_WAKE)
 	struct sdio_func *func = dev_to_sdio_func(pdev);
 #endif
 	sd_trace(("%s Enter\n", __FUNCTION__));
