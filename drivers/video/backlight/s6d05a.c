@@ -190,10 +190,9 @@ static void s6d05a_set_power(struct s6d05a_data *data, int power)
 		udelay(15);
 
 		regulator_enable(data->vci);
-		udelay(15);
+		msleep(3);
 
 		gpio_set_value(data->reset_gpio, 1);
-
 		msleep(10);
 
 		s6d05a_send_command_seq(data, data->power_on_seq);
