@@ -882,7 +882,108 @@ static int s5k4ca_set_focus_mode(struct v4l2_subdev *sd, int mode)
 
 static int s5k4ca_set_auto_focus(struct v4l2_subdev *sd, int val)
 {
-	return -EINVAL;
+	struct s5k4ca_state *state = to_state(sd);
+	int ret = 0, count = 50;
+	u16 tmpVal = 0;
+
+	// Get lux_value.
+	s5k4ca_sensor_write(state, 0xFCFC, 0xD000);
+	s5k4ca_sensor_write(state, 0x002C, 0x7000);
+	s5k4ca_sensor_write(state, 0x002E, 0x12FE);
+	s5k4ca_sensor_read(state, 0x0F12, &state->lux_value);
+	if (state->lux_value < 0x80)  //Low light AF
+		s5k4ca_write_regs(state, s5k4ca_af_low_lux_val, ARRAY_SIZE(s5k4ca_af_low_lux_val));
+	else
+		s5k4ca_write_regs(state, s5k4ca_af_normal_lux_val, ARRAY_SIZE(s5k4ca_af_normal_lux_val));
+
+	if (state->focus_mode == FOCUS_MODE_MACRO) {
+		s5k4ca_sensor_write(state, 0xFCFC, 0xD000);
+		s5k4ca_sensor_write(state, 0x0028, 0x7000);
+		s5k4ca_sensor_write(state, 0x002A, 0x030E);
+		s5k4ca_sensor_write(state, 0x0F12, 0x0030);
+		s5k4ca_sensor_write(state, 0x002A, 0x030C);
+		s5k4ca_sensor_write(state, 0x0F12, 0x0000); //AF manual
+		msleep(140);
+		s5k4ca_sensor_write(state, 0x002A, 0x030E);
+		s5k4ca_sensor_write(state, 0x0F12, 0x0040);
+		msleep(100);
+	} else {
+		s5k4ca_sensor_write(state, 0xFCFC, 0xD000);
+		s5k4ca_sensor_write(state, 0x0028, 0x7000);
+		s5k4ca_sensor_write(state, 0x002A, 0x030E);
+		s5k4ca_sensor_write(state, 0x0F12, 0x00FF);
+		s5k4ca_sensor_write(state, 0x002A, 0x030C);
+		s5k4ca_sensor_write(state, 0x0F12, 0x0000); // AF Manual
+		msleep(140);
+		s5k4ca_sensor_write(state, 0x002A, 0x030E);
+		s5k4ca_sensor_write(state, 0x0F12, 0x00F1);
+		msleep(50);
+		s5k4ca_sensor_write(state, 0x002A, 0x030C);
+		s5k4ca_sensor_write(state, 0x0F12, 0x0003); // AF Freeze
+		msleep(50);
+	}
+
+	s5k4ca_sensor_write(state, 0x002A, 0x030C);
+	s5k4ca_sensor_write(state, 0x0F12, 0x0002);
+
+	do
+	{
+		if (count == 0)
+			break;
+		s5k4ca_sensor_write(state, 0xFCFC, 0xD000);
+		s5k4ca_sensor_write(state, 0x002C, 0x7000);
+		s5k4ca_sensor_write(state, 0x002E, 0x130E);
+		if (state->lux_value < 0x80)
+			msleep(250);
+		else
+			msleep(100);
+		s5k4ca_sensor_read(state, 0x0F12, &tmpVal);
+		count--;
+	} while((tmpVal & 0x3) != 0x3 && (tmpVal & 0x3) != 0x2);
+
+	if (!count) {
+		ret = 0;
+		printk("[CAM-SENSOR] =CAM 3M AF_Single Mode Fail.==> TIMEOUT \n");
+	}
+
+	if ((tmpVal & 0x3) == 0x02) {
+		if (state->focus_mode != FOCUS_MODE_MACRO) { //normal AF
+			s5k4ca_sensor_write(state, 0xFCFC, 0xD000);
+			s5k4ca_sensor_write(state, 0x0028, 0x7000);
+			s5k4ca_sensor_write(state, 0x002A, 0x030E);
+			s5k4ca_sensor_write(state, 0x0F12, 0x00FF);
+			s5k4ca_sensor_write(state, 0x002A, 0x030C);
+			s5k4ca_sensor_write(state, 0x0F12, 0x0000);
+			msleep(140);
+			s5k4ca_sensor_write(state, 0x002A, 0x030E);
+			s5k4ca_sensor_write(state, 0x0F12, 0x00F1);
+			msleep(50);
+			s5k4ca_sensor_write(state, 0x002A, 0x030C);
+			s5k4ca_sensor_write(state, 0x0F12, 0x0003);
+			s5k4ca_sensor_write(state, 0x0028, 0x7000);
+			s5k4ca_sensor_write(state, 0x002A, 0x161C);
+			s5k4ca_sensor_write(state, 0x0F12, 0x82A8);
+		} else {
+			s5k4ca_sensor_write(state, 0xFCFC, 0xD000);
+			s5k4ca_sensor_write(state, 0x0028, 0x7000);
+			s5k4ca_sensor_write(state, 0x002A, 0x030E);
+			s5k4ca_sensor_write(state, 0x0F12, 0x0030);
+			s5k4ca_sensor_write(state, 0x002A, 0x030C);
+			s5k4ca_sensor_write(state, 0x0F12, 0x0000);
+			msleep(140);
+			s5k4ca_sensor_write(state, 0x002A, 0x030E);
+			s5k4ca_sensor_write(state, 0x0F12, 0x0040);
+		}
+		ret = 0;
+		printk("[CAM-SENSOR] =CAM 3M AF_Single Mode Fail.==> FAIL \n");
+	}
+
+	if ((tmpVal & 0x3) == 0x03) {
+		ret = 1;
+		printk("[CAM-SENSOR] =CAM 3M AF_Single Mode SUCCESS. \r\n");
+	}
+	state->auto_focus_result = ret;
+	return ret;
 }
 
 #if 0
