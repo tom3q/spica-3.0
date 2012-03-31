@@ -414,31 +414,6 @@ static int __devexit s6d05a_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int s6d05a_suspend(struct device *dev)
-{
-	struct platform_device *pdev = to_platform_device(dev);
-	struct s6d05a_data *data = platform_get_drvdata(pdev);
-
-	s6d05a_set_power(data, 0);
-
-	return 0;
-}
-
-static int s6d05a_resume(struct device *dev)
-{
-	struct platform_device *pdev = to_platform_device(dev);
-	struct s6d05a_data *data = platform_get_drvdata(pdev);
-
-	s6d05a_bl_update_status(data->bl);
-
-	return 0;
-}
-
-static struct dev_pm_ops s6d05a_pm_ops = {
-	.suspend	= s6d05a_suspend,
-	.resume		= s6d05a_resume,
-};
-
 static void s6d05a_shutdown(struct platform_device *pdev)
 {
 	struct s6d05a_data *data = platform_get_drvdata(pdev);
@@ -450,7 +425,6 @@ static struct platform_driver s6d05a_driver = {
 	.driver = {
 		.name	= "s6d05a-lcd",
 		.owner	= THIS_MODULE,
-		.pm	= &s6d05a_pm_ops,
 	},
 	.probe		= s6d05a_probe,
 	.remove		= s6d05a_remove,
