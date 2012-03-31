@@ -132,7 +132,6 @@ static inline void s6d05a_send_word(struct s6d05a_data *data, u16 word)
 {
 	unsigned mask = 1 << 8;
 
-	gpio_set_value(data->sck_gpio, 1);
 	udelay(S6D05A_SPI_DELAY_USECS);
 
 	gpio_set_value(data->cs_gpio, 0);
@@ -153,8 +152,6 @@ static inline void s6d05a_send_word(struct s6d05a_data *data, u16 word)
 
 	gpio_set_value(data->cs_gpio, 1);
 	udelay(S6D05A_SPI_DELAY_USECS);
-
-	gpio_set_value(data->sck_gpio, 0);
 }
 
 static void s6d05a_send_command_seq(struct s6d05a_data *data, const u16 *cmd)
@@ -188,6 +185,7 @@ static void s6d05a_set_power(struct s6d05a_data *data, int power)
 		gpio_set_value(data->cs_gpio, 1);
 
 		gpio_set_value(data->reset_gpio, 0);
+		gpio_set_value(data->sck_gpio, 1);
 		udelay(15);
 
 		regulator_enable(data->vdd3);
