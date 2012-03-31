@@ -183,8 +183,6 @@ static void s6d05a_set_power(struct s6d05a_data *data, int power)
 		pm_runtime_get_sync(data->dev);
 
 		gpio_set_value(data->cs_gpio, 1);
-
-		gpio_set_value(data->reset_gpio, 0);
 		gpio_set_value(data->sck_gpio, 1);
 		udelay(15);
 
