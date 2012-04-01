@@ -555,6 +555,11 @@ config S3C_G2D
 	depends on CPU_S3C6410
 	default n
 
+config S3C_G3D
+	tristate "Samsung FIMG-3DSE kernel interface for OpenFIMG"
+	depends on CPU_S3C6410
+	default n
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
