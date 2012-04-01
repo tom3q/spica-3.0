@@ -560,6 +560,11 @@ config S3C_G3D
 	depends on CPU_S3C6410
 	default n
 
+config SPICA_DPRAM
+	tristate "Modem interface for Samsung Galaxy GT-i5700 phone"
+	depends on MACH_GT_I5700
+	default n
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
