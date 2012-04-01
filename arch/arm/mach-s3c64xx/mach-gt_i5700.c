@@ -44,6 +44,7 @@
 #include <linux/mtd/partitions.h>
 #include <linux/mtd/bml.h>
 #include <linux/power/spica_battery.h>
+#include <linux/platform_data/spica_dpram.h>
 #include <linux/input/qt5480_ts.h>
 #include <linux/wlan_plat.h>
 #include <linux/akm8973.h>
@@ -1763,17 +1764,6 @@ static struct resource spica_dpram_resources[] = {
 		.end	= SPICA_DPRAM_START + SPICA_DPRAM_SIZE - 1,
 		.flags	= IORESOURCE_MEM,
 	}
-};
-
-struct dpram_platform_data {
-	unsigned int gpio_phone_on;
-	unsigned int gpio_phone_rst_n;
-	unsigned int gpio_phone_active;
-	unsigned int gpio_cp_boot_sel;
-	unsigned int gpio_usim_boot;
-	unsigned int gpio_pda_active;
-	unsigned int gpio_onedram_int_n;
-	unsigned int gpio_sim_detect_n;
 };
 
 static struct dpram_platform_data spica_dpram_pdata = {

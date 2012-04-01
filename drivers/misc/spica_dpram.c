@@ -44,6 +44,7 @@
 #include <linux/circ_buf.h>
 #include <linux/kthread.h>
 #include <linux/fs.h>
+#include <linux/platform_data/spica_dpram.h>
 #include <asm/ioctls.h>
 
 #include "spica_dpram.h"

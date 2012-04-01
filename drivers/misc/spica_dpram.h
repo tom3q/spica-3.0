@@ -255,17 +255,6 @@ struct dpram_device {
 	unsigned int idx;
 };
 
-struct dpram_platform_data {
-	unsigned int gpio_phone_on;
-	unsigned int gpio_phone_rst_n;
-	unsigned int gpio_phone_active;
-	unsigned int gpio_cp_boot_sel;
-	unsigned int gpio_usim_boot;
-	unsigned int gpio_pda_active;
-	unsigned int gpio_onedram_int_n;
-	unsigned int gpio_sim_detect_n;
-};
-
 enum dpram_index {
 	DPRAM_FMT = 0,
 	DPRAM_RAW,
