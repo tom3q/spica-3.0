@@ -1788,7 +1788,7 @@ static struct dpram_platform_data spica_dpram_pdata = {
 };
 
 static struct platform_device spica_dpram_device = {
-	.name		= "samsung-dpram",
+	.name		= "spica-dpram",
 	.id		= -1,
 	.num_resources	= ARRAY_SIZE(spica_dpram_resources),
 	.resource	= spica_dpram_resources,
