@@ -289,7 +289,7 @@ static int fimc_m2m_shutdown(struct fimc_ctx *ctx)
 	return ret == 0 ? -ETIMEDOUT : ret;
 }
 
-static int start_streaming(struct vb2_queue *q)
+static int start_streaming(struct vb2_queue *q, unsigned int count)
 {
 	struct fimc_ctx *ctx = q->drv_priv;
 	int ret;
@@ -425,7 +425,7 @@ int fimc_prepare_addr(struct fimc_ctx *ctx, struct vb2_buffer *vb,
 	dbg("memplanes= %d, colplanes= %d, pix_size= %d",
 		frame->fmt->memplanes, frame->fmt->colplanes, pix_size);
 
-	paddr->y = vb2_dma_contig_plane_paddr(vb, 0);
+	paddr->y = vb2_dma_contig_plane_dma_addr(vb, 0);
 
 	if (frame->fmt->memplanes == 1) {
 		switch (frame->fmt->colplanes) {
@@ -453,10 +453,10 @@ int fimc_prepare_addr(struct fimc_ctx *ctx, struct vb2_buffer *vb,
 		}
 	} else {
 		if (frame->fmt->memplanes >= 2)
-			paddr->cb = vb2_dma_contig_plane_paddr(vb, 1);
+			paddr->cb = vb2_dma_contig_plane_dma_addr(vb, 1);
 
 		if (frame->fmt->memplanes == 3)
-			paddr->cr = vb2_dma_contig_plane_paddr(vb, 2);
+			paddr->cr = vb2_dma_contig_plane_dma_addr(vb, 2);
 	}
 
 	dbg("PHYS_ADDR: y= 0x%X  cb= 0x%X cr= 0x%X ret= %d",
@@ -652,9 +652,9 @@ static void fimc_job_abort(void *priv)
 	fimc_m2m_shutdown(priv);
 }
 
-static int fimc_queue_setup(struct vb2_queue *vq, unsigned int *num_buffers,
-			    unsigned int *num_planes, unsigned long sizes[],
-			    void *allocators[])
+static int fimc_queue_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
+			   unsigned int *num_buffers, unsigned int *num_planes,
+			   unsigned int sizes[], void *alloc_ctxs[])
 {
 	struct fimc_ctx *ctx = vb2_get_drv_priv(vq);
 	struct fimc_frame *f;
@@ -673,7 +673,7 @@ static int fimc_queue_setup(struct vb2_queue *vq, unsigned int *num_buffers,
 	*num_planes = f->fmt->memplanes;
 	for (i = 0; i < f->fmt->memplanes; i++) {
 		sizes[i] = (f->f_width * f->f_height * f->fmt->depth[i]) / 8;
-		allocators[i] = ctx->fimc_dev->alloc_ctx;
+		alloc_ctxs[i] = ctx->fimc_dev->alloc_ctx;
 	}
 	return 0;
 }
