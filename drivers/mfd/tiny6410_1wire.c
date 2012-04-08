@@ -32,6 +32,7 @@
 
 enum tiny6410_1wire_state {
 	TINY6410_1WIRE_STOP = 0,
+	TINY6410_1WIRE_PREPARE,
 	TINY6410_1WIRE_RESET,
 	TINY6410_1WIRE_TX,
 	TINY6410_1WIRE_WAIT1,
@@ -47,8 +48,8 @@ struct tiny6410_1wire {
 	struct device			*dev;
 
 	u16		tx_data;
-	u32		rx_data;
-	int		error;
+	volatile u32	rx_data;
+	volatile int	error;
 	int		bits_left;
 
 	struct tiny6410_1wire_platform_data	*pdata;
@@ -105,6 +106,7 @@ int tiny6410_1wire_transfer(struct tiny6410_1wire *bus,
 	u8 crc;
 	int retry = 0;
 	ktime_t time;
+	unsigned long flags;
 
 	/* Calculate CRC8 checksum */
 	crc = crc8_tab[0xac ^ tx_data];
@@ -116,14 +118,15 @@ restart:
 	/* Prepare the transfer */
 	bus->error = 0;
 	bus->tx_data = (tx_data << 8) | crc;
+	bus->state = TINY6410_1WIRE_PREPARE;
 
-	/* Put the bus into the reset state */
-	gpio_direction_output(bus->pdata->gpio_pin, 0);
-	bus->state = TINY6410_1WIRE_RESET;
+	local_irq_save(flags);
 
 	/* Schedule the timer */
 	time = ktime_add_ns(ktime_get(), TINY6410_1WIRE_DELAY);
 	hrtimer_start(&bus->timer, time, HRTIMER_MODE_ABS);
+
+	local_irq_restore(flags);
 
 	/* Wait for the transfer to finish */
 	ret = wait_for_completion_interruptible(&bus->completion);
@@ -142,14 +145,12 @@ restart:
 		crc = crc8_tab[crc ^ ((rx >> 8) & 0xff)];
 		if (crc != (rx & 0xff)) {
 			ret = -EBADMSG;
-			dev_err(bus->dev, "CRC error in received data\n");
+			dev_err(bus->dev, "CRC error in received data (%02x != %02x)\n",
+							crc, rx & 0xff);
 		}
 	}
 
-	if (ret == -ETIMEDOUT)
-		dev_err(bus->dev, "Transfer timed out\n");
-
-	if (ret && ++retry <= 10)
+	if (ret && ++retry <= 3)
 		goto restart;
 
 	return ret;
@@ -161,9 +162,18 @@ static enum hrtimer_restart tiny6410_1wire_timer(struct hrtimer *timer)
 	struct tiny6410_1wire *bus = container_of(timer,
 						struct tiny6410_1wire, timer);
 	struct tiny6410_1wire_platform_data *pdata = bus->pdata;
+	ktime_t delay = ktime_set(0, TINY6410_1WIRE_DELAY);
 	int ret;
 
 	switch(bus->state) {
+	case TINY6410_1WIRE_PREPARE:
+		/* Sync with the clock */
+		delay = ktime_add(hrtimer_cb_get_time(&bus->timer), delay);
+		gpio_direction_output(bus->pdata->gpio_pin, 0);
+		hrtimer_set_expires(&bus->timer, delay);
+		bus->state = TINY6410_1WIRE_RESET;
+		return HRTIMER_RESTART;
+
 	case TINY6410_1WIRE_RESET:
 		/* Start transfer */
 		bus->bits_left = 16;
@@ -180,12 +190,12 @@ static enum hrtimer_restart tiny6410_1wire_timer(struct hrtimer *timer)
 
 	case TINY6410_1WIRE_WAIT1:
 		/* Wait state */
-		gpio_direction_input(pdata->gpio_pin);
 		bus->state = TINY6410_1WIRE_WAIT2;
 		break;
 
 	case TINY6410_1WIRE_WAIT2:
 		/* Wait state */
+		gpio_direction_input(pdata->gpio_pin);
 		bus->bits_left = 32;
 		bus->state = TINY6410_1WIRE_RX;
 		break;
@@ -197,12 +207,12 @@ static enum hrtimer_restart tiny6410_1wire_timer(struct hrtimer *timer)
 		if (--bus->bits_left == 0) {
 			bus->bits_left = 2;
 			bus->state = TINY6410_1WIRE_STOP;
-			gpio_direction_output(pdata->gpio_pin, 1);
 		}
 		break;
 
 	case TINY6410_1WIRE_STOP:
 		/* Stop condition */
+		gpio_direction_output(pdata->gpio_pin, 1);
 		if (--bus->bits_left == 0) {
 			complete(&bus->completion);
 			return HRTIMER_NORESTART;
@@ -210,8 +220,7 @@ static enum hrtimer_restart tiny6410_1wire_timer(struct hrtimer *timer)
 		break;
 	}
 
-	ret = hrtimer_forward(&bus->timer, ktime_get(),
-					ktime_set(0, TINY6410_1WIRE_DELAY));
+	ret = hrtimer_forward_now(&bus->timer, delay);
 	if (ret > 1) {
 		gpio_direction_output(pdata->gpio_pin, 1);
 		bus->state = TINY6410_1WIRE_STOP;
@@ -219,7 +228,6 @@ static enum hrtimer_restart tiny6410_1wire_timer(struct hrtimer *timer)
 		complete(&bus->completion);
 		return HRTIMER_NORESTART;
 	}
-
 
 	return HRTIMER_RESTART;
 }
