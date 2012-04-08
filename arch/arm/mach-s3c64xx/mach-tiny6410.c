@@ -32,6 +32,8 @@
 #include <linux/android_pmem.h>
 #include <linux/input.h>
 #include <linux/leds.h>
+#include <linux/memory_alloc.h>
+#include <linux/memblock.h>
 
 #include <linux/usb/android_composite.h>
 #include <linux/usb/ch9.h>
@@ -688,72 +690,88 @@ static struct platform_device *tiny6410_mod_devices[] __initdata = {
 	}
 };
 
-/*
- * Memory Configuration (Reserved Memory Setting)
- */
+#define PHYS_SIZE			(208*1024*1024)
 
-#define	PHYS_SIZE			(208 * SZ_1M)
+#define RAM_CONSOLE_SIZE		(1*1024*1024)
+#define PMEM_GPU1_SIZE			(32*1024*1024)
+#define PMEM_SIZE			(8*1024*1024)
 
-#define DRAM_END_ADDR 			(PHYS_OFFSET + PHYS_SIZE)
-#define RESERVED_PMEM_END_ADDR 		(DRAM_END_ADDR)
+#define RESERVED_SIZE			(RAM_CONSOLE_SIZE \
+					+ PMEM_GPU1_SIZE \
+					+ PMEM_SIZE)
 
-#define RESERVED_MEM_CMM		(3 * SZ_1M)
-#define RESERVED_MEM_MFC		(6 * SZ_1M)
-/* PMEM_PIC and MFC use share area */
-#define RESERVED_PMEM_PICTURE		(6 * SZ_1M)
-#define RESERVED_PMEM_JPEG		(3 * SZ_1M)
-#define RESERVED_PMEM_PREVIEW		(2 * SZ_1M)
-#define RESERVED_PMEM_RENDER	  	(2 * SZ_1M)
-#define RESERVED_PMEM_STREAM	  	(2 * SZ_1M)
-/* G3D is shared with uppper memory areas */
-#define RESERVED_G3D			(32 * SZ_1M)
-#define RESERVED_PMEM_GPU1		(RESERVED_G3D)
-#define RESERVED_PMEM			(8 * SZ_1M)
-#define RESERVED_PMEM_SKIA		(0 * SZ_1M)
-#define RESERVED_G3D_UI			(6 * SZ_1M)
-#define RESERVED_G3D_SHARED		(RESERVED_MEM_CMM \
-					+ RESERVED_MEM_MFC \
-					+ RESERVED_PMEM_STREAM \
-					+ RESERVED_PMEM_JPEG \
-					+ RESERVED_PMEM_PREVIEW \
-					+ RESERVED_PMEM_RENDER)
-#define RESERVED_G3D_APP		(RESERVED_G3D \
-					- RESERVED_G3D_UI \
-					- RESERVED_G3D_SHARED)
+#ifdef CONFIG_ANDROID_PMEM
+static struct android_pmem_platform_data pmem_pdata = {
+	.name		= "pmem",
+	.allocator_type	= PMEM_ALLOCATORTYPE_ALLORNOTHING,
+	.cached		= 1,
+	.size		= PMEM_SIZE,
+};
 
-#define CMM_RESERVED_MEM_START		(RESERVED_PMEM_END_ADDR \
-					- RESERVED_MEM_CMM)
-#define PICTURE_RESERVED_PMEM_START	(CMM_RESERVED_MEM_START \
-					- RESERVED_MEM_MFC)
-#define JPEG_RESERVED_PMEM_START	(PICTURE_RESERVED_PMEM_START \
-					- RESERVED_PMEM_JPEG)
-#define PREVIEW_RESERVED_PMEM_START	(JPEG_RESERVED_PMEM_START \
-					- RESERVED_PMEM_PREVIEW)
-#define RENDER_RESERVED_PMEM_START	(PREVIEW_RESERVED_PMEM_START \
-					- RESERVED_PMEM_RENDER)
-#define STREAM_RESERVED_PMEM_START	(RENDER_RESERVED_PMEM_START \
-					- RESERVED_PMEM_STREAM)
-/* G3D is shared with uppper memory areas */
-#define G3D_RESERVED_START		(RESERVED_PMEM_END_ADDR \
-					- RESERVED_G3D)
-#define GPU1_RESERVED_PMEM_START	(RESERVED_PMEM_END_ADDR \
-					- RESERVED_PMEM_GPU1)
-#define RESERVED_PMEM_START		(GPU1_RESERVED_PMEM_START \
-					- RESERVED_PMEM)
-#define PHYS_UNRESERVED_SIZE		(RESERVED_PMEM_START \
-					- PHYS_OFFSET)
-#define SKIA_RESERVED_PMEM_START	(0)
+static struct android_pmem_platform_data pmem_gpu1_pdata = {
+	.name		= "pmem_gpu1",
+	.allocator_type	= PMEM_ALLOCATORTYPE_BITMAP,
+	.cached		= 1,
+	.size		= PMEM_GPU1_SIZE,
+};
+
+static struct platform_device pmem_device = {
+	.name		= "android_pmem",
+	.id		= 0,
+	.dev		= { .platform_data = &pmem_pdata },
+};
+
+static struct platform_device pmem_gpu1_device = {
+	.name		= "android_pmem",
+	.id		= 1,
+	.dev		= { .platform_data = &pmem_gpu1_pdata },
+};
+
+static struct platform_device *pmem_devices[] = {
+	&pmem_device,
+	&pmem_gpu1_device,
+};
+
+static void __init tiny6410_add_mem_devices(void)
+{
+	unsigned i;
+	for (i = 0; i < ARRAY_SIZE(pmem_devices); ++i)
+		if (pmem_devices[i]->dev.platform_data) {
+			struct android_pmem_platform_data *pmem =
+					pmem_devices[i]->dev.platform_data;
+
+			if (pmem->size)
+				platform_device_register(pmem_devices[i]);
+		}
+}
+#else
+static void __init tiny6410_add_mem_devices(void) {}
+#endif
+
+static void __init tiny6410_reserve(void)
+{
+	unsigned long start = PHYS_OFFSET + PHYS_SIZE - RESERVED_SIZE;
+	unsigned long size = RESERVED_SIZE;
+	struct mem_pool *mpool;
+	int ret;
+
+	memory_pool_init();
+
+	ret = memblock_remove(start, size);
+	WARN_ON(ret);
+
+	mpool = initialize_memory_pool(start, size, 0);
+	if (!mpool)
+		pr_warning("failed to create mempool\n");
+}
 
 static void __init tiny6410_fixup(struct machine_desc *desc,
 		struct tag *tags, char **cmdline, struct meminfo *mi)
 {
-	mi->nr_banks = 2;
+	mi->nr_banks = 1;
 
 	mi->bank[0].start = PHYS_OFFSET;
-	mi->bank[0].size = SZ_128M;
-
-	mi->bank[1].start = PHYS_OFFSET + SZ_128M;
-	mi->bank[1].size = PHYS_UNRESERVED_SIZE - SZ_128M;
+	mi->bank[0].size = PHYS_SIZE;
 }
 
 static void __init tiny6410_map_io(void)
@@ -833,150 +851,6 @@ static void tiny6410_parse_features(
 	}
 }
 
-/*
- * Android PMEM
- */
-
-#ifdef CONFIG_ANDROID_PMEM
-static struct android_pmem_platform_data pmem_pdata = {
-	.name		= "pmem",
-	.no_allocator	= 1,
-	.cached		= 1,
-	.buffered	= 1,
-	.start		= RESERVED_PMEM_START,
-	.size		= RESERVED_PMEM,
-};
-
-static struct android_pmem_platform_data pmem_gpu1_pdata = {
-	.name		= "pmem_gpu1",
-	.no_allocator	= 0,
-	.cached		= 1,
-	.buffered	= 1,
-	.start		= GPU1_RESERVED_PMEM_START,
-	.size		= RESERVED_PMEM_GPU1,
-};
-
-static struct android_pmem_platform_data pmem_render_pdata = {
-	.name		= "pmem_render",
-	.no_allocator	= 1,
-	.cached		= 0,
-	.start		= RENDER_RESERVED_PMEM_START,
-	.size		= RESERVED_PMEM_RENDER,
-};
-
-static struct android_pmem_platform_data pmem_stream_pdata = {
-	.name		= "pmem_stream",
-	.no_allocator	= 1,
-	.cached		= 0,
-	.start		= STREAM_RESERVED_PMEM_START,
-	.size		= RESERVED_PMEM_STREAM,
-};
-
-static struct android_pmem_platform_data pmem_preview_pdata = {
-	.name		= "pmem_preview",
-	.no_allocator	= 1,
-	.cached		= 0,
-        .start		= PREVIEW_RESERVED_PMEM_START,
-        .size		= RESERVED_PMEM_PREVIEW,
-};
-
-static struct android_pmem_platform_data pmem_picture_pdata = {
-	.name		= "pmem_picture",
-	.no_allocator	= 1,
-	.cached		= 0,
-        .start		= PICTURE_RESERVED_PMEM_START,
-        .size		= RESERVED_PMEM_PICTURE,
-};
-
-static struct android_pmem_platform_data pmem_jpeg_pdata = {
-	.name		= "pmem_jpeg",
-	.no_allocator	= 1,
-	.cached		= 0,
-        .start		= JPEG_RESERVED_PMEM_START,
-        .size		= RESERVED_PMEM_JPEG,
-};
-
-static struct android_pmem_platform_data pmem_skia_pdata = {
-	.name		= "pmem_skia",
-	.no_allocator	= 1,
-	.cached		= 0,
-        .start		= SKIA_RESERVED_PMEM_START,
-        .size		= RESERVED_PMEM_SKIA,
-};
-
-static struct platform_device pmem_device = {
-	.name		= "android_pmem",
-	.id		= 0,
-	.dev		= { .platform_data = &pmem_pdata },
-};
-
-static struct platform_device pmem_gpu1_device = {
-	.name		= "android_pmem",
-	.id		= 1,
-	.dev		= { .platform_data = &pmem_gpu1_pdata },
-};
-
-static struct platform_device pmem_render_device = {
-	.name		= "android_pmem",
-	.id		= 2,
-	.dev		= { .platform_data = &pmem_render_pdata },
-};
-
-static struct platform_device pmem_stream_device = {
-	.name		= "android_pmem",
-	.id		= 3,
-	.dev		= { .platform_data = &pmem_stream_pdata },
-};
-
-static struct platform_device pmem_preview_device = {
-	.name		= "android_pmem",
-	.id		= 5,
-	.dev		= { .platform_data = &pmem_preview_pdata },
-};
-
-static struct platform_device pmem_picture_device = {
-	.name		= "android_pmem",
-	.id		= 6,
-	.dev		= { .platform_data = &pmem_picture_pdata },
-};
-
-static struct platform_device pmem_jpeg_device = {
-	.name		= "android_pmem",
-	.id		= 7,
-	.dev		= { .platform_data = &pmem_jpeg_pdata },
-};
-
-static struct platform_device pmem_skia_device = {
-	.name		= "android_pmem",
-	.id		= 8,
-	.dev		= { .platform_data = &pmem_skia_pdata },
-};
-
-static struct platform_device *pmem_devices[] = {
-	&pmem_device,
-	&pmem_gpu1_device,
-	&pmem_render_device,
-	&pmem_stream_device,
-	&pmem_preview_device,
-	&pmem_picture_device,
-	&pmem_jpeg_device,
-	&pmem_skia_device
-};
-
-static void __init tiny6410_add_mem_devices(void)
-{
-	unsigned i;
-	for (i = 0; i < ARRAY_SIZE(pmem_devices); ++i)
-		if (pmem_devices[i]->dev.platform_data) {
-			struct android_pmem_platform_data *pmem =
-					pmem_devices[i]->dev.platform_data;
-
-			if (pmem->size)
-				platform_device_register(pmem_devices[i]);
-		}
-}
-#endif
-
 static void __init tiny6410_machine_init(void)
 {
 	u32 cs1;
@@ -1030,10 +904,8 @@ static void __init tiny6410_machine_init(void)
 
 	platform_add_devices(tiny6410_devices, ARRAY_SIZE(tiny6410_devices));
 
-#ifdef CONFIG_ANDROID_PMEM
-	/* Register PMEM devices */
+	/* Register memory devices */
 	tiny6410_add_mem_devices();
-#endif
 
 	platform_add_devices(tiny6410_mod_devices, ARRAY_SIZE(tiny6410_mod_devices));
 }
@@ -1043,6 +915,7 @@ MACHINE_START(TINY6410, "Tiny6410")
 	.init_irq	= s3c6410_init_irq,
 	.fixup		= tiny6410_fixup,
 	.map_io		= tiny6410_map_io,
+	.reserve	= tiny6410_reserve,
 	.init_machine	= tiny6410_machine_init,
 	.timer		= &s3c64xx_timer,
 MACHINE_END
