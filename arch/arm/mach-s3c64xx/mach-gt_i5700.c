@@ -2088,6 +2088,8 @@ static struct resource s3c_pp_resource[] = {
 	}
 };
 
+static u64 full_dmamask = DMA_BIT_MASK(32);
+
 static struct platform_device *spica_mod_devices[] __initdata = {
 	&(struct platform_device){
 		.name		= "s3c-g3d",
@@ -2112,6 +2114,8 @@ static struct platform_device *spica_mod_devices[] __initdata = {
 		.resource	= s3c_jpeg_resource,
 		.dev		= {
 			.parent	= &s3c64xx_device_pd[S3C64XX_DOMAIN_I].dev,
+			.dma_mask = &full_dmamask,
+			.coherent_dma_mask = DMA_BIT_MASK(32),
 		},
 	}, &(struct platform_device){
 		.name		= "s3c-fimc",
