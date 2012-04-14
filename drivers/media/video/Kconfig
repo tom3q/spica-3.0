@@ -1131,7 +1131,8 @@ config VIDEO_S5P_MIPI_CSIS
 
 config VIDEO_SAMSUNG_S3C_FIMC
 	tristate "Samsung S3C camera host interface driver"
-	depends on VIDEO_V4L2 && PLAT_S3C64XX && PM_RUNTIME
+	depends on VIDEO_V4L2 && I2C && PLAT_S3C64XX && PM_RUNTIME && \
+		VIDEO_V4L2_SUBDEV_API && EXPERIMENTAL
 	select VIDEOBUF2_DMA_CONTIG
 	select V4L2_MEM2MEM_DEV
 	---help---
