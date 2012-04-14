@@ -1,8 +1,12 @@
 /*
- * Samsung S5P/EXYNOS4 SoC series camera interface (video postprocessor) driver
+ * Samsung S3C64xx SoC series camera interface (video postprocessor) driver
  *
+ * Original s5p-fimc driver:
  * Copyright (C) 2010-2011 Samsung Electronics Co., Ltd.
- * Contact: Sylwester Nawrocki, <s.nawrocki@samsung.com>
+ * Original author: Sylwester Nawrocki, <s.nawrocki@samsung.com>
+ *
+ * Modification for S3C64xx SoCs:
+ * Copyright 2012 Tomasz Figa <tomasz.figa at gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published
@@ -1885,6 +1889,7 @@ module_init(fimc_init);
 module_exit(fimc_exit);
 
 MODULE_AUTHOR("Sylwester Nawrocki <s.nawrocki@samsung.com>");
-MODULE_DESCRIPTION("S5P FIMC camera host interface/video postprocessor driver");
+MODULE_AUTHOR("Tomasz Figa <tomasz.figa at gmail.com>");
+MODULE_DESCRIPTION("S3C64xx FIMC camera host interface/video postprocessor driver");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("1.0.1");
