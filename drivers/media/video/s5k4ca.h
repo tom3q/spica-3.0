@@ -1357,6 +1357,14 @@ static struct s5k4ca_request s5k4ca_init[] = {
 	S5K4CA_DATA(0x0033),	/* COMP_BIAS => CFPN @low luminance 0033h */
 	S5K4CA_DATA(0x0081),	/* EVT3_3 */
 
+	S5K4CA_REG(0xA06E),	/* ADLC_1	*/
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0xA074),
+	S5K4CA_DATA(0x0000),
+	S5K4CA_DATA(0x0000),
+	S5K4CA_DATA(0x0000),
+	S5K4CA_DATA(0x0002),
+
 	S5K4CA_REG(0xA098),
 	S5K4CA_DATA(0x00EF),	/* CT_WIDTH_1 (ct_smp_width. ct_az_width): 07.12.17	analog	080226 CD->EF	*/
 	S5K4CA_DATA(0x0008),	/* CT_WIDTH_2 (ct_rmp_start. ct_dshut_width): 07.07.27	analog	*/
@@ -1582,7 +1590,8 @@ static struct s5k4ca_request s5k4ca_init[] = {
 	S5K4CA_DATA(0x0000),	/* REG_1TC_PCFG_uCaptureMirror	2	70000372 */
 	S5K4CA_DATA(0x0000),	/* REG_1TC_PCFG_uRotation	2	70000374 */
 
-	S5K4CA_REG(0x03F4),	/* Normal capture  */
+	S5K4CA_REG(0x03F2),	/* Normal capture  */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_uCaptureMode	2	700003F2 */
 	S5K4CA_DATA(0x0800),	/* REG_0TC_CCFG_usWidth	2	700003F4 */
 	S5K4CA_DATA(0x0600),	/* REG_0TC_CCFG_usHeight	2	700003F6 */
 	S5K4CA_DATA(0x0005),	/* REG_0TC_CCFG_Format	2	700003F8 */
@@ -3469,41 +3478,13 @@ static struct s5k4ca_request s5k4ca_init[] = {
 };
 
 /*
- *  Preview Start
+ *  Preview mode
  */
+
 static struct s5k4ca_request s5k4ca_preview[] = {
 	S5K4CA_BANK(0xD000),
-
-	S5K4CA_PAGE(0xD000),
-
-	S5K4CA_REG(0xA06E),	/* ADLC_1	*/
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0xA074),
-	S5K4CA_DATA(0x0000),
-	S5K4CA_DATA(0x0000),
-	S5K4CA_DATA(0x0000),
-	S5K4CA_DATA(0x0002),
-
-	S5K4CA_PAGE(0xD000),	/* CFPN EDit 0506 */
-	S5K4CA_REG(0xA092),
-	S5K4CA_DATA(0x0033),
-	S5K4CA_REG(0xA0A8),
-	S5K4CA_DATA(0x00DF),
-	S5K4CA_DATA(0x00F8),
-	S5K4CA_REG(0xA0BC),
-	S5K4CA_DATA(0x0004),
-	S5K4CA_REG(0xA0C0),
-	S5K4CA_DATA(0x0007),	/* 07	*/
-
 	S5K4CA_PAGE(0x7000),
-	S5K4CA_REG(0x0688),	/* lowlight recovery	*/
-	S5K4CA_DATA(0x0900),	/* R	*/
-	S5K4CA_REG(0x06AA),
-	S5K4CA_DATA(0x0900),	/* G	*/
-	S5K4CA_REG(0x06CC),
-	S5K4CA_DATA(0x0800),	/* B	*/
 
-	S5K4CA_PAGE(0x7000),	/* Preview Return */
 	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
 	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange  */
@@ -3522,120 +3503,30 @@ static struct s5k4ca_request s5k4ca_preview[] = {
 };
 
 /*
- * Capturew	Mode
+ * Snapshot mode
  */
-static struct s5k4ca_request s5k4ca_snapshot_normal[] = {
-	/* Tuning 1019 SEMCO */
 
+static struct s5k4ca_request s5k4ca_snapshot[] = {
 	S5K4CA_BANK(0xD000),
-
 	S5K4CA_PAGE(0x7000),
+
 	S5K4CA_REG(0x02EA),	/* REG_TC_GP_ActiveCapConfig  */
 	S5K4CA_DATA(0x0000),
-
 	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync  */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02EC),	/* REG_TC_GP_CapConfigChanged  */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02B6),	/* REG_TC_GP_EnableCapture  */
-	S5K4CA_DATA(0x0001),	/* REG_TC_GP_EnableCaptureChanged */
 	S5K4CA_DATA(0x0001),
-
+	S5K4CA_DATA(0x0001),	/* REG_TC_GP_EnableCaptureChanged */
 	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
 	S5K4CA_DATA(0x0001),
 };
 
-
 /*
- * SnapshotLowLightMode
+ * Effects
  */
-static struct s5k4ca_request s5k4ca_snapshot_low[] = {
-	S5K4CA_BANK(0xD000),
 
-	S5K4CA_PAGE(0xD000),
-	S5K4CA_REG(0xA092),
-	S5K4CA_DATA(0x0033),	/* COMP_BIAS => CFPN	low luminance 0033h */
-	S5K4CA_DATA(0x0081),
-
-	S5K4CA_REG(0xA06E),	/* ADLC */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0xA074),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_DATA(0x0000),
-	S5K4CA_DATA(0x0000),
-	S5K4CA_DATA(0x0002),
-
-	S5K4CA_PAGE(0x7000),
-	S5K4CA_REG(0x0688),	/* lowlight recovery */
-	S5K4CA_DATA(0x0070),	/* R */
-	S5K4CA_REG(0x06AA),
-	S5K4CA_DATA(0x0070),	/* G */
-	S5K4CA_REG(0x06CC),
-	S5K4CA_DATA(0x0070),	/* B */
-
-	S5K4CA_REG(0x02EA),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02BE),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02EC),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02B6),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_DATA(0x0001),
-
-	S5K4CA_REG(0x028A),
-	S5K4CA_DATA(0x0001),
-};
-
-/*
- * SnapshotNightMode
- */
-static struct s5k4ca_request s5k4ca_snapshot_nightmode[] = {
-	S5K4CA_BANK(0xD000),
-
-	S5K4CA_PAGE(0xD000),
-	S5K4CA_REG(0xA092),
-	S5K4CA_DATA(0x0033),	/* COMP_BIAS => CFPN @low luminance 0033h */
-	S5K4CA_DATA(0x0081),
-
-	S5K4CA_REG(0xA06E),	/* ADLC */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0xA074),
-	S5K4CA_DATA(0x0081),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_DATA(0x0003),	/* 0006 */
-
-	S5K4CA_PAGE(0x7000),
-	S5K4CA_REG(0x0688),
-	S5K4CA_DATA(0x0468),
-	S5K4CA_REG(0x06AA),
-	S5K4CA_DATA(0x0A68),
-	S5K4CA_REG(0x06CC),
-	S5K4CA_DATA(0x0A60),
-
-	S5K4CA_REG(0x0614),
-	S5K4CA_DATA(0x01DC),
-	S5K4CA_DATA(0x0700),
-	S5K4CA_DATA(0x0100),
-
-	S5K4CA_REG(0x02EA),
-	S5K4CA_DATA(0x0002),	/* change the Nightcapture table from 1TC to 2TC */
-	S5K4CA_REG(0x02BE),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02EC),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02B6),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_DATA(0x0001),
-
-	S5K4CA_REG(0x028A),
-	S5K4CA_DATA(0x0001),
-};
-
-/*
- * EFFECT_OFF
- */
 static struct s5k4ca_request s5k4ca_effect_off[] = {
 	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
@@ -3644,9 +3535,6 @@ static struct s5k4ca_request s5k4ca_effect_off[] = {
 	S5K4CA_DATA(0x0000),
 };
 
-/*
- *  case 16 : MonoEffect
- */
 static struct s5k4ca_request s5k4ca_effect_gray[] = {
 	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
@@ -3655,9 +3543,6 @@ static struct s5k4ca_request s5k4ca_effect_gray[] = {
 	S5K4CA_DATA(0x0001),
 };
 
-/*
- *  case 20 : NegativeEffect
- */
 static struct s5k4ca_request s5k4ca_effect_negative[] = {
 	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
@@ -3666,9 +3551,6 @@ static struct s5k4ca_request s5k4ca_effect_negative[] = {
 	S5K4CA_DATA(0x0002),
 };
 
-/*
- * EFFECT_SEPIA
- */
 static struct s5k4ca_request s5k4ca_effect_sepia[] = {
 	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
@@ -3677,9 +3559,6 @@ static struct s5k4ca_request s5k4ca_effect_sepia[] = {
 	S5K4CA_DATA(0x0003),
 };
 
-/*
- * EFFECT_AQUA
- */
 static struct s5k4ca_request s5k4ca_effect_aqua[] = {
 	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
@@ -3688,9 +3567,6 @@ static struct s5k4ca_request s5k4ca_effect_aqua[] = {
 	S5K4CA_DATA(0x0004),
 };
 
-/*
- *  case 19 : GREENEffect(sketch)
- */
 static struct s5k4ca_request s5k4ca_effect_sketch[] = {
 	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
@@ -3700,8 +3576,9 @@ static struct s5k4ca_request s5k4ca_effect_sketch[] = {
 };
 
 /*
- * WB_Auto
+ * White balance
  */
+
 static struct s5k4ca_request s5k4ca_wb_auto[] = {
 	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
@@ -3710,12 +3587,6 @@ static struct s5k4ca_request s5k4ca_wb_auto[] = {
 	S5K4CA_DATA(0x007F),
 };
 
-/*
- * WB_Sunny
- */
-
-/* Arun c: modify the registers according to techwin
- */
 static struct s5k4ca_request s5k4ca_wb_sunny[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
@@ -3724,15 +3595,10 @@ static struct s5k4ca_request s5k4ca_wb_sunny[] = {
 
 	S5K4CA_REG(0x1302),
 	S5K4CA_DATA(0x0650),
-/*	S5K4CA_REG(0x1304), */
 	S5K4CA_DATA(0x0400),
-/*	S5K4CA_REG(0x1306), */
 	S5K4CA_DATA(0x0520),
 };
 
-/*
- * WB_Cloudy
- */
 static struct s5k4ca_request s5k4ca_wb_cloudy[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
@@ -3741,15 +3607,10 @@ static struct s5k4ca_request s5k4ca_wb_cloudy[] = {
 
 	S5K4CA_REG(0x1302),
 	S5K4CA_DATA(0x07B0),
-/*	S5K4CA_REG(0x1304), */
 	S5K4CA_DATA(0x0400),
-/*	S5K4CA_REG(0x1306), */
 	S5K4CA_DATA(0x04B0),
 };
 
-/*
- * WB_Tungsten
- */
 static struct s5k4ca_request s5k4ca_wb_tungsten[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
@@ -3758,15 +3619,10 @@ static struct s5k4ca_request s5k4ca_wb_tungsten[] = {
 
 	S5K4CA_REG(0x1302),
 	S5K4CA_DATA(0x0418),
-/*	S5K4CA_REG(0x1304), */
 	S5K4CA_DATA(0x0400),
-/*	S5K4CA_REG(0x1306), */
 	S5K4CA_DATA(0x0875),
 };
 
-/*
- * WB_Flourescent
- */
 static struct s5k4ca_request s5k4ca_wb_fluorescent[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
@@ -3775,15 +3631,14 @@ static struct s5k4ca_request s5k4ca_wb_fluorescent[] = {
 
 	S5K4CA_REG(0x1302),
 	S5K4CA_DATA(0x0560),
-/*	S5K4CA_REG(0x1304), */
 	S5K4CA_DATA(0x0400),
-/*	S5K4CA_REG(0x1306), */
 	S5K4CA_DATA(0x0717),
 };
 
 /*
- * BR_Minus4
+ * Brightness (from -4 to +4)
  */
+
 static struct s5k4ca_request s5k4ca_br_minus4[] = {
 
 	S5K4CA_BANK(0xD000),
@@ -3792,9 +3647,6 @@ static struct s5k4ca_request s5k4ca_br_minus4[] = {
 	S5K4CA_DATA(0xFFA8),
 };
 
-/*
- * BR_Minus3
- */
 static struct s5k4ca_request s5k4ca_br_minus3[] = {
 
 	S5K4CA_BANK(0xD000),
@@ -3803,9 +3655,6 @@ static struct s5k4ca_request s5k4ca_br_minus3[] = {
 	S5K4CA_DATA(0xFFBE),
 };
 
-/*
- * BR_Minus2
- */
 static struct s5k4ca_request s5k4ca_br_minus2[] = {
 
 
@@ -3815,9 +3664,6 @@ static struct s5k4ca_request s5k4ca_br_minus2[] = {
 	S5K4CA_DATA(0xFFD4),
 };
 
-/*
- * BR_Minus1
- */
 static struct s5k4ca_request s5k4ca_br_minus1[] = {
 
 	S5K4CA_BANK(0xD000),
@@ -3826,9 +3672,6 @@ static struct s5k4ca_request s5k4ca_br_minus1[] = {
 	S5K4CA_DATA(0xFFEA),
 };
 
-/*
- * BR_ZERO
- */
 static struct s5k4ca_request s5k4ca_br_zero[] = {
 	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
@@ -3837,9 +3680,6 @@ static struct s5k4ca_request s5k4ca_br_zero[] = {
 	S5K4CA_DATA(0x0000),
 };
 
-/*
- * BR_Plus1
- */
 static struct s5k4ca_request s5k4ca_br_plus1[] = {
 
 	S5K4CA_BANK(0xD000),
@@ -3848,9 +3688,6 @@ static struct s5k4ca_request s5k4ca_br_plus1[] = {
 	S5K4CA_DATA(0x000A),
 };
 
-/*
- * BR_Plus2
- */
 static struct s5k4ca_request s5k4ca_br_plus2[] = {
 
 	S5K4CA_BANK(0xD000),
@@ -3859,9 +3696,6 @@ static struct s5k4ca_request s5k4ca_br_plus2[] = {
 	S5K4CA_DATA(0x0014),
 };
 
-/*
- * BR_Plus3
- */
 static struct s5k4ca_request s5k4ca_br_plus3[] = {
 
 	S5K4CA_BANK(0xD000),
@@ -3870,9 +3704,6 @@ static struct s5k4ca_request s5k4ca_br_plus3[] = {
 	S5K4CA_DATA(0x001E),
 };
 
-/*
- * BR_Plus4
- */
 static struct s5k4ca_request s5k4ca_br_plus4[] = {
 
 	S5K4CA_BANK(0xD000),
@@ -3882,10 +3713,10 @@ static struct s5k4ca_request s5k4ca_br_plus4[] = {
 };
 
 /*
- *  Contrast Mode ( -2 ~ +2 )
+ * Contrast Mode (from -2 to +2)
  */
+
 static struct s5k4ca_request s5k4ca_contrast_m2[] = {
-	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x02A8),
@@ -3893,7 +3724,6 @@ static struct s5k4ca_request s5k4ca_contrast_m2[] = {
 };
 
 static struct s5k4ca_request s5k4ca_contrast_m1[] = {
-	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x02A8),
@@ -3901,7 +3731,6 @@ static struct s5k4ca_request s5k4ca_contrast_m1[] = {
 };
 
 static struct s5k4ca_request s5k4ca_contrast_0[] = {
-	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x02A8),
@@ -3909,7 +3738,6 @@ static struct s5k4ca_request s5k4ca_contrast_0[] = {
 };
 
 static struct s5k4ca_request s5k4ca_contrast_p1[] = {
-	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x02A8),
@@ -3917,7 +3745,6 @@ static struct s5k4ca_request s5k4ca_contrast_p1[] = {
 };
 
 static struct s5k4ca_request s5k4ca_contrast_p2[] = {
-	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x02A8),
@@ -3925,10 +3752,10 @@ static struct s5k4ca_request s5k4ca_contrast_p2[] = {
 };
 
 /*
- *  Saturation Mode ( -2 ~ +2 )
+ *  Saturation Mode (from -2 to +2)
  */
+
 static struct s5k4ca_request s5k4ca_Saturation_m2[] = {
-	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x02AA),
@@ -3936,7 +3763,6 @@ static struct s5k4ca_request s5k4ca_Saturation_m2[] = {
 };
 
 static struct s5k4ca_request s5k4ca_Saturation_m1[] = {
-	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x02AA),
@@ -3944,7 +3770,6 @@ static struct s5k4ca_request s5k4ca_Saturation_m1[] = {
 };
 
 static struct s5k4ca_request s5k4ca_Saturation_0[] = {
-	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x02AA),
@@ -3952,7 +3777,6 @@ static struct s5k4ca_request s5k4ca_Saturation_0[] = {
 };
 
 static struct s5k4ca_request s5k4ca_Saturation_p1[] = {
-	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x02AA),
@@ -3960,7 +3784,6 @@ static struct s5k4ca_request s5k4ca_Saturation_p1[] = {
 };
 
 static struct s5k4ca_request s5k4ca_Saturation_p2[] = {
-	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x02AA),
@@ -3968,10 +3791,10 @@ static struct s5k4ca_request s5k4ca_Saturation_p2[] = {
 };
 
 /*
- *  Sharpness Mode ( -2 ~ +2 )
+ * Sharpness (from -2 to +2)
  */
+
 static struct s5k4ca_request s5k4ca_Sharpness_m2[] = {
-	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x02AC),
@@ -3979,7 +3802,6 @@ static struct s5k4ca_request s5k4ca_Sharpness_m2[] = {
 };
 
 static struct s5k4ca_request s5k4ca_Sharpness_m1[] = {
-	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x02AC),
@@ -3987,7 +3809,6 @@ static struct s5k4ca_request s5k4ca_Sharpness_m1[] = {
 };
 
 static struct s5k4ca_request s5k4ca_Sharpness_0[] = {
-	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x02AC),
@@ -3995,7 +3816,6 @@ static struct s5k4ca_request s5k4ca_Sharpness_0[] = {
 };
 
 static struct s5k4ca_request s5k4ca_Sharpness_p1[] = {
-	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x02AC),
@@ -4003,7 +3823,6 @@ static struct s5k4ca_request s5k4ca_Sharpness_p1[] = {
 };
 
 static struct s5k4ca_request s5k4ca_Sharpness_p2[] = {
-	/* 1201 SEMCO */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x02AC),
@@ -4011,13 +3830,13 @@ static struct s5k4ca_request s5k4ca_Sharpness_p2[] = {
 };
 
 /*
- * ISO_AUTO
+ * ISO modes
  */
-static struct s5k4ca_request s5k4ca_iso_auto[] = {
-	/* 01. ISO_AUTO */
 
+static struct s5k4ca_request s5k4ca_iso_auto[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
+
 	S5K4CA_REG(0x047C),
 	S5K4CA_DATA(0x0C80),	/* 7000047C	//t_usLTtable1_1 32ms */
 	S5K4CA_DATA(0x15E0),	/* 7000047E	//t_usLTtable1_2 Control for 700lux */
@@ -4053,13 +3872,10 @@ static struct s5k4ca_request s5k4ca_iso_auto[] = {
 	S5K4CA_DATA(0x0001),
 };
 
-/*
- * ISO_50 (NOTUSE)
- */
 static struct s5k4ca_request s5k4ca_iso50[] = {
-	/* 02. ISO_50 */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
+
 	S5K4CA_REG(0x0490),	/* t_usKISOGain */
 	S5K4CA_DATA(0x0100),	/* To Set the same as It_uMaxAnGain2 */
 	S5K4CA_REG(0x0616),
@@ -4069,13 +3885,10 @@ static struct s5k4ca_request s5k4ca_iso50[] = {
 	S5K4CA_DATA(0x30D4),	/* 7000048E	//t_usMaxExposure */
 };
 
-/*
- * ISO_100
- */
 static struct s5k4ca_request s5k4ca_iso100[] = {
-	/* 03. ISO_100 */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
+
 	S5K4CA_REG(0x047C),
 	S5K4CA_DATA(0x1194),	/* 7000047C	//t_usLTtable1_1 32ms */
 	S5K4CA_DATA(0x1A5E),	/* 7000047E	//t_usLTtable1_2 Control for 700lux */
@@ -4111,13 +3924,10 @@ static struct s5k4ca_request s5k4ca_iso100[] = {
 	S5K4CA_DATA(0x0001),
 };
 
-/*
- * ISO_200
- */
 static struct s5k4ca_request s5k4ca_iso200[] = {
-	/* 04. ISO_200 */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
+
 	S5K4CA_REG(0x047C),
 	S5K4CA_DATA(0x0700),	/* 7000047C	//t_usLTtable1_1 32ms */
 	S5K4CA_DATA(0x0FA0),	/* 7000047E	//t_usLTtable1_2 Control for 700lux */
@@ -4153,13 +3963,10 @@ static struct s5k4ca_request s5k4ca_iso200[] = {
 	S5K4CA_DATA(0x0001),
 };
 
-/*
- * ISO_400
- */
 static struct s5k4ca_request s5k4ca_iso400[] = {
-	/* 05. ISO_400 */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
+
 	S5K4CA_REG(0x047C),
 	S5K4CA_DATA(0x03E8),	/* 7000047C	//t_usLTtable1_1 32ms */
 	S5K4CA_DATA(0x157C),	/* 7000047E	//t_usLTtable1_2 Control for 700lux */
@@ -4196,29 +4003,38 @@ static struct s5k4ca_request s5k4ca_iso400[] = {
 };
 
 /*
- * @auther ARUNC
- *
- * Register settings for various scenemodes are set according to the
- * data from vendor techwin. It supports auto, portrait, landscape,
- * night, sport, sunset, dawn, party, candlelight, fall-color and backlight
+ * Scene modes
  */
+
 static struct s5k4ca_request s5k4ca_scene_auto[] = {
 	/*
-	 * Scene off/////////////////////////
-	 *
-	 * 01.None
-	 * 02.Sports off
-	 * 03.Night off
-	 *
-	 * CAM_REGSET_SCENE_NORMAL /////////
-	 * [CAMTUNING_SCENE_NORMAL]
+	 * Disable low light settings
 	 */
-
-/*
- * 01. None _ Default
- */
 	S5K4CA_BANK(0xD000),
+	S5K4CA_PAGE(0xD000),
+
+	S5K4CA_REG(0xA06E),	/* ADLC_1	*/
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0xA074),
+	S5K4CA_DATA(0x0000),
+	S5K4CA_DATA(0x0000),
+	S5K4CA_DATA(0x0000),
+	S5K4CA_DATA(0x0002),
+
+	S5K4CA_PAGE(0x7000),
+
+	S5K4CA_REG(0x0688),	/* lowlight recovery R */
+	S5K4CA_DATA(0x0900),
+	S5K4CA_REG(0x06AA),	/* lowlight recovery G */
+	S5K4CA_DATA(0x0900),
+	S5K4CA_REG(0x06CC),	/* lowlight recovery B */
+	S5K4CA_DATA(0x0800),
+
+	/*
+	 * Default
+	 */
 	S5K4CA_PAGE(0x7000), /* For Scene */
+
 	S5K4CA_REG(0x02A6),
 	S5K4CA_DATA(0x0000), /* Brightness for controling the EV */
 	S5K4CA_REG(0x02AA),
@@ -4226,12 +4042,9 @@ static struct s5k4ca_request s5k4ca_scene_auto[] = {
 	S5K4CA_DATA(0x0000), /* Sharpness */
 	S5K4CA_DATA(0x0000), /* Glamour */
 
-/*
- * 02. Sports off
- */
-	/* NEW */
-/*	S5K4CA_BANK(0xD000), */
-/*	S5K4CA_PAGE(0x7000), */
+	/*
+	 * Sports and night settings off
+	 */
 	S5K4CA_REG(0x047C),
 	S5K4CA_DATA(0x0C80),	/* 7000047C	//t_usLTtable1_1 32ms */
 	S5K4CA_DATA(0x15E0),	/* 7000047E	//t_usLTtable1_2 Control for 700lux */
@@ -4249,38 +4062,42 @@ static struct s5k4ca_request s5k4ca_scene_auto[] = {
 	S5K4CA_DATA(0x0600),	/* lt_uMaxAnGain2 5+5/16 =5.3125  */
 	S5K4CA_DATA(0x0100),	/* lt_uMaxDigGain */
 
-/*
- * 03. Night off
- */
+	/*
+	 * Default preview init params
+	 */
+	S5K4CA_REG(0x0338),	/* Normal Preview */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_usFrTimeType	frame ae enable: 0000h : dynamic	0001h :Fixed	2	70000338 */
+	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_FrRateQualityType	2	7000033A */
+	S5K4CA_DATA(0x0682),	/* REG_0TC_PCFG_usMaxFrTimeMsecMult10	0682h(1666)= 166.6 ms	2	7000033C */
+	S5K4CA_DATA(0x02B2),	/* REG_0TC_PCFG_usMinFrTimeMsecMult10	0242h(578) =57.8ms	2	7000033E */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_sSaturation	2	70000340 */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_sSharpBlur	2	70000342 */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_sGlamour	2	70000344 */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_sColorTemp	2	70000346 */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_uDeviceGammaIndex	2	70000348 */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_uPrevMirror	2	7000034A */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_uCaptureMirror	2	7000034C */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_uRotation	2	7000034E */
 
 	/*
-	 * Arun C
-	 * This is same as sports off
-	 * is it required ??
+	 * Default capture init params
 	 */
-/*	S5K4CA_BANK(0xD000), */
-/*	S5K4CA_PAGE(0x7000), */
-/*	S5K4CA_REG(0x047C), */
-/*	S5K4CA_DATA(0x0C80),	// 7000047C	//t_usLTtable1_1 32ms */
-/*	S5K4CA_DATA(0x15E0),	// 7000047E	//t_usLTtable1_2 Control for 700lux */
-/*	S5K4CA_DATA(0x2B2F),	// 70000480	//t_usLTtable2_1 67ms */
-/*	S5K4CA_DATA(0x2EE0),	// 70000482	//t_usLTtable2_2 Control for 400lux */
-/*	S5K4CA_DATA(0x3A5C),	// 70000484	//t_usLTtable3_1 83ms */
-/*	S5K4CA_DATA(0x4650),	// 70000486	//t_usLTtable3_2 Control for 200lux */
-/*	S5K4CA_DATA(0xFFFF),	// 70000488	//t_usMaxLTtable ?? */
-
-/*	S5K4CA_DATA(0x1A2C),	// 7000048A	//t_usLTExposure2 67ms */
-/*	S5K4CA_DATA(0x206C),	// 7000048C	//t_usLTExposure3 83ms */
-/*	S5K4CA_DATA(0x30D4),	// 7000048E	//t_usMaxExposure Control for 200lux */
-
-/*	S5K4CA_REG(0x0616), */
-/*	S5K4CA_DATA(0x0600),	//lt_uMaxAnGain2 5+5/16 =5.3125  */
-/*	S5K4CA_DATA(0x0100),	//lt_uMaxDigGain */
+	S5K4CA_REG(0x03F2),	/* Normal capture  */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_uCaptureMode	2	700003F2 */
+	S5K4CA_REG(0x0402),
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_usFrTimeType	2	70000402 */
+	S5K4CA_DATA(0x0002),	/* REG_0TC_CCFG_FrRateQualityType	2	70000404 */
+	S5K4CA_DATA(0x09C4),	/* REG_0TC_CCFG_usMaxFrTimeMsecMult10 4fps	2	70000406 */
+	S5K4CA_DATA(0x0535),	/* REG_0TC_CCFG_usMinFrTimeMsecMult10 7.5fps	2	70000408 */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_sSaturation	2	7000040A */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_sSharpBlur	2	7000040C */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_sGlamour	2	7000040E */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_sColorTemp	2	70000410 */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_uDeviceGammaIndex	2	70000412 */
 
 	/*
-	 * page high address is not required here
+	 * Init parameters changed
 	 */
-/*	S5K4CA_PAGE(0x7000),	//Normal Preview Return */
 	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
 	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange  */
@@ -4289,43 +4106,21 @@ static struct s5k4ca_request s5k4ca_scene_auto[] = {
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
 	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02B2),	/* REG_TC_GP_EnablePreview  */
-	S5K4CA_DATA(0x0001),
-	/*
-	* i2c Burst
-	*/
-/*	S5K4CA_REG(0x02B4),	//REG_TC_GP_EnablePreviewChanged  */
-	S5K4CA_DATA(0x0001),
-
+	S5K4CA_REG(0x02B2),
+	S5K4CA_DATA(0x0001),	/* REG_TC_GP_EnablePreview  */
+	S5K4CA_DATA(0x0001),	/* REG_TC_GP_EnablePreviewChanged */
 	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
 	S5K4CA_DATA(0x0001),
 
-/*
- * 04. WB_Auto
- */
-	/* WB Auto */
-
 	/*
-	* i2c is writing to the same page
-	*/
-/*	S5K4CA_BANK(0xD000), */
-
-/*	S5K4CA_PAGE(0x7000), */
+	 * WB Auto
+	 */
 	S5K4CA_REG(0x0578),
 	S5K4CA_DATA(0x007F),
 
-
-/*
- * 05. Metering default
- */
-	/* 03. CENTER */
-
 	/*
-	* i2c is writing to the same page
-	*/
-/*	S5K4CA_BANK(0xD000), */
-/*	S5K4CA_PAGE(0x7000), */
-
+	 * Metering default (center?)
+	 */
 	S5K4CA_REG(0x1482),	/* DEFAULT AE weight */
 	S5K4CA_DATA(0x0000),
 	S5K4CA_DATA(0x0000),
@@ -4359,7 +4154,6 @@ static struct s5k4ca_request s5k4ca_scene_auto[] = {
 	S5K4CA_DATA(0x0101),
 	S5K4CA_DATA(0x0101),
 	S5K4CA_DATA(0x0101),
-
 	S5K4CA_REG(0x057C),
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x057C),
@@ -4368,9 +4162,10 @@ static struct s5k4ca_request s5k4ca_scene_auto[] = {
 
 static struct s5k4ca_request s5k4ca_scene_portrait[] = {
 	/* 01. PORTRAIT */
-	S5K4CA_BANK(0xD000),
 	/* Portrait _ Sharpness -1 */
+	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000), /* For Scene */
+
 	S5K4CA_REG(0x02A6),
 	S5K4CA_DATA(0x0000), /* Brightness for controling the EV */
 	S5K4CA_REG(0x02AA),
@@ -4381,9 +4176,10 @@ static struct s5k4ca_request s5k4ca_scene_portrait[] = {
 
 static struct s5k4ca_request s5k4ca_scene_landscape[] = {
 	/* 02. LANDSCAPE */
-	S5K4CA_BANK(0xD000),
 	/* Landscape _ Sharpness +1	Saturation +1 */
+	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000), /* For Scene */
+
 	S5K4CA_REG(0x02A6),
 	S5K4CA_DATA(0x0000), /* Brightness for controling the EV */
 	S5K4CA_REG(0x02AA),
@@ -4392,12 +4188,6 @@ static struct s5k4ca_request s5k4ca_scene_landscape[] = {
 	S5K4CA_DATA(0xFFEC), /* Glamour */
 
 	/* Metering Matrix */
-
-	/*
-	* i2c writing to same page
-	*/
-/*	S5K4CA_PAGE(0x7000), */
-
 	S5K4CA_REG(0x1482),
 	S5K4CA_DATA(0x0101),
 	S5K4CA_DATA(0x0101),
@@ -4439,50 +4229,57 @@ static struct s5k4ca_request s5k4ca_scene_landscape[] = {
 };
 
 static struct s5k4ca_request s5k4ca_scene_night[] = {
-	/* 13. NIGHT ON */
+	/* 
+	 * 13. NIGHT ON
+	 * 
+	 * Min FPS = 4
+	 * Max FPS = 15
+	 */
 	S5K4CA_BANK(0xD000),
+	S5K4CA_PAGE(0xD000),
+
+	S5K4CA_REG(0xA06E),	/* ADLC */
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0xA074),
+	S5K4CA_DATA(0x0081),
+	S5K4CA_DATA(0x0001),
+	S5K4CA_DATA(0x0001),
+	S5K4CA_DATA(0x0003),	/* 0006 */
+
 	S5K4CA_PAGE(0x7000),
-	S5K4CA_REG(0x0376),	/* Night on preview  */
-	S5K4CA_DATA(0x0400),	/* REG_2TC_PCFG_usWidth	2	70000376 */
-	S5K4CA_DATA(0x0300),	/* REG_2TC_PCFG_usHeight	2	70000378 */
-	S5K4CA_DATA(0x0005),	/* REG_2TC_PCFG_Format	2	7000037A */
-	S5K4CA_DATA(0x2BF4),	/* REG_2TC_PCFG_usMaxOut4KHzRate	2	7000037C */
-	S5K4CA_DATA(0x2BF0),	/* REG_2TC_PCFG_usMinOut4KHzRate	2	7000037E */
-	S5K4CA_DATA(0x0072),	/* REG_2TC_PCFG_PVIMask	2	70000380 */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_PCFG_uClockInd	2	70000382 */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_PCFG_usFrTimeType	2	70000384 */
-	S5K4CA_DATA(0x0001),	/* REG_2TC_PCFG_FrRateQualityType	2	70000386 */
-	S5K4CA_DATA(0x09C4),	/* REG_2TC_PCFG_usMaxFrTimeMsecMult10	4fps	2	70000388 */
-	S5K4CA_DATA(0x02B2),	/* REG_2TC_PCFG_usMinFrTimeMsecMult10	15fps	2	7000038A */
-	S5K4CA_DATA(0x0050),	/* REG_2TC_PCFG_sSaturation	2	7000038C */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_PCFG_sSharpBlur	2	7000038E */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_PCFG_sGlamour	2	70000390 */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_PCFG_sColorTemp	2	70000392 */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_PCFG_uDeviceGammaIndex	2	70000394 */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_PCFG_uPrevMirror	*/
-	S5K4CA_DATA(0x0000),	/* REG_2TC_PCFG_uCaptureMirror  */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_PCFG_uRotation	//	*/
 
-	S5K4CA_REG(0x0436),	/* Night shot capture  */
-	S5K4CA_DATA(0x0001),	/* REG_2TC_CCFG_uCaptureMode	2	70000436 */
-	S5K4CA_DATA(0x0800),	/* REG_2TC_CCFG_usWidth	2	70000438 */
-	S5K4CA_DATA(0x0600),	/* REG_2TC_CCFG_usHeight	2	7000043A */
-	S5K4CA_DATA(0x0005),	/* REG_2TC_CCFG_Format	2	7000043C */
-	S5K4CA_DATA(0x2BF4),	/* 2BF4	//REG_2TC_CCFG_usMaxOut4KHzRate	2	7000043E */
-	S5K4CA_DATA(0x2BF0),	/* 2BF0	//REG_2TC_CCFG_usMinOut4KHzRate	2	70000440 */
-	S5K4CA_DATA(0x0072),	/* REG_2TC_CCFG_PVIMask	2	70000442 */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_CCFG_uClockInd	2	70000444 */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_CCFG_usFrTimeType	2	70000446 */
-	S5K4CA_DATA(0x0002),	/* REG_2TC_CCFG_FrRateQualityType	2	70000448 */
-	S5K4CA_DATA(0x1964),	/* 1964	//REG_2TC_CCFG_usMaxFrTimeMsecMult10	2	7000044A */
-	S5K4CA_DATA(0x0535),	/* 0000	//REG_2TC_CCFG_usMinFrTimeMsecMult10	2	7000044C */
-	S5K4CA_DATA(0x0050),	/* REG_2TC_CCFG_sSaturation	2	7000044E */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_CCFG_sSharpBlur	2	70000450 */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_CCFG_sGlamour	2	70000452 */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_CCFG_sColorTemp	2	70000454 */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_CCFG_uDeviceGammaIndex	2	70000456 */
+	S5K4CA_REG(0x0688),
+	S5K4CA_DATA(0x0468),
+	S5K4CA_REG(0x06AA),
+	S5K4CA_DATA(0x0A68),
+	S5K4CA_REG(0x06CC),
+	S5K4CA_DATA(0x0A60),
 
-/*	S5K4CA_PAGE(0x7000), */
+	S5K4CA_REG(0x0338),	/* Night on preview  */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_usFrTimeType */
+	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_FrRateQualityType */
+	S5K4CA_DATA(0x09C4),	/* REG_0TC_PCFG_usMaxFrTimeMsecMult10 */
+	S5K4CA_DATA(0x02B2),	/* REG_0TC_PCFG_usMinFrTimeMsecMult10 */
+	S5K4CA_DATA(0x0050),	/* REG_0TC_PCFG_sSaturation */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_sSharpBlur */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_sGlamour */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_sColorTemp */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_uDeviceGammaIndex */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_uPrevMirror */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_uCaptureMirror */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_uRotation */
+
+	S5K4CA_REG(0x0402),	/* Night shot capture  */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_usFrTimeType */
+	S5K4CA_DATA(0x0002),	/* REG_0TC_CCFG_FrRateQualityType */
+	S5K4CA_DATA(0x1964),	/* 1964	//REG_0TC_CCFG_usMaxFrTimeMsecMult10 */
+	S5K4CA_DATA(0x0535),	/* 0000	//REG_0TC_CCFG_usMinFrTimeMsecMult10 */
+	S5K4CA_DATA(0x0050),	/* REG_0TC_CCFG_sSaturation */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_sSharpBlur */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_sGlamour */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_sColorTemp */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_uDeviceGammaIndex */
+
 	S5K4CA_REG(0x047C),
 	S5K4CA_DATA(0x2710),	/* 7000047C	//t_usLTtable1_1 50ms */
 	S5K4CA_DATA(0x2EE0),	/* 7000047E	//t_usLTtable1_2 Control for 700lux */
@@ -4492,7 +4289,6 @@ static struct s5k4ca_request s5k4ca_scene_night[] = {
 	S5K4CA_DATA(0xF618),	/* 70000486	//t_usLTtable3_2 Control for 200lux */
 	S5K4CA_DATA(0xFFFF),	/* 70000488	//t_usMaxLTtable */
 
-
 	S5K4CA_DATA(0x4E20),	/* 7000048A	//t_usLTExposure2 100ms */
 	S5K4CA_DATA(0x7530),	/* 7000048C	//t_usLTExposure3 200ms */
 	S5K4CA_DATA(0xFA60),	/* 7000048E	//t_usMaxExposure 250ms */
@@ -4501,9 +4297,8 @@ static struct s5k4ca_request s5k4ca_scene_night[] = {
 	S5K4CA_DATA(0x0700),	/* lt_uMaxAnGain2 5+5/16 =5.3125  */
 	S5K4CA_DATA(0x0100),	/* lt_uMaxDigGain */
 
-/*	S5K4CA_PAGE(0x7000),	//Night Preview Return using table2 */
 	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
-	S5K4CA_DATA(0x0002),
+	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
@@ -4521,9 +4316,9 @@ static struct s5k4ca_request s5k4ca_scene_night[] = {
 
 static struct s5k4ca_request s5k4ca_scene_sport[] = {
 	/* 12. SPORTS_700lux: 6ea 400lux:12ea 200lux:18ea 20lux:24 */
-
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
+
 	S5K4CA_REG(0x047C),
 	S5K4CA_DATA(0x07D0),	/* 7000047C	//t_usLTtable1_1 20ms */
 	S5K4CA_DATA(0x1388),	/* 7000047E	//t_usLTtable1_2 Control for 700lux */
@@ -4560,21 +4355,12 @@ static struct s5k4ca_request s5k4ca_scene_sport[] = {
 
 };
 
-static struct s5k4ca_request s5k4ca_scene_sunset[] = {
-
+static struct s5k4ca_request s5k4ca_scene_sunset_candlelight[] = {
 	/* 05. SUNSET_To use MWB daylight : Refer to TN Scene mode Guide */
-/*	S5K4CA_BANK(0xD000), */
-	/* Sunset	_ Default */
-	/* s00287000 //For Scene */
-	/* s002A02AA */
-	/* s0F120000 // Saturagon */
-	/* s0F120000 // Sharpness */
-	/* s0F120000 // Glamour */
-
 	/* MWB DAY */
 	S5K4CA_BANK(0xD000),
-
 	S5K4CA_PAGE(0x7000),
+
 	S5K4CA_REG(0x0578),
 	S5K4CA_DATA(0x0077),
 
@@ -4582,23 +4368,14 @@ static struct s5k4ca_request s5k4ca_scene_sunset[] = {
 	S5K4CA_DATA(0x0650),
 	S5K4CA_DATA(0x0400),
 	S5K4CA_DATA(0x0520),
-
 };
 
 static struct s5k4ca_request s5k4ca_scene_duskdawn[] = {
 	/* 06. DAWN_To use MWB CW : Refer to TN Scene mode Guide */
-
-	/*	Dawn	_ Default */
-	/* s00287000 //For Scene */
-	/* s002A02AA */
-	/* s0F120000 // Saturation */
-	/* s0F120000 // Sharpness */
-	/* s0F120000 // Glamour */
-
 	/* MWB Fluorescent */
 	S5K4CA_BANK(0xD000),
-
 	S5K4CA_PAGE(0x7000),
+
 	S5K4CA_REG(0x0578),
 	S5K4CA_DATA(0x0077),
 
@@ -4610,52 +4387,22 @@ static struct s5k4ca_request s5k4ca_scene_duskdawn[] = {
 
 static struct s5k4ca_request s5k4ca_scene_text[] = {
 	/* 10. TEXT */
+	/* Text	_ Sharpness +2 */
 	S5K4CA_BANK(0xD000),
-	/*	Text	_ Sharpness +2 */
 	S5K4CA_PAGE(0x7000), /* For Scene */
+
 	S5K4CA_REG(0x02AA),
 	S5K4CA_DATA(0x0000), /* Saturagon */
 	S5K4CA_DATA(0x0028), /* Sharpness */
 	S5K4CA_DATA(0xffd8), /* Glamour */
 };
 
-/*
- * FIXME
- * Arun C: candlelight registers are same as sunset scene mode
- * any other reason to waste memory??
- *
- */
-static struct s5k4ca_request s5k4ca_scene_candlelight[] = {
-/* 11. CANDLE _ To use MWB CW */
-
-/*	Candle	_ Default */
-/* s00287000 //For Scene */
-/* s002A02A6 */
-/* s0F120000 // Brightness for controling the EV */
-/* s002A02AA */
-/* s0F120000 // Saturagon */
-/* s0F120000 // Sharpness */
-/* s0F120000 // Glamour */
-
-	/* MWB DAY */
-	S5K4CA_BANK(0xD000),
-
-	S5K4CA_PAGE(0x7000),
-	S5K4CA_REG(0x0578),
-	S5K4CA_DATA(0x0077),
-
-	S5K4CA_REG(0x1302),
-	S5K4CA_DATA(0x0650),
-	S5K4CA_DATA(0x0400),
-	S5K4CA_DATA(0x0520),
-};
-
 static struct s5k4ca_request s5k4ca_scene_party[] = {
-/* 03. PARTY_INDOOR */
-
-/* Party/indoor _ Shaturation +1 */
+	/* 03. PARTY_INDOOR */
+	/* Party/indoor _ Shaturation +1 */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000), /* For Scene */
+
 	S5K4CA_REG(0x02A6),
 	S5K4CA_DATA(0x0000), /* Brightness for controling the EV */
 	S5K4CA_REG(0x02AA),
@@ -4665,11 +4412,11 @@ static struct s5k4ca_request s5k4ca_scene_party[] = {
 };
 
 static struct s5k4ca_request s5k4ca_scene_fallcolor[] = {
-/* 07. FALL */
-
-/*	Fall	_ Saturation +2 */
+	/* 07. FALL */
+	/* Fall	_ Saturation +2 */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000), /* For Scene */
+
 	S5K4CA_REG(0x02A6),
 	S5K4CA_DATA(0x0000), /* Brightness for controling the EV */
 	S5K4CA_REG(0x02AA),
@@ -4679,16 +4426,14 @@ static struct s5k4ca_request s5k4ca_scene_fallcolor[] = {
 };
 
 static struct s5k4ca_request s5k4ca_scene_backlight[] = {
-/* 08. AGAINSTLIGHT _ To use SPOT MODE : Refer to TN Scene mode Guide */
-
-/*	Against Light	_ Default */
-/* s00287000 //For Scene */
-/* s002A02AA */
-/* s0F120000 // Saturation */
-/* s0F120000 // Sharpness */
-/* s0F120000 // Glamour */
-
-/* 02. SPOT */
+	/* 08. AGAINSTLIGHT _ To use SPOT MODE : Refer to TN Scene mode Guide */
+	/* Against Light _ Default */
+	/* s00287000 //For Scene */
+	/* s002A02AA */
+	/* s0F120000 // Saturation */
+	/* s0F120000 // Sharpness */
+	/* s0F120000 // Glamour */
+	/* 02. SPOT */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 
@@ -4732,58 +4477,42 @@ static struct s5k4ca_request s5k4ca_scene_backlight[] = {
 	S5K4CA_DATA(0x0001),
 };
 
-/*
- * SCENE_FIREWORKS
- */
-	/* ISO 50, Shutter-speed = 1s */
 static struct s5k4ca_request s5k4ca_scene_fireworks[] = {
-	/* 09. FIRE _ Preview : (4fps Exposure 250ms) Capture : ( 1fps Exposure 1000ms ) Capture Delay : 400ms */
+	/*
+	 * Fireworks
+	 * Preview : (4fps Exposure 250ms)
+	 * Capture : ( 1fps Exposure 1000ms )
+	 * Capture Delay : 400ms
+	 * ISO 50, Shutter-speed = 1s
+	 */
 	S5K4CA_BANK(0xD000),
-	/*	Fire	_ Default */
-/*	S5K4CA_BANK(0xD000), */
 	S5K4CA_PAGE(0x7000),
-	S5K4CA_REG(0x0376),	/* Fire Mode on preview  */
-	S5K4CA_DATA(0x0400),	/* REG_2TC_PCFG_usWidth	2	70000376 */
-	S5K4CA_DATA(0x0300),	/* REG_2TC_PCFG_usHeight	2	70000378 */
-	S5K4CA_DATA(0x0005),	/* REG_2TC_PCFG_Format	2	7000037A */
-	S5K4CA_DATA(0x2BF4),	/* REG_2TC_PCFG_usMaxOut4KHzRate	2	7000037C */
-	S5K4CA_DATA(0x2BF0),	/* REG_2TC_PCFG_usMinOut4KHzRate	2	7000037E */
-	S5K4CA_DATA(0x0072),	/* REG_2TC_PCFG_PVIMask	2	70000380 */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_PCFG_uClockInd	2	70000382 */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_PCFG_usFrTimeType	2	70000384 */
-	S5K4CA_DATA(0x0001),	/* REG_2TC_PCFG_FrRateQualityType	2	70000386 */
-	S5K4CA_DATA(0x09C4),	/* REG_2TC_PCFG_usMaxFrTimeMsecMult10	4fps	2	70000388 */
-	S5K4CA_DATA(0x0242),	/* REG_2TC_PCFG_usMinFrTimeMsecMult10	15fps	2	7000038A */
-	S5K4CA_DATA(0x0050),	/* REG_2TC_PCFG_sSaturation	2	7000038C */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_PCFG_sSharpBlur	2	7000038E */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_PCFG_sGlamour	2	70000390 */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_PCFG_sColorTemp	2	70000392 */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_PCFG_uDeviceGammaIndex	2	70000394 */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_PCFG_uPrevMirror	*/
-	S5K4CA_DATA(0x0000),	/* REG_2TC_PCFG_uCaptureMirror  */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_PCFG_uRotation	//	*/
 
-	S5K4CA_REG(0x0436),	/* Fire shot capture  */
-	S5K4CA_DATA(0x0001),	/* REG_2TC_CCFG_uCaptureMode	2	70000436 */
-	S5K4CA_DATA(0x0800),	/* REG_2TC_CCFG_usWidth	2	70000438 */
-	S5K4CA_DATA(0x0600),	/* REG_2TC_CCFG_usHeight	2	7000043A */
-	S5K4CA_DATA(0x0005),	/* REG_2TC_CCFG_Format	2	7000043C */
-	S5K4CA_DATA(0x1770),	/* 2BF4	//REG_2TC_CCFG_usMaxOut4KHzRate	2	7000043E */
-	S5K4CA_DATA(0x05DC),	/* 2BF0	//REG_2TC_CCFG_usMinOut4KHzRate	2	70000440 */
-	S5K4CA_DATA(0x0072),	/* REG_2TC_CCFG_PVIMask	2	70000442 */
-	S5K4CA_DATA(0x0002),	/* REG_2TC_CCFG_uClockInd	2	70000444 */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_CCFG_usFrTimeType	2	70000446 */
-	S5K4CA_DATA(0x0002),	/* REG_2TC_CCFG_FrRateQualityType	2	70000448 */
-	S5K4CA_DATA(0x2710),	/* 1964	//1964	//REG_2TC_CCFG_usMaxFrTimeMsecMult10	2	7000044A */
-	S5K4CA_DATA(0x0535),	/* 0000	//REG_2TC_CCFG_usMinFrTimeMsecMult10	2	7000044C */
-	S5K4CA_DATA(0x0050),	/* REG_2TC_CCFG_sSaturation	2	7000044E */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_CCFG_sSharpBlur	2	70000450 */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_CCFG_sGlamour	2	70000452 */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_CCFG_sColorTemp	2	70000454 */
-	S5K4CA_DATA(0x0000),	/* REG_2TC_CCFG_uDeviceGammaIndex	2	70000456 */
+	S5K4CA_REG(0x0338),	/* Fire Mode on preview  */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_usFrTimeType */
+	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_FrRateQualityType */
+	S5K4CA_DATA(0x09C4),	/* REG_0TC_PCFG_usMaxFrTimeMsecMult10 */
+	S5K4CA_DATA(0x0242),	/* REG_0TC_PCFG_usMinFrTimeMsecMult10 */
+	S5K4CA_DATA(0x0050),	/* REG_0TC_PCFG_sSaturation */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_sSharpBlur */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_sGlamour */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_sColorTemp */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_uDeviceGammaIndex */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_uPrevMirror */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_uCaptureMirror */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_uRotation */
 
+	S5K4CA_REG(0x0402),	/* Fire shot capture  */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_usFrTimeType */
+	S5K4CA_DATA(0x0002),	/* REG_0TC_CCFG_FrRateQualityType */
+	S5K4CA_DATA(0x2710),	/* REG_0TC_CCFG_usMaxFrTimeMsecMult10 */
+	S5K4CA_DATA(0x0535),	/* REG_0TC_CCFG_usMinFrTimeMsecMult10 */
+	S5K4CA_DATA(0x0050),	/* REG_0TC_CCFG_sSaturation */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_sSharpBlur */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_sGlamour */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_sColorTemp */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_uDeviceGammaIndex */
 
-/*	S5K4CA_PAGE(0x7000), */
 	S5K4CA_REG(0x047C),
 	S5K4CA_DATA(0x2710),	/* 7000047C	//t_usLTtable1_1 50ms */
 	S5K4CA_DATA(0x2EE0),	/* 7000047E	//t_usLTtable1_2 Control for 700lux */
@@ -4802,9 +4531,8 @@ static struct s5k4ca_request s5k4ca_scene_fireworks[] = {
 	S5K4CA_DATA(0x0700),	/* lt_uMaxAnGain2 5+5/16 =5.3125  */
 	S5K4CA_DATA(0x0100),	/* lt_uMaxDigGain */
 
-/*	S5K4CA_PAGE(0x7000),	//Night Preview Return using table2 */
 	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
-	S5K4CA_DATA(0x0002),
+	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
@@ -4813,21 +4541,22 @@ static struct s5k4ca_request s5k4ca_scene_fireworks[] = {
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02B2),	/* REG_TC_GP_EnablePreview */
 	S5K4CA_DATA(0x0001),
-/*	S5K4CA_REG(0x02B4),	//REG_TC_GP_EnablePreviewChanged */
-	S5K4CA_DATA(0x0001),
+	S5K4CA_DATA(0x0001),	/* REG_TC_GP_EnablePreviewChanged */
 
 	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
 	S5K4CA_DATA(0x0001),
 };
 
-/*
- * SCENE_BEACH
- */
-	/* ISO 50, EV +1, Saturation +1 */
 static struct s5k4ca_request s5k4ca_scene_beach[] = {
-	/* 04. BEACH_SNOW */
+	/*
+	 * Beach/snow
+	 * ISO 50
+	 * EV +1
+	 * Saturation +1
+	 */
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000), /* For Scene */
+
 	S5K4CA_REG(0x02A6),
 	S5K4CA_DATA(0x0014), /* Brightness for controling the EV */
 	S5K4CA_REG(0x02AA),
@@ -4837,10 +4566,10 @@ static struct s5k4ca_request s5k4ca_scene_beach[] = {
 };
 
 /*
- * MeasureBrightness_SPOT
+ * Photometry
  */
-static struct s5k4ca_request s5k4ca_measure_brightness_spot[] = {
-	/* 1201 SEMCO */
+
+static struct s5k4ca_request s5k4ca_photometry_spot[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 
@@ -4884,11 +4613,7 @@ static struct s5k4ca_request s5k4ca_measure_brightness_spot[] = {
 	S5K4CA_DATA(0x0001),
 };
 
-/*
- * MeasureBrightness_Default
- */
-static struct s5k4ca_request s5k4ca_measure_brightness_default[] = {
-	/* 1201 SEMCO */
+static struct s5k4ca_request s5k4ca_photometry_matrix[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 
@@ -4932,11 +4657,7 @@ static struct s5k4ca_request s5k4ca_measure_brightness_default[] = {
 	S5K4CA_DATA(0x0001),
 };
 
-/*
- * MeasureBrightness_CENTER
- */
-static struct s5k4ca_request s5k4ca_measure_brightness_center[] = {
-	/* 1201 SEMCO */
+static struct s5k4ca_request s5k4ca_photometry_center[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 
@@ -4980,50 +4701,41 @@ static struct s5k4ca_request s5k4ca_measure_brightness_center[] = {
 	S5K4CA_DATA(0x0001),
 };
 
-#if 0
-static struct s5k4ca_request s5k4ca_af_power_off[] = {
-	/* Tuning */
-	S5K4CA_BANK(0xd000),
-	S5K4CA_PAGE(0x7000),
-	S5K4CA_REG(0x030E),
-	S5K4CA_DATA(0x00FE),
-	S5K4CA_REG(0x030C),
-	S5K4CA_DATA(0x0000),
+/*
+ * AE/AWB lock
+ */
 
-	S5K4CA_MSLEEP(150),
-
-	S5K4CA_REG(0x030E),
-	S5K4CA_DATA(0x00FE),
-
-	S5K4CA_MSLEEP(200),
-
-	S5K4CA_REG(0x030C),
-	S5K4CA_DATA(0x0003),
-};
-#endif
-
-static struct s5k4ca_request s5k4ca_ae_awb_unlock[] = {
+static struct s5k4ca_request s5k4ca_awb_ae_unlock[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x0578),
 	S5K4CA_DATA(0x007F),
 };
 
-static struct s5k4ca_request s5k4ca_ae_mwb_unlock[] = {
+static struct s5k4ca_request s5k4ca_awb_ae_lock[] = {
+	S5K4CA_BANK(0xD000),
+	S5K4CA_PAGE(0x7000),
+	S5K4CA_REG(0x0578),
+	S5K4CA_DATA(0x007d),
+};
+
+static struct s5k4ca_request s5k4ca_mwb_ae_unlock[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x0578),
 	S5K4CA_DATA(0x0077),
 };
 
-#if 0
-static struct s5k4ca_request s5k4ca_ae_awb_lock[] = {
+static struct s5k4ca_request s5k4ca_mwb_ae_lock[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x0578),
 	S5K4CA_DATA(0x0075),
 };
-#endif
+
+/*
+ * Auto focus
+ */
 
 static struct s5k4ca_request s5k4ca_af_low_lux_val[] = {
 	S5K4CA_BANK(0xD000),
@@ -5080,6 +4792,97 @@ static struct s5k4ca_request s5k4ca_af_normal_lux_val[] = {
 	S5K4CA_DATA(0x0016),	/* AF lens step number */
 };
 
+static struct s5k4ca_request s5k4ca_af_start_normal[] = {
+	S5K4CA_BANK(0xd000),
+	S5K4CA_PAGE(0x7000),
+
+	S5K4CA_REG(0x030e),
+	S5K4CA_DATA(0x00ff),
+	S5K4CA_REG(0x030c),
+	S5K4CA_DATA(0x0000),
+
+	S5K4CA_MSLEEP(140),
+
+	S5K4CA_REG(0x030e),
+	S5K4CA_DATA(0x00f1),
+
+	S5K4CA_MSLEEP(50),
+
+	S5K4CA_REG(0x030c),
+	S5K4CA_DATA(0x0003),
+
+	S5K4CA_MSLEEP(50),
+
+	S5K4CA_REG(0x030c),
+	S5K4CA_DATA(0x0002),
+};
+
+static struct s5k4ca_request s5k4ca_af_start_macro[] = {
+	S5K4CA_BANK(0xd000),
+	S5K4CA_PAGE(0x7000),
+
+	S5K4CA_REG(0x030e),
+	S5K4CA_DATA(0x0030),
+	S5K4CA_REG(0x030c),
+	S5K4CA_DATA(0x0000),
+
+	S5K4CA_MSLEEP(140),
+
+	S5K4CA_REG(0x030e),
+	S5K4CA_DATA(0x0040),
+
+	S5K4CA_MSLEEP(100),
+
+	S5K4CA_REG(0x030c),
+	S5K4CA_DATA(0x0002),
+};
+
+static struct s5k4ca_request s5k4ca_af_stop_normal[] = {
+	S5K4CA_BANK(0xd000),
+	S5K4CA_PAGE(0x7000),
+
+	S5K4CA_REG(0x030e),
+	S5K4CA_DATA(0x00ff),
+	S5K4CA_REG(0x030c),
+	S5K4CA_DATA(0x0000),
+
+	S5K4CA_MSLEEP(140),
+
+	S5K4CA_REG(0x030e),
+	S5K4CA_DATA(0x00f1),
+
+	S5K4CA_MSLEEP(50),
+
+	S5K4CA_REG(0x030c),
+	S5K4CA_DATA(0x0003),
+	S5K4CA_REG(0x161c),
+	S5K4CA_DATA(0x82a8),
+};
+
+static struct s5k4ca_request s5k4ca_af_stop_macro[] = {
+	S5K4CA_BANK(0xd000),
+	S5K4CA_PAGE(0x7000),
+
+	S5K4CA_REG(0x030e),
+	S5K4CA_DATA(0x0030),
+	S5K4CA_REG(0x030c),
+	S5K4CA_DATA(0x0000),
+
+	S5K4CA_MSLEEP(140),
+
+	S5K4CA_REG(0x030e),
+	S5K4CA_DATA(0x0040),
+
+	S5K4CA_MSLEEP(100),
+
+	S5K4CA_REG(0x161c),
+	S5K4CA_DATA(0xa2a8),
+};
+
+/*
+ * Focus mode
+ */
+
 static struct s5k4ca_request s5k4ca_focus_mode_macro[] = {
 	/* Set addresses */
 	S5K4CA_BANK(0xD000),
@@ -5133,11 +4936,114 @@ static struct s5k4ca_request s5k4ca_focus_mode_infinity[] = {
 };
 
 /*
- * case 23 : FPS_NONFIX
+ * Preview/video frame rate
  */
-static struct s5k4ca_request s5k4ca_fps_nonfix[] = {
+
+static struct s5k4ca_request s5k4ca_fps_auto[] = {
 	S5K4CA_BANK(0xd000),
 	S5K4CA_PAGE(0x7000),
+
+	S5K4CA_REG(0x0338), 	/* Dynamic framerate 6.00-17.30 fps */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_usFrTimeType	frame ae enable: 0000h : dynamic	0001h :Fixed	2	70000338 */
+	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_FrRateQualityType	2	7000033A */
+	S5K4CA_DATA(0x0682),	/* REG_0TC_PCFG_usMaxFrTimeMsecMult10	0682h(1666)= 166.6 ms	2	7000033C */
+	S5K4CA_DATA(0x02B2),	/* REG_0TC_PCFG_usMinFrTimeMsecMult10	0242h(578) =57.8ms	2	7000033E */
+
+	S5K4CA_REG(0x02e2),
+	S5K4CA_DATA(0x0000),
+	S5K4CA_REG(0x02e6),
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02be),
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02e4),
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02b2),
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02b4),
+	S5K4CA_DATA(0x0001),
+
+	S5K4CA_REG(0x028a), /* REG_TC_IPRM_InitParamsUpdated  */
+	S5K4CA_DATA(0x0001),
+
+	S5K4CA_REG(0x057c),
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x057c),
+	S5K4CA_DATA(0x0001),
+};
+
+static struct s5k4ca_request s5k4ca_fps_30[] = {
+	S5K4CA_BANK(0xd000),
+	S5K4CA_PAGE(0x7000),
+
+	S5K4CA_REG(0x0338),	/* 29.94fps Fixcamcoderpreview */
+	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_usFrTimeType	frame ae enable: 0000h : dynamic	0001h :Fixed	2	70000338 */
+	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_FrRateQualityType	2	7000033A */
+	S5K4CA_DATA(0x014e),	/* REG_1TC_PCFG_usMaxFrTimeMsecMult10 1104 02bc->029A  */
+	S5K4CA_DATA(0x014e),	/* REG_1TC_PCFG_usMinFrTimeMsecMult10 1104 02bc->029A  */
+
+	S5K4CA_REG(0x02e2),
+	S5K4CA_DATA(0x0000),
+	S5K4CA_REG(0x02e6),
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02be),
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02e4),
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02b2),
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02b4),
+	S5K4CA_DATA(0x0001),
+
+	S5K4CA_REG(0x028a), /* REG_TC_IPRM_InitParamsUpdated  */
+	S5K4CA_DATA(0x0001),
+
+	S5K4CA_REG(0x057c),
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x057c),
+	S5K4CA_DATA(0x0001),
+};
+
+static struct s5k4ca_request s5k4ca_fps_15[] = {
+	S5K4CA_BANK(0xd000),
+	S5K4CA_PAGE(0x7000),
+
+	S5K4CA_REG(0x0338), 	/* 14.28fps Fixcamcoderpreview */
+	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_usFrTimeType	frame ae enable: 0000h : dynamic	0001h :Fixed	2	70000338 */
+	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_FrRateQualityType	2	7000033A */
+	S5K4CA_DATA(0x029A),	/* REG_1TC_PCFG_usMaxFrTimeMsecMult10 1104 02bc->029A  */
+	S5K4CA_DATA(0x029A),	/* REG_1TC_PCFG_usMinFrTimeMsecMult10 1104 02bc->029A  */
+
+	S5K4CA_REG(0x02e2),
+	S5K4CA_DATA(0x0000),
+	S5K4CA_REG(0x02e6),
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02be),
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02e4),
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02b2),
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02b4),
+	S5K4CA_DATA(0x0001),
+
+	S5K4CA_REG(0x028a), /* REG_TC_IPRM_InitParamsUpdated  */
+	S5K4CA_DATA(0x0001),
+
+	S5K4CA_REG(0x057c),
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x057c),
+	S5K4CA_DATA(0x0001),
+};
+
+static struct s5k4ca_request s5k4ca_fps_7[] = {
+	S5K4CA_BANK(0xd000),
+	S5K4CA_PAGE(0x7000),
+
+	S5K4CA_REG(0x0338), 	/* 7.14fps Fixcamcoderpreview */
+	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_usFrTimeType	frame ae enable: 0000h : dynamic	0001h :Fixed	2	70000338 */
+	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_FrRateQualityType	2	7000033A */
+	S5K4CA_DATA(0x0579),	/* REG_1TC_PCFG_usMaxFrTimeMsecMult10 */
+	S5K4CA_DATA(0x0579),	/* REG_1TC_PCFG_usMinFrTimeMsecMult10 */
 
 	S5K4CA_REG(0x02e2),
 	S5K4CA_DATA(0x0000),
@@ -5162,102 +5068,141 @@ static struct s5k4ca_request s5k4ca_fps_nonfix[] = {
 };
 
 /*
- * case 23 : FPS_30FIX
+ * Image resolution
  */
-static struct s5k4ca_request s5k4ca_fps_30fix[] = {
+
+static struct s5k4ca_request s5k4ca_res_qxga[] = {
 	S5K4CA_BANK(0xd000),
 	S5K4CA_PAGE(0x7000),
 
-	S5K4CA_REG(0x0362), /* 14.28fps Fixcamcoderpreview */
-	S5K4CA_DATA(0x014e), /* REG_1TC_PCFG_usMaxFrTimeMsecMult10 1104 02bc->029A  */
-	S5K4CA_DATA(0x014e), /* REG_1TC_PCFG_usMinFrTimeMsecMult10 1104 02bc->029A  */
+	S5K4CA_REG(0x032A),	/* Normal Preview */
+	S5K4CA_DATA(2048),	/* REG_0TC_PCFG_usWidth */
+	S5K4CA_DATA(1536),	/* REG_0TC_PCFG_usHeight */
 
-	S5K4CA_REG(0x02e2),
+	S5K4CA_REG(0x03F4),	/* Normal capture */
+	S5K4CA_DATA(2048),	/* REG_0TC_CCFG_usWidth */
+	S5K4CA_DATA(1536),	/* REG_0TC_CCFG_usHeight */
+
+	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
+	S5K4CA_DATA(0x0000),
+	S5K4CA_REG(0x02EA),	/* REG_TC_GP_ActiveCapConfig  */
+	S5K4CA_DATA(0x0000),
+	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
 	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02e6),
+	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
 	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02be),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02e4),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02b2),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02b4),
+	S5K4CA_REG(0x02EC),	/* REG_TC_GP_CapConfigChanged  */
 	S5K4CA_DATA(0x0001),
 
-	S5K4CA_REG(0x028a), /* REG_TC_IPRM_InitParamsUpdated  */
-	S5K4CA_DATA(0x0001),
-
-	S5K4CA_REG(0x057c),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x057c),
+	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
 	S5K4CA_DATA(0x0001),
 };
 
-/*
- * case 23 : FPS_15FIX
- */
-static struct s5k4ca_request s5k4ca_fps_15fix[] = {
+static struct s5k4ca_request s5k4ca_res_uxga[] = {
 	S5K4CA_BANK(0xd000),
 	S5K4CA_PAGE(0x7000),
 
-	S5K4CA_REG(0x0362), /* 14.28fps Fixcamcoderpreview */
-	S5K4CA_DATA(0x029A), /* REG_1TC_PCFG_usMaxFrTimeMsecMult10 1104 02bc->029A  */
-	S5K4CA_DATA(0x029A), /* REG_1TC_PCFG_usMinFrTimeMsecMult10 1104 02bc->029A  */
+	S5K4CA_REG(0x032A),	/* Normal Preview */
+	S5K4CA_DATA(1600),	/* REG_0TC_PCFG_usWidth */
+	S5K4CA_DATA(1200),	/* REG_0TC_PCFG_usHeight */
 
-	S5K4CA_REG(0x02e2),
+	S5K4CA_REG(0x03F4),	/* Normal capture */
+	S5K4CA_DATA(1600),	/* REG_0TC_CCFG_usWidth */
+	S5K4CA_DATA(1200),	/* REG_0TC_CCFG_usHeight */
+
+	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
+	S5K4CA_DATA(0x0000),
+	S5K4CA_REG(0x02EA),	/* REG_TC_GP_ActiveCapConfig  */
+	S5K4CA_DATA(0x0000),
+	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
 	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02e6),
+	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
 	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02be),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02e4),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02b2),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02b4),
+	S5K4CA_REG(0x02EC),	/* REG_TC_GP_CapConfigChanged  */
 	S5K4CA_DATA(0x0001),
 
-	S5K4CA_REG(0x028a), /* REG_TC_IPRM_InitParamsUpdated  */
-	S5K4CA_DATA(0x0001),
-
-	S5K4CA_REG(0x057c),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x057c),
+	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
 	S5K4CA_DATA(0x0001),
 };
 
-/*
- * case 23 : FPS_7FIX
- */
-/* [SEC_KERNEL_B quartz.jang 20090716: cuzco spec not support. */
-static struct s5k4ca_request s5k4ca_fps_7fix[] = {
+static struct s5k4ca_request s5k4ca_res_sxga[] = {
 	S5K4CA_BANK(0xd000),
 	S5K4CA_PAGE(0x7000),
 
-	S5K4CA_REG(0x0362), /* 7.14fps Fixcamcoderpreview */
-	S5K4CA_DATA(0x0579), /* REG_1TC_PCFG_usMaxFrTimeMsecMult10 */
-	S5K4CA_DATA(0x0579), /* REG_1TC_PCFG_usMinFrTimeMsecMult10 */
+	S5K4CA_REG(0x032A),	/* Normal Preview */
+	S5K4CA_DATA(1280),	/* REG_0TC_PCFG_usWidth */
+	S5K4CA_DATA(960),	/* REG_0TC_PCFG_usHeight */
 
-	S5K4CA_REG(0x02e2),
+	S5K4CA_REG(0x03F4),	/* Normal capture */
+	S5K4CA_DATA(1280),	/* REG_0TC_CCFG_usWidth */
+	S5K4CA_DATA(960),	/* REG_0TC_CCFG_usHeight */
+
+	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
+	S5K4CA_DATA(0x0000),
+	S5K4CA_REG(0x02EA),	/* REG_TC_GP_ActiveCapConfig  */
+	S5K4CA_DATA(0x0000),
+	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
 	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02e6),
+	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
 	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02be),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02e4),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02b2),
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02b4),
+	S5K4CA_REG(0x02EC),	/* REG_TC_GP_CapConfigChanged  */
 	S5K4CA_DATA(0x0001),
 
-	S5K4CA_REG(0x028a), /* REG_TC_IPRM_InitParamsUpdated  */
+	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
+	S5K4CA_DATA(0x0001),
+};
+
+static struct s5k4ca_request s5k4ca_res_xga[] = {
+	S5K4CA_BANK(0xd000),
+	S5K4CA_PAGE(0x7000),
+
+	S5K4CA_REG(0x032A),	/* Normal Preview */
+	S5K4CA_DATA(1024),	/* REG_0TC_PCFG_usWidth */
+	S5K4CA_DATA(768),	/* REG_0TC_PCFG_usHeight */
+
+	S5K4CA_REG(0x03F4),	/* Normal capture */
+	S5K4CA_DATA(1024),	/* REG_0TC_CCFG_usWidth */
+	S5K4CA_DATA(768),	/* REG_0TC_CCFG_usHeight */
+
+	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
+	S5K4CA_DATA(0x0000),
+	S5K4CA_REG(0x02EA),	/* REG_TC_GP_ActiveCapConfig  */
+	S5K4CA_DATA(0x0000),
+	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02EC),	/* REG_TC_GP_CapConfigChanged  */
 	S5K4CA_DATA(0x0001),
 
-	S5K4CA_REG(0x057c),
+	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
 	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x057c),
+};
+
+static struct s5k4ca_request s5k4ca_res_vga[] = {
+	S5K4CA_BANK(0xd000),
+	S5K4CA_PAGE(0x7000),
+
+	S5K4CA_REG(0x032A),	/* Normal Preview */
+	S5K4CA_DATA(640),	/* REG_0TC_PCFG_usWidth */
+	S5K4CA_DATA(480),	/* REG_0TC_PCFG_usHeight */
+
+	S5K4CA_REG(0x03F4),	/* Normal capture */
+	S5K4CA_DATA(640),	/* REG_0TC_CCFG_usWidth */
+	S5K4CA_DATA(480),	/* REG_0TC_CCFG_usHeight */
+
+	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
+	S5K4CA_DATA(0x0000),
+	S5K4CA_REG(0x02EA),	/* REG_TC_GP_ActiveCapConfig  */
+	S5K4CA_DATA(0x0000),
+	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02EC),	/* REG_TC_GP_CapConfigChanged  */
+	S5K4CA_DATA(0x0001),
+
+	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
 	S5K4CA_DATA(0x0001),
 };
 
