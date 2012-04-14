@@ -544,7 +544,7 @@ int fimc_hw_set_camera_source(struct fimc_dev *fimc,
 		}
 
 		if (i == ARRAY_SIZE(pix_desc)) {
-			v4l2_err(&fimc->vid_cap.v4l2_dev,
+			v4l2_err(fimc->vid_cap.vfd,
 				 "Camera color format not supported: %d\n",
 				 fimc->vid_cap.fmt.code);
 			return -EINVAL;
