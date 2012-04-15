@@ -351,17 +351,19 @@ void fimc_hw_en_capture(struct fimc_ctx *ctx)
 	writel(cfg | S3C_CIIMGCPT_IMGCPTEN, dev->regs + S3C_CIIMGCPT);
 }
 
-void fimc_hw_set_effect(struct fimc_ctx *ctx)
+void fimc_hw_set_effect(struct fimc_ctx *ctx, bool active)
 {
 	struct fimc_dev *dev = ctx->fimc_dev;
 	struct fimc_effect *effect = &ctx->effect;
-	u32 cfg = (S3C_CIIMGEFF_IE_ENABLE | S3C_CIIMGEFF_IE_SC_AFTER);
+	u32 cfg = 0;
 
-	cfg |= effect->type;
-
-	if (effect->type == S3C_FIMC_EFFECT_ARBITRARY) {
-		cfg |= S3C_CIIMGEFF_PAT_CB(effect->pat_cb);
-		cfg |= S3C_CIIMGEFF_PAT_CR(effect->pat_cr);
+	if (active) {
+		cfg |= S3C_CIIMGEFF_IE_SC_AFTER | S3C_CIIMGEFF_IE_ENABLE;
+		cfg |= effect->type;
+		if (effect->type == S3C_FIMC_EFFECT_ARBITRARY) {
+			cfg |= S3C_CIIMGEFF_PAT_CB(effect->pat_cb);
+			cfg |= S3C_CIIMGEFF_PAT_CR(effect->pat_cr);
+		}
 	}
 
 	writel(cfg, dev->regs + S3C_CIIMGEFF);

@@ -175,7 +175,6 @@
 
 /* Image effect */
 #define S3C_CIIMGEFF			0xd0
-#define S3C_CIIMGEFF_IE_DISABLE		(0 << 30)
 #define S3C_CIIMGEFF_IE_ENABLE		(1 << 30)
 #define S3C_CIIMGEFF_IE_SC_BEFORE	(0 << 29)
 #define S3C_CIIMGEFF_IE_SC_AFTER	(1 << 29)
