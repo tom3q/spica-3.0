@@ -63,6 +63,7 @@
 
 #include <media/s5k4ca_platform.h>
 #include <media/s3c_fimc.h>
+#include <media/v4l2-mediabus.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
@@ -819,7 +820,7 @@ static struct s3c_fimc_isp_info spica_fimc_isp_infos[] = {
 		.clk_frequency	= 24000000,
 		.bus_type	= FIMC_ITU_601,
 		.i2c_bus_num	= 1,
-		.flags		= FIMC_CLK_INV_VSYNC,
+		.flags		= V4L2_MBUS_VSYNC_ACTIVE_LOW,
 		.clk_id		= 0,
 	}
 };

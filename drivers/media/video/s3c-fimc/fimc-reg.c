@@ -492,14 +492,17 @@ int fimc_hw_set_camera_polarity(struct fimc_dev *fimc,
 	cfg &= ~(S3C_CIGCTRL_INVPOLPCLK | S3C_CIGCTRL_INVPOLVSYNC |
 		 S3C_CIGCTRL_INVPOLHREF);
 
-	if (cam->flags & FIMC_CLK_INV_PCLK)
+	if (cam->flags & V4L2_MBUS_PCLK_SAMPLE_FALLING)
 		cfg |= S3C_CIGCTRL_INVPOLPCLK;
 
-	if (cam->flags & FIMC_CLK_INV_VSYNC)
+	if (cam->flags & V4L2_MBUS_VSYNC_ACTIVE_LOW)
 		cfg |= S3C_CIGCTRL_INVPOLVSYNC;
 
-	if (cam->flags & FIMC_CLK_INV_HREF)
+	if (cam->flags & V4L2_MBUS_HSYNC_ACTIVE_LOW)
 		cfg |= S3C_CIGCTRL_INVPOLHREF;
+
+	if (cam->flags & V4L2_MBUS_FIELD_EVEN_LOW)
+		cfg |= S3C_CIGCTRL_INVPOLFIELD;
 
 	cfg |= S3C_CIGCTRL_FIELDMODE;
 

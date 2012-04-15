@@ -18,10 +18,6 @@ enum cam_bus_type {
 	FIMC_ITU_656,
 };
 
-#define FIMC_CLK_INV_PCLK	(1 << 0)
-#define FIMC_CLK_INV_VSYNC	(1 << 1)
-#define FIMC_CLK_INV_HREF	(1 << 2)
-
 struct i2c_board_info;
 
 /**
@@ -32,7 +28,7 @@ struct i2c_board_info;
  * @clk_frequency: frequency of the clock the host interface provides to sensor
  * @bus_type: determines bus type, MIPI, ITU-R BT.601 etc.
  * @i2c_bus_num: i2c control bus id the sensor is attached to
- * @flags: flags defining bus signals polarity inversion (High by default)
+ * @flags: the parallel bus flags defining signals polarity (V4L2_MBUS_*)
  * @clk_id: index of the SoC peripheral clock for sensors
  */
 struct s3c_fimc_isp_info {
