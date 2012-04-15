@@ -762,11 +762,11 @@ int fimc_ctrls_create(struct fimc_ctx *ctx)
 	v4l2_ctrl_handler_init(&ctx->ctrl_handler, 3);
 
 	ctx->ctrl_rotate = v4l2_ctrl_new_std(&ctx->ctrl_handler, &fimc_ctrl_ops,
-				     V4L2_CID_HFLIP, 0, 1, 1, 0);
+					V4L2_CID_ROTATE, 0, 270, 90, 0);
 	ctx->ctrl_hflip = v4l2_ctrl_new_std(&ctx->ctrl_handler, &fimc_ctrl_ops,
-				    V4L2_CID_VFLIP, 0, 1, 1, 0);
+					V4L2_CID_HFLIP, 0, 1, 1, 0);
 	ctx->ctrl_vflip = v4l2_ctrl_new_std(&ctx->ctrl_handler, &fimc_ctrl_ops,
-				    V4L2_CID_ROTATE, 0, 270, 90, 0);
+					V4L2_CID_VFLIP, 0, 1, 1, 0);
 	ctx->ctrls_rdy = ctx->ctrl_handler.error == 0;
 
 	return ctx->ctrl_handler.error;
