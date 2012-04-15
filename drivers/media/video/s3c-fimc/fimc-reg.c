@@ -497,7 +497,7 @@ int fimc_hw_set_camera_polarity(struct fimc_dev *fimc,
 	u32 cfg = readl(fimc->regs + S3C_CIGCTRL);
 
 	cfg &= ~(S3C_CIGCTRL_INVPOLPCLK | S3C_CIGCTRL_INVPOLVSYNC |
-		 S3C_CIGCTRL_INVPOLHREF);
+		 S3C_CIGCTRL_INVPOLHREF | S3C_CIGCTRL_INVPOLFIELD);
 
 	if (cam->flags & V4L2_MBUS_PCLK_SAMPLE_FALLING)
 		cfg |= S3C_CIGCTRL_INVPOLPCLK;
