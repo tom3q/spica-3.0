@@ -1549,8 +1549,8 @@ static struct s5k4ca_request s5k4ca_init[] = {
  */
 
 	S5K4CA_REG(0x032A),	/* Normal Preview */
-	S5K4CA_DATA(0x0400),	/* REG_0TC_PCFG_usWidth	2	7000032A */
-	S5K4CA_DATA(0x0300),	/* REG_0TC_PCFG_usHeight	2	7000032C */
+	S5K4CA_DATA(0x0800),	/* REG_0TC_PCFG_usWidth	2	7000032A */
+	S5K4CA_DATA(0x0600),	/* REG_0TC_PCFG_usHeight	2	7000032C */
 	S5K4CA_DATA(0x0005),	/* REG_0TC_PCFG_Format	0005h : YUV . 0009h : MJPG	2	7000032E */
 	S5K4CA_DATA(0x2FF0),	/* REG_0TC_PCFG_usMaxOut4KHzRate	48(49.088)Mhz=(2FF0h(12272d)/1000d)x4 2	70000330 */
 	S5K4CA_DATA(0x2DE0),	/* REG_0TC_PCFG_usMinOut4KHzRate	48(46.976)Mhz={2DE0h(11744d)/1000d }x4 2	70000332 */
@@ -1568,27 +1568,6 @@ static struct s5k4ca_request s5k4ca_init[] = {
 	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_uPrevMirror	2	7000034A */
 	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_uCaptureMirror	2	7000034C */
 	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_uRotation	2	7000034E */
-
-	S5K4CA_REG(0x0350),	/* 15fps Fix camcoder preview */
-	S5K4CA_DATA(0x0400),	/* REG_1TC_PCFG_usWidth	2	70000350 */
-	S5K4CA_DATA(0x0300),	/* REG_1TC_PCFG_usHeight	2	70000352 */
-	S5K4CA_DATA(0x0005),	/* REG_1TC_PCFG_Format	2	70000354 */
-	S5K4CA_DATA(0x2FF0),	/* REG_1TC_PCFG_usMaxOut4KHzRate	2	70000356 */
-	S5K4CA_DATA(0x2DE0),	/* REG_1TC_PCFG_usMinOut4KHzRate	2	70000358 */
-	S5K4CA_DATA(0x0072),	/* 1019 52->72 REG_1TC_PCFG_PVIMask	2	7000035A */
-	S5K4CA_DATA(0x0000),	/* REG_1TC_PCFG_uClockInd	2	7000035C */
-	S5K4CA_DATA(0x0001),	/* REG_1TC_PCFG_usFrTimeType	2	7000035E */
-	S5K4CA_DATA(0x0001),	/* REG_1TC_PCFG_FrRateQualityType	2	70000360 */
-	S5K4CA_DATA(0x02AB),	/* REG_1TC_PCFG_usMaxFrTimeMsecMult10	15fps	2	70000362 */
-	S5K4CA_DATA(0x02AB),	/* REG_1TC_PCFG_usMinFrTimeMsecMult10	15fps	2	70000364 */
-	S5K4CA_DATA(0x0000),	/* REG_1TC_PCFG_sSaturation	2	70000366 */
-	S5K4CA_DATA(0x0000),	/* REG_1TC_PCFG_sSharpBlur	2	70000368 */
-	S5K4CA_DATA(0x0000),	/* REG_1TC_PCFG_sGlamour	2	7000036A */
-	S5K4CA_DATA(0x0000),	/* REG_1TC_PCFG_sColorTemp	2	7000036C */
-	S5K4CA_DATA(0x0000),	/* REG_1TC_PCFG_uDeviceGammaIndex	2	7000036E */
-	S5K4CA_DATA(0x0000),	/* REG_1TC_PCFG_uPrevMirror	2	70000370 */
-	S5K4CA_DATA(0x0000),	/* REG_1TC_PCFG_uCaptureMirror	2	70000372 */
-	S5K4CA_DATA(0x0000),	/* REG_1TC_PCFG_uRotation	2	70000374 */
 
 	S5K4CA_REG(0x03F2),	/* Normal capture  */
 	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_uCaptureMode	2	700003F2 */
@@ -1608,25 +1587,6 @@ static struct s5k4ca_request s5k4ca_init[] = {
 	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_sGlamour	2	7000040E */
 	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_sColorTemp	2	70000410 */
 	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_uDeviceGammaIndex	2	70000412 */
-
-	S5K4CA_REG(0x0414),	/* lowlux shot capture  */
-	S5K4CA_DATA(0x0000),	/* REG_1TC_CCFG_uCaptureMode	2	70000414 */
-	S5K4CA_DATA(0x0800),	/* REG_1TC_CCFG_usWidth	2	70000416 */
-	S5K4CA_DATA(0x0600),	/* REG_1TC_CCFG_usHeight	2	70000418 */
-	S5K4CA_DATA(0x0005),	/* REG_1TC_CCFG_Format	2	7000041A */
-	S5K4CA_DATA(0x1770),	/* REG_1TC_CCFG_usMaxOut4KHzRate	2	7000041C */
-	S5K4CA_DATA(0x05DC),	/* REG_1TC_CCFG_usMinOut4KHzRate	2	7000041E */
-	S5K4CA_DATA(0x0072),	/* 1019 SEMCO 52->72 REG_1TC_CCFG_PVIMask	2	70000420 */
-	S5K4CA_DATA(0x0002),	/* REG_1TC_CCFG_uClockInd	2	70000422 */
-	S5K4CA_DATA(0x0000),	/* REG_1TC_CCFG_usFrTimeType	2	70000424 */
-	S5K4CA_DATA(0x0002),	/* REG_1TC_CCFG_FrRateQualityType	2	70000426 */
-	S5K4CA_DATA(0x0FA0),	/* REG_1TC_CCFG_usMaxFrTimeMsecMult10	1.5fps	2	70000428 */
-	S5K4CA_DATA(0x0D05),	/* REG_1TC_CCFG_usMinFrTimeMsecMult10	7.5fps	2	7000042A */
-	S5K4CA_DATA(0x0000),	/* REG_1TC_CCFG_sSaturation	2	7000042C */
-	S5K4CA_DATA(0x0000),	/* REG_1TC_CCFG_sSharpBlur	2	7000042E */
-	S5K4CA_DATA(0x0000),	/* REG_1TC_CCFG_sGlamour	2	70000430 */
-	S5K4CA_DATA(0x0000),	/* REG_1TC_CCFG_sColorTemp	2	70000432 */
-	S5K4CA_DATA(0x0000),	/* REG_1TC_CCFG_uDeviceGammaIndex	2	70000434 */
 
 	/* Etc _ improvement Preview line error when using XY mirror  */
 
@@ -3481,7 +3441,7 @@ static struct s5k4ca_request s5k4ca_init[] = {
  *  Preview mode
  */
 
-static struct s5k4ca_request s5k4ca_preview[] = {
+static struct s5k4ca_request s5k4ca_preview_enable[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 
@@ -3502,11 +3462,32 @@ static struct s5k4ca_request s5k4ca_preview[] = {
 	S5K4CA_DATA(0x0001),
 };
 
+static struct s5k4ca_request s5k4ca_preview_disable[] = {
+	S5K4CA_BANK(0xD000),
+	S5K4CA_PAGE(0x7000),
+
+	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
+	S5K4CA_DATA(0x0000),
+	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange  */
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02B2),	/* REG_TC_GP_EnablePreview	*/
+	S5K4CA_DATA(0x0000),
+	S5K4CA_REG(0x02B4),	/* REG_TC_GP_EnablePreviewChanged  */
+	S5K4CA_DATA(0x0001),
+
+	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
+	S5K4CA_DATA(0x0001),
+};
+
 /*
  * Snapshot mode
  */
 
-static struct s5k4ca_request s5k4ca_snapshot[] = {
+static struct s5k4ca_request s5k4ca_snapshot_enable[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 
@@ -3518,6 +3499,23 @@ static struct s5k4ca_request s5k4ca_snapshot[] = {
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02B6),	/* REG_TC_GP_EnableCapture  */
 	S5K4CA_DATA(0x0001),
+	S5K4CA_DATA(0x0001),	/* REG_TC_GP_EnableCaptureChanged */
+	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
+	S5K4CA_DATA(0x0001),
+};
+
+static struct s5k4ca_request s5k4ca_snapshot_disable[] = {
+	S5K4CA_BANK(0xD000),
+	S5K4CA_PAGE(0x7000),
+
+	S5K4CA_REG(0x02EA),	/* REG_TC_GP_ActiveCapConfig  */
+	S5K4CA_DATA(0x0000),
+	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync  */
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02EC),	/* REG_TC_GP_CapConfigChanged  */
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02B6),	/* REG_TC_GP_EnableCapture  */
+	S5K4CA_DATA(0x0000),
 	S5K4CA_DATA(0x0001),	/* REG_TC_GP_EnableCaptureChanged */
 	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
 	S5K4CA_DATA(0x0001),
@@ -4975,7 +4973,7 @@ static struct s5k4ca_request s5k4ca_fps_30[] = {
 	S5K4CA_BANK(0xd000),
 	S5K4CA_PAGE(0x7000),
 
-	S5K4CA_REG(0x0338),	/* 29.94fps Fixcamcoderpreview */
+	S5K4CA_REG(0x0338),	/* 29.940fps Fixcamcoderpreview */
 	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_usFrTimeType	frame ae enable: 0000h : dynamic	0001h :Fixed	2	70000338 */
 	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_FrRateQualityType	2	7000033A */
 	S5K4CA_DATA(0x014e),	/* REG_1TC_PCFG_usMaxFrTimeMsecMult10 1104 02bc->029A  */
@@ -5007,7 +5005,7 @@ static struct s5k4ca_request s5k4ca_fps_15[] = {
 	S5K4CA_BANK(0xd000),
 	S5K4CA_PAGE(0x7000),
 
-	S5K4CA_REG(0x0338), 	/* 14.28fps Fixcamcoderpreview */
+	S5K4CA_REG(0x0338), 	/* 15.015fps Fixcamcoderpreview */
 	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_usFrTimeType	frame ae enable: 0000h : dynamic	0001h :Fixed	2	70000338 */
 	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_FrRateQualityType	2	7000033A */
 	S5K4CA_DATA(0x029A),	/* REG_1TC_PCFG_usMaxFrTimeMsecMult10 1104 02bc->029A  */
@@ -5039,7 +5037,7 @@ static struct s5k4ca_request s5k4ca_fps_7[] = {
 	S5K4CA_BANK(0xd000),
 	S5K4CA_PAGE(0x7000),
 
-	S5K4CA_REG(0x0338), 	/* 7.14fps Fixcamcoderpreview */
+	S5K4CA_REG(0x0338), 	/* 7.138fps Fixcamcoderpreview */
 	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_usFrTimeType	frame ae enable: 0000h : dynamic	0001h :Fixed	2	70000338 */
 	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_FrRateQualityType	2	7000033A */
 	S5K4CA_DATA(0x0579),	/* REG_1TC_PCFG_usMaxFrTimeMsecMult10 */

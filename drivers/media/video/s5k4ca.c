@@ -22,6 +22,8 @@
 #include <linux/regulator/consumer.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-subdev.h>
+#include <media/v4l2-mediabus.h>
+#include <media/v4l2-ctrls.h>
 #include <media/videodev2_samsung.h>
 #include <media/s5k4ca_platform.h>
 
@@ -38,12 +40,43 @@
 #define TRACE_CALL
 #endif
 
+#define S5K4CA_WIN_WIDTH_MAX		2048
+#define S5K4CA_WIN_HEIGHT_MAX		1536
+#define S5K4CA_WIN_WIDTH_MIN		8
+#define S5K4CA_WIN_HEIGHT_MIN		8
+
+struct s5k4ca_ctrls {
+	struct v4l2_ctrl_handler handler;
+	/* TODO */
+};
+
+struct s5k4ca_preset {
+	/* output pixel format and resolution */
+	struct v4l2_mbus_framefmt mbus_fmt;
+	u8 clk_id;
+	u8 index;
+};
+
+struct s5k4ca_interval {
+	u16 reg_fr_time;
+	struct v4l2_fract interval;
+	/* Maximum rectangle for the interval */
+	struct v4l2_frmsize_discrete size;
+};
+
+struct s5k4ca_format {
+	unsigned int width;
+	unsigned int height;
+	struct s5k4ca_request *table;
+	unsigned int table_length;
+};
+
 struct s5k4ca_state {
+	struct v4l2_subdev sd;
+	struct media_pad pad;
+
 	struct i2c_client *client;
 	struct s5k4ca_platform_data *pdata;
-	struct v4l2_subdev sd;
-	struct v4l2_pix_format pix;
-	struct v4l2_fract timeperframe;
 
 	int frame_rate;
 	int focus_mode;
@@ -60,20 +93,55 @@ struct s5k4ca_state {
 	int capture;
 	int ae_awb_lock;
 
-	int freq;
-	int isize;
-	int ver;
-	int fps;
+	struct mutex lock;
 
-	int powered;
+	struct s5k4ca_ctrls ctrls;
+	struct s5k4ca_preset preset;
+
+	unsigned int powered:1;
+	unsigned int streaming:1;
+	unsigned int apply_cfg:1;
 
 	u8 burst_buffer[2500];
 };
+
+#define S5K4CA_FORMAT(w, h, table) \
+	{ (w), (h), (table), ARRAY_SIZE((table)) }
+
+static struct s5k4ca_format s5k4ca_formats[] = {
+	S5K4CA_FORMAT( 640,  480, s5k4ca_res_vga),
+	S5K4CA_FORMAT(1024,  768, s5k4ca_res_xga),
+	S5K4CA_FORMAT(1280,  960, s5k4ca_res_sxga),
+	S5K4CA_FORMAT(1600, 1200, s5k4ca_res_uxga),
+	S5K4CA_FORMAT(2048, 1536, s5k4ca_res_qxga),
+};
+
+
+
+static const struct s5k4ca_interval s5k4ca_intervals[] = {
+	{ 1401, {140100, 1000000}, {2048, 1536} }, /*  7.138 fps */
+	{ 666,  { 66600, 1000000}, {2048, 1536} }, /* 15.015 fps */
+	{ 334,  { 33400, 1000000}, {640,  480 } }, /* 29.940 fps */
+};
+
+/*
+ * Utility functions
+ */
+
+static inline struct v4l2_subdev *ctrl_to_sd(struct v4l2_ctrl *ctrl)
+{
+	return &container_of(ctrl->handler,
+				struct s5k4ca_state, ctrls.handler)->sd;
+}
 
 static inline struct s5k4ca_state *to_state(struct v4l2_subdev *sd)
 {
 	return container_of(sd, struct s5k4ca_state, sd);
 }
+
+/*
+ * Register access
+ */
 
 static int s5k4ca_sensor_write(struct s5k4ca_state *state,
 				unsigned short subaddr, unsigned short val)
@@ -164,114 +232,9 @@ error:
 	return ret;
 }
 
-static int s5k4ca_s_crystal_freq(struct v4l2_subdev *sd, u32 freq, u32 flags)
-{
-	int err = -EINVAL;
-
-	TRACE_CALL;
-
-	return err;
-}
-
-static int s5k4ca_enum_framesizes(struct v4l2_subdev *sd,
-				  struct v4l2_frmsizeenum *fsize)
-{
-	int err = 0;
-
-	TRACE_CALL;
-
-	return err;
-}
-
-static int s5k4ca_enum_frameintervals(struct v4l2_subdev *sd,
-				      struct v4l2_frmivalenum *fival)
-{
-	int err = 0;
-
-	TRACE_CALL;
-
-	return err;
-}
-
-static int s5k4ca_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *param)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	int err = 0;
-
-	TRACE_CALL;
-
-	dev_dbg(&client->dev, "%s\n", __func__);
-
-	return err;
-}
-
-static int s5k4ca_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *param)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	int err = 0;
-
-	TRACE_CALL;
-
-	dev_dbg(&client->dev, "%s: numerator %d, denominator: %d\n",
-		__func__, param->parm.capture.timeperframe.numerator,
-		param->parm.capture.timeperframe.denominator);
-
-	return err;
-}
-
-static int s5k4ca_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct s5k4ca_state *state = to_state(sd);
-	int err = 0;
-
-	TRACE_CALL;
-
-	switch (ctrl->id) {
-	case V4L2_CID_CAMERA_FRAME_RATE:
-		ctrl->value = state->frame_rate;
-		break;
-	case V4L2_CID_CAMERA_FOCUS_MODE:
-		ctrl->value = state->focus_mode;
-		break;
-	case V4L2_CID_CAMERA_AUTO_FOCUS_RESULT:
-		ctrl->value = state->auto_focus_result;
-		break;
-	case V4L2_CID_CAMERA_EFFECT:
-		ctrl->value = state->color_effect;
-		break;
-	case V4L2_CID_CAMERA_SCENE_MODE:
-		ctrl->value = state->scene_mode;
-		break;
-	case V4L2_CID_CAMERA_BRIGHTNESS:
-		ctrl->value = state->brightness;
-		break;
-	case V4L2_CID_CAMERA_CONTRAST:
-		ctrl->value = state->contrast;
-		break;
-	case V4L2_CID_CAMERA_SATURATION:
-		ctrl->value = state->saturation;
-		break;
-	case V4L2_CID_CAMERA_SHARPNESS:
-		ctrl->value = state->sharpness;
-		break;
-	case V4L2_CID_CAMERA_ISO:
-		ctrl->value = state->iso;
-		break;
-	case V4L2_CID_CAMERA_METERING:
-		ctrl->value = state->photometry;
-		break;
-	case V4L2_CID_CAMERA_WHITE_BALANCE:
-		ctrl->value = state->white_balance;
-		break;
-	default:
-		dev_err(&client->dev, "%s: no such ctrl\n", __func__);
-		err = -EINVAL;
-		break;
-	}
-
-	return err;
-}
+/*
+ * Control handlers
+ */
 
 static int s5k4ca_set_wb(struct v4l2_subdev *sd, int type)
 {
@@ -744,57 +707,6 @@ static int s5k4ca_set_ae_awb_lock(struct v4l2_subdev *sd, int type)
 	return 0;
 }
 
-struct s5k4ca_format {
-	unsigned int width;
-	unsigned int height;
-	struct s5k4ca_request *table;
-	unsigned int table_length;
-};
-
-#define S5K4CA_FORMAT(w, h, table) \
-	{ (w), (h), (table), ARRAY_SIZE((table)) }
-
-static struct s5k4ca_format s5k4ca_formats[] = {
-	S5K4CA_FORMAT(640, 480, s5k4ca_res_vga),
-	S5K4CA_FORMAT(1024, 768, s5k4ca_res_xga),
-	S5K4CA_FORMAT(1280, 960, s5k4ca_res_sxga),
-	S5K4CA_FORMAT(1600, 1200, s5k4ca_res_uxga),
-	S5K4CA_FORMAT(2048, 1536, s5k4ca_res_qxga),
-};
-
-static int s5k4ca_s_mbus_fmt(struct v4l2_subdev *sd,
-						struct v4l2_mbus_framefmt *fmt)
-{
-	struct s5k4ca_state *state = to_state(sd);
-	int ret;
-	int i;
-
-	TRACE_CALL;
-
-	if (!state->powered)
-		return -EINVAL;
-
-	for (i = 0; i < ARRAY_SIZE(s5k4ca_formats); ++i)
-		if (fmt->width < s5k4ca_formats[i].width
-		    && fmt->height < s5k4ca_formats[i].height)
-			break;
-
-	if (i == ARRAY_SIZE(s5k4ca_formats))
-		return -EINVAL;
-
-	ret = s5k4ca_write_regs(state, s5k4ca_formats[i].table,
-						s5k4ca_formats[i].table_length);
-	if (ret < 0)
-		return ret;
-
-	fmt->width = s5k4ca_formats[i].width;
-	fmt->height = s5k4ca_formats[i].height;
-	fmt->code = V4L2_MBUS_FMT_VYUY8_2X8;
-	msleep(300);
-
-	return 0;
-}
-
 static int s5k4ca_framerate_set(struct v4l2_subdev *sd, int rate)
 {
 	int ret;
@@ -838,6 +750,8 @@ static int s5k4ca_set_focus_mode(struct v4l2_subdev *sd, int mode)
 	struct s5k4ca_state *state = to_state(sd);
 	int ret;
 
+	TRACE_CALL;
+
 	switch(mode) {
 	case FOCUS_MODE_AUTO:
 		ret = s5k4ca_write_regs(state, s5k4ca_focus_mode_normal,
@@ -867,12 +781,14 @@ static int s5k4ca_set_capture(struct v4l2_subdev *sd, int mode)
 	struct s5k4ca_state *state = to_state(sd);
 	int ret;
 
+	TRACE_CALL;
+
 	if (mode)
-		ret = s5k4ca_write_regs(state, s5k4ca_snapshot,
-						ARRAY_SIZE(s5k4ca_snapshot));
+		ret = s5k4ca_write_regs(state, s5k4ca_snapshot_enable,
+					ARRAY_SIZE(s5k4ca_snapshot_enable));
 	else
-		ret = s5k4ca_write_regs(state, s5k4ca_preview,
-						ARRAY_SIZE(s5k4ca_preview));
+		ret = s5k4ca_write_regs(state, s5k4ca_snapshot_disable,
+					ARRAY_SIZE(s5k4ca_snapshot_disable));
 
 	if (ret < 0)
 		return ret;
@@ -888,6 +804,8 @@ static int s5k4ca_set_auto_focus(struct v4l2_subdev *sd, int val)
 	u16 stat = 0;
 	u16 lux_value = 0;
 	int ret;
+
+	TRACE_CALL;
 
 	if (state->focus_mode == FOCUS_MODE_INFINITY)
 		return 0;
@@ -953,67 +871,236 @@ static int s5k4ca_set_auto_focus(struct v4l2_subdev *sd, int val)
 	return 0;
 }
 
-static int s5k4ca_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
+/*
+ * V4L2 ctrl ops
+ */
+
+static int s5k4ca_s_ctrl(struct v4l2_ctrl *ctrl)
 {
+	struct v4l2_subdev *sd = ctrl_to_sd(ctrl);
 	struct s5k4ca_state *state = to_state(sd);
-	int err;
+	int err = 0;
 
 	TRACE_CALL;
 
+	mutex_lock(&state->lock);
+
 	if (!state->powered)
-		return -EINVAL;
+		goto unlock;
 
 	printk("[S5k4CA] %s function ctrl->id : %d \n", __func__, ctrl->id);
 
 	switch (ctrl->id) {
 	case V4L2_CID_CAMERA_FRAME_RATE:
-		err = s5k4ca_framerate_set(sd, ctrl->value);
+		err = s5k4ca_framerate_set(sd, ctrl->val);
 		break;
 	case V4L2_CID_CAMERA_FOCUS_MODE:
-		err = s5k4ca_set_focus_mode(sd, ctrl->value);
+		err = s5k4ca_set_focus_mode(sd, ctrl->val);
 		break;
 	case V4L2_CID_CAMERA_SET_AUTO_FOCUS:
-		err = s5k4ca_set_auto_focus(sd, ctrl->value);
+		err = s5k4ca_set_auto_focus(sd, ctrl->val);
 		break;
 	case V4L2_CID_CAMERA_WHITE_BALANCE:
-		err = s5k4ca_set_wb(sd, ctrl->value);
+		err = s5k4ca_set_wb(sd, ctrl->val);
 		break;
 	case V4L2_CID_CAMERA_EFFECT:
-		err = s5k4ca_set_effect(sd, ctrl->value);
+		err = s5k4ca_set_effect(sd, ctrl->val);
 		break;
 	case V4L2_CID_CAMERA_SCENE_MODE:
-		err = s5k4ca_set_scene_mode(sd, ctrl->value);
+		err = s5k4ca_set_scene_mode(sd, ctrl->val);
 		break;
 	case V4L2_CID_CAMERA_BRIGHTNESS:
-		err = s5k4ca_set_br(sd, ctrl->value);
+		err = s5k4ca_set_br(sd, ctrl->val);
 		break;
 	case V4L2_CID_CAMERA_CONTRAST:
-		err = s5k4ca_set_contrast(sd, ctrl->value);
+		err = s5k4ca_set_contrast(sd, ctrl->val);
 		break;
 	case V4L2_CID_CAMERA_SATURATION:
-		err = s5k4ca_set_saturation(sd, ctrl->value);
+		err = s5k4ca_set_saturation(sd, ctrl->val);
 		break;
 	case V4L2_CID_SHARPNESS:
-		err = s5k4ca_set_sharpness(sd, ctrl->value);
+		err = s5k4ca_set_sharpness(sd, ctrl->val);
 		break;
 	case V4L2_CID_CAMERA_SHARPNESS:
-		err = s5k4ca_set_iso(sd, ctrl->value);
+		err = s5k4ca_set_iso(sd, ctrl->val);
 		break;
 	case V4L2_CID_CAMERA_METERING:
-		err = s5k4ca_set_photometry(sd, ctrl->value);
+		err = s5k4ca_set_photometry(sd, ctrl->val);
 		break;
 	case V4L2_CID_CAMERA_AEAWB_LOCK_UNLOCK:
-		err = s5k4ca_set_ae_awb_lock(sd, ctrl->value);
+		err = s5k4ca_set_ae_awb_lock(sd, ctrl->val);
 		break;
 	case V4L2_CID_CAMERA_CAPTURE:
-		err = s5k4ca_set_capture(sd, ctrl->value);
+		err = s5k4ca_set_capture(sd, ctrl->val);
 		break;
-	default:
-		return -EINVAL;
 	}
 
+unlock:
+	mutex_unlock(&state->lock);
 	return err;
 }
+
+static const struct v4l2_ctrl_ops s5k4ca_ctrl_ops = {
+	.s_ctrl	= s5k4ca_s_ctrl,
+};
+
+/*
+ * V4L2 subdev pad ops
+ */
+
+static void s5k4ca_bound_image(u32 *w, u32 *h)
+{
+	int i;
+
+	TRACE_CALL;
+
+	for (i = 0; i < ARRAY_SIZE(s5k4ca_formats); ++i)
+		if (*w <= s5k4ca_formats[i].width
+		    && *h <= s5k4ca_formats[i].height)
+			break;
+
+	if (i >= ARRAY_SIZE(s5k4ca_formats))
+		i = ARRAY_SIZE(s5k4ca_formats) - 1;
+
+	*w = s5k4ca_formats[i].width;
+	*h = s5k4ca_formats[i].height;
+}
+
+static int s5k4ca_enum_frame_interval(struct v4l2_subdev *sd,
+			      struct v4l2_subdev_fh *fh,
+			      struct v4l2_subdev_frame_interval_enum *fie)
+{
+	struct s5k4ca_state *state = to_state(sd);
+	const struct s5k4ca_interval *fi;
+	int ret = 0;
+
+	TRACE_CALL;
+
+	if (fie->index > ARRAY_SIZE(s5k4ca_intervals))
+		return -EINVAL;
+
+	s5k4ca_bound_image(&fie->width, &fie->height);
+
+	mutex_lock(&state->lock);
+	fi = &s5k4ca_intervals[fie->index];
+	if (fie->width > fi->size.width || fie->height > fi->size.height)
+		ret = -EINVAL;
+	else
+		fie->interval = fi->interval;
+	mutex_unlock(&state->lock);
+
+	return ret;
+}
+
+static int s5k4ca_enum_mbus_code(struct v4l2_subdev *sd,
+				 struct v4l2_subdev_fh *fh,
+				 struct v4l2_subdev_mbus_code_enum *code)
+{
+	TRACE_CALL;
+
+	if (code->index > 0)
+		return -EINVAL;
+
+	code->code = V4L2_MBUS_FMT_VYUY8_2X8;
+	return 0;
+}
+
+static int s5k4ca_enum_frame_size(struct v4l2_subdev *sd,
+				  struct v4l2_subdev_fh *fh,
+				  struct v4l2_subdev_frame_size_enum *fse)
+{
+	TRACE_CALL;
+
+	if (fse->index >= ARRAY_SIZE(s5k4ca_formats))
+		return -EINVAL;
+
+	fse->code	= V4L2_MBUS_FMT_VYUY8_2X8;
+	fse->min_width	= s5k4ca_formats[fse->index].width;
+	fse->max_width	= s5k4ca_formats[fse->index].width;
+	fse->max_height	= s5k4ca_formats[fse->index].height;
+	fse->min_height	= s5k4ca_formats[fse->index].height;
+
+	return 0;
+}
+
+static void s5k4ca_try_format(struct s5k4ca_state *state,
+						struct v4l2_mbus_framefmt *mf)
+{
+	TRACE_CALL;
+
+	s5k4ca_bound_image(&mf->width, &mf->height);
+
+	mf->colorspace	= V4L2_COLORSPACE_JPEG;
+	mf->code	= V4L2_MBUS_FMT_VYUY8_2X8;
+	mf->field	= V4L2_FIELD_NONE;
+}
+
+static int s5k4ca_get_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
+			  struct v4l2_subdev_format *fmt)
+{
+	struct s5k4ca_state *s5k4ca = to_state(sd);
+	struct v4l2_mbus_framefmt *mf;
+
+	TRACE_CALL;
+
+	memset(fmt->reserved, 0, sizeof(fmt->reserved));
+
+	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY) {
+		mf = v4l2_subdev_get_try_format(fh, 0);
+		fmt->format = *mf;
+		return 0;
+	}
+
+	mutex_lock(&s5k4ca->lock);
+	fmt->format = s5k4ca->preset.mbus_fmt;
+	mutex_unlock(&s5k4ca->lock);
+
+	return 0;
+}
+
+static int s5k4ca_set_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
+			  struct v4l2_subdev_format *fmt)
+{
+	struct s5k4ca_state *s5k4ca = to_state(sd);
+	struct s5k4ca_preset *preset = &s5k4ca->preset;
+	struct v4l2_mbus_framefmt *mf;
+	int ret = 0;
+
+	TRACE_CALL;
+
+	mutex_lock(&s5k4ca->lock);
+	s5k4ca_try_format(s5k4ca, &fmt->format);
+
+	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY) {
+		mf = v4l2_subdev_get_try_format(fh, fmt->pad);
+	} else {
+		if (s5k4ca->streaming) {
+			ret = -EBUSY;
+		} else {
+			mf = &preset->mbus_fmt;
+			s5k4ca->apply_cfg = 1;
+		}
+	}
+
+	if (ret == 0)
+		*mf = fmt->format;
+
+	mutex_unlock(&s5k4ca->lock);
+
+	return ret;
+}
+
+static const struct v4l2_subdev_pad_ops s5k4ca_pad_ops = {
+	.enum_mbus_code		= s5k4ca_enum_mbus_code,
+	.enum_frame_size	= s5k4ca_enum_frame_size,
+	.enum_frame_interval	= s5k4ca_enum_frame_interval,
+	.get_fmt		= s5k4ca_get_fmt,
+	.set_fmt		= s5k4ca_set_fmt,
+};
+
+/*
+ * V4L2 subdev core ops
+ */
 
 static int s5k4ca_s_power(struct v4l2_subdev *sd, int on)
 {
@@ -1022,15 +1109,18 @@ static int s5k4ca_s_power(struct v4l2_subdev *sd, int on)
 
 	TRACE_CALL;
 
+	mutex_lock(&state->lock);
+
 	if (!!on == state->powered)
-		return 0;
+		goto unlock;
 
 	if (!on) {
+		state->streaming = 0;
 		state->powered = 0;
 		if (state->pdata->set_power)
 			state->pdata->set_power(0);
-		return 0;
-	};
+		goto unlock;
+	}
 
 	v4l_info(state->client, "%s: camera initialization start\n", __func__);
 
@@ -1041,40 +1131,166 @@ static int s5k4ca_s_power(struct v4l2_subdev *sd, int on)
 
 	ret = s5k4ca_write_regs(state, s5k4ca_init, ARRAY_SIZE(s5k4ca_init));
 	if (ret < 0)
-		goto err;
-
-	ret = s5k4ca_write_regs(state, s5k4ca_preview,
-						ARRAY_SIZE(s5k4ca_preview));
-	if (ret < 0)
-		goto err;
+		goto unlock;
 
 	TRACE_CALL;
 
 	state->powered = 1;
-	return 0;
 
-err:
-	v4l_err(state->client, "Sensor initialization failed.\n");
+	ret = v4l2_ctrl_handler_setup(sd->ctrl_handler);
+
+unlock:
+	mutex_unlock(&state->lock);
 	return ret;
 }
 
+static int s5k4ca_log_status(struct v4l2_subdev *sd)
+{
+	TRACE_CALL;
+	v4l2_ctrl_handler_log_status(sd->ctrl_handler, sd->name);
+	return 0;
+}
+
 static const struct v4l2_subdev_core_ops s5k4ca_core_ops = {
-	.s_power = s5k4ca_s_power,
-	.g_ctrl = s5k4ca_g_ctrl,
-	.s_ctrl = s5k4ca_s_ctrl,
+	.s_power		= s5k4ca_s_power,
+	.log_status		= s5k4ca_log_status,
 };
 
+/*
+ * V4L2 subdev video ops
+ */
+
+static int s5k4ca_apply_cfg(struct s5k4ca_state *state)
+{
+	struct v4l2_mbus_framefmt *fmt = &state->preset.mbus_fmt;
+	int ret;
+	int i;
+
+	TRACE_CALL;
+
+	for (i = 0; i < ARRAY_SIZE(s5k4ca_formats); ++i)
+		if (fmt->width <= s5k4ca_formats[i].width
+		    && fmt->height <= s5k4ca_formats[i].height)
+			break;
+
+	if (i >= ARRAY_SIZE(s5k4ca_formats))
+		return -EINVAL;
+
+	ret = s5k4ca_write_regs(state, s5k4ca_formats[i].table,
+						s5k4ca_formats[i].table_length);
+	if (ret < 0)
+		return ret;
+
+	state->apply_cfg = 0;
+	msleep(300);
+	return 0;
+}
+
+static int s5k4ca_stream(struct s5k4ca_state *s5k4ca, int enable)
+{
+	int ret = 0;
+
+	TRACE_CALL;
+
+	if (enable)
+		ret = s5k4ca_write_regs(s5k4ca, s5k4ca_preview_enable,
+					ARRAY_SIZE(s5k4ca_preview_enable));
+	else
+		ret = s5k4ca_write_regs(s5k4ca, s5k4ca_preview_disable,
+					ARRAY_SIZE(s5k4ca_preview_disable));
+
+	if (ret < 0)
+		return ret;
+
+	s5k4ca->streaming = enable;
+	return 0;
+}
+
+static int s5k4ca_s_stream(struct v4l2_subdev *sd, int on)
+{
+	struct s5k4ca_state *s5k4ca = to_state(sd);
+	int ret = 0;
+
+	TRACE_CALL;
+
+	mutex_lock(&s5k4ca->lock);
+
+	if (s5k4ca->streaming == !on) {
+		if (!ret && s5k4ca->apply_cfg)
+			ret = s5k4ca_apply_cfg(s5k4ca);
+		if (!ret)
+			ret = s5k4ca_stream(s5k4ca, !!on);
+	}
+	mutex_unlock(&s5k4ca->lock);
+
+	return ret;
+}
+
 static const struct v4l2_subdev_video_ops s5k4ca_video_ops = {
-	.s_crystal_freq = s5k4ca_s_crystal_freq,
-	.enum_framesizes = s5k4ca_enum_framesizes,
-	.enum_frameintervals = s5k4ca_enum_frameintervals,
-	.g_parm = s5k4ca_g_parm,
-	.s_parm = s5k4ca_s_parm,
-	.s_mbus_fmt = s5k4ca_s_mbus_fmt,
+	.s_stream		= s5k4ca_s_stream,
 };
+
+/*
+ * V4L2 subdev internal ops
+ */
+
+static int s5k4ca_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+{
+	struct v4l2_mbus_framefmt *format = v4l2_subdev_get_try_format(fh, 0);
+	struct v4l2_rect *crop = v4l2_subdev_get_try_crop(fh, 0);
+
+	TRACE_CALL;
+
+	format->colorspace = V4L2_COLORSPACE_JPEG;
+	format->code = V4L2_MBUS_FMT_VYUY8_2X8;
+	format->width = S5K4CA_WIN_WIDTH_MAX;
+	format->height = S5K4CA_WIN_HEIGHT_MAX;
+	format->field = V4L2_FIELD_NONE;
+
+	crop->width = S5K4CA_WIN_WIDTH_MAX;
+	crop->height = S5K4CA_WIN_HEIGHT_MAX;
+	crop->left = 0;
+	crop->top = 0;
+
+	return 0;
+}
+
+static const struct v4l2_subdev_internal_ops s5k4ca_subdev_internal_ops = {
+	.open = s5k4ca_open,
+};
+
+/*
+ * V4L2 I2C driver
+ */
+
+static int s5k4ca_initialize_ctrls(struct s5k4ca_state *state)
+{
+	const struct v4l2_ctrl_ops *ops = &s5k4ca_ctrl_ops;
+	struct s5k4ca_ctrls *ctrls = &state->ctrls;
+	struct v4l2_ctrl_handler *hdl = &ctrls->handler;
+	int ret;
+
+	TRACE_CALL;
+
+	ret = v4l2_ctrl_handler_init(hdl, 16);
+	if (ret)
+		return ret;
+
+	/* TODO: Setup controls here */
+
+	if (hdl->error) {
+		ret = hdl->error;
+		v4l2_ctrl_handler_free(hdl);
+		return ret;
+	}
+
+	state->sd.ctrl_handler = hdl;
+	return 0;
+}
 
 static const struct v4l2_subdev_ops s5k4ca_ops = {
 	.core = &s5k4ca_core_ops,
+	.pad = &s5k4ca_pad_ops,
 	.video = &s5k4ca_video_ops,
 };
 
@@ -1084,6 +1300,7 @@ static int s5k4ca_probe(struct i2c_client *client,
 	struct s5k4ca_platform_data *pdata;
 	struct s5k4ca_state *state;
 	struct v4l2_subdev *sd;
+	int ret;
 
 	TRACE_CALL;
 
@@ -1094,35 +1311,42 @@ static int s5k4ca_probe(struct i2c_client *client,
 	}
 
 	state = kzalloc(sizeof(struct s5k4ca_state), GFP_KERNEL);
-	if (state == NULL)
+	if (!state)
 		return -ENOMEM;
+
+	mutex_init(&state->lock);
 
 	state->client = client;
 	state->pdata = pdata;
-	state->scene_mode = -1;
+
 	sd = &state->sd;
 	strcpy(sd->name, S5K4CA_DRIVER_NAME);
 
-	if (pdata->default_width && pdata->default_height) {
-		state->pix.width = pdata->default_width;
-		state->pix.height = pdata->default_height;
-	}
-
-	if (!pdata->pixelformat)
-		state->pix.pixelformat = V4L2_PIX_FMT_VYUY;
-	else
-		state->pix.pixelformat = pdata->pixelformat;
-
-	if (!pdata->freq)
-		state->freq = 24000000;	/* 24MHz default */
-	else
-		state->freq = pdata->freq;
-
 	v4l2_i2c_subdev_init(sd, client, &s5k4ca_ops);
+
+	sd->internal_ops = &s5k4ca_subdev_internal_ops;
+	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
+
+	state->pad.flags = MEDIA_PAD_FL_SOURCE;
+	sd->entity.type = MEDIA_ENT_T_V4L2_SUBDEV_SENSOR;
+	ret = media_entity_init(&sd->entity, 1, &state->pad, 0);
+	if (ret)
+		goto err_free_mem;
+
+	ret = s5k4ca_initialize_ctrls(state);
+	if (ret)
+		goto err_media_entity_cleanup;
 
 	dev_info(&client->dev, "s5k4ca has been probed\n");
 
 	return 0;
+
+err_media_entity_cleanup:
+	media_entity_cleanup(&sd->entity);
+err_free_mem:
+	kfree(state);
+
+	return ret;
 }
 
 static int s5k4ca_remove(struct i2c_client *client)
@@ -1132,6 +1356,8 @@ static int s5k4ca_remove(struct i2c_client *client)
 	TRACE_CALL;
 
 	v4l2_device_unregister_subdev(sd);
+	v4l2_ctrl_handler_free(sd->ctrl_handler);
+	media_entity_cleanup(&sd->entity);
 	kfree(to_state(sd));
 
 	return 0;
