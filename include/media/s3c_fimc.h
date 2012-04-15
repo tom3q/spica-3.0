@@ -54,4 +54,13 @@ struct s3c_platform_fimc {
 	struct s3c_fimc_isp_info *isp_info;
 	int num_clients;
 };
+
+/*
+ * v4l2_device notification id. This is only for internal use in the kernel.
+ * Sensor subdevs should issue S3C_FIMC_TX_END_NOTIFY notification in single
+ * frame capture mode when there is only one VSYNC pulse issued by the sensor
+ * at begining of the frame transmission.
+ */
+#define S3C_FIMC_TX_END_NOTIFY _IO('e', 0)
+
 #endif /* S3C_FIMC_H_ */
