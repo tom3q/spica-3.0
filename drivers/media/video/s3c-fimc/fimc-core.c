@@ -989,12 +989,11 @@ static int fimc_try_fmt_mplane(struct fimc_ctx *ctx, struct v4l2_format *f)
 		mod_x = 6; /* 64 x 32 pixels tile */
 		mod_y = 5;
 	} else {
-		if (fimc->id == 1 && variant->pix_hoff)
+		if (variant->min_vsize_align == 1)
 			mod_y = fimc_fmt_is_rgb(fmt->color) ? 0 : 1;
 		else
-			mod_y = mod_x;
+			mod_y = ffs(variant->min_vsize_align) - 1;
 	}
-	dbg("mod_x: %d, mod_y: %d, max_w: %d", mod_x, mod_y, max_w);
 
 	v4l_bound_align_image(&pix->width, 16, max_w, mod_x,
 		&pix->height, 8, variant->pix_limit->scaler_dis_w, mod_y, 0);
@@ -1177,10 +1176,10 @@ static int fimc_m2m_try_crop(struct fimc_ctx *ctx, struct v4l2_crop *cr)
 		fimc->variant->min_inp_pixsize : fimc->variant->min_out_pixsize;
 
 	/* Get pixel alignment constraints. */
-	if (fimc->id == 1 && fimc->variant->pix_hoff)
+	if (fimc->variant->min_vsize_align == 1)
 		halign = fimc_fmt_is_rgb(f->fmt->color) ? 0 : 1;
 	else
-		halign = ffs(min_size) - 1;
+		halign = ffs(fimc->variant->min_vsize_align) - 1;
 
 	for (i = 0; i < f->fmt->colplanes; i++)
 		depth += f->fmt->depth[i];
@@ -1758,6 +1757,7 @@ static struct samsung_fimc_variant fimc_variant_s3c64xx = {
 	.min_inp_pixsize = 16,
 	.min_out_pixsize = 16,
 	.hor_offs_align	 = 8,
+	.min_vsize_align = 16,
 	.pix_limit	 = &s3c_pix_limit[0],
 };
 
