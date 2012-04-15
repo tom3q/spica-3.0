@@ -267,7 +267,14 @@ static void fimc_hw_set_scaler(struct fimc_ctx *ctx)
 	struct fimc_scaler *sc = &ctx->scaler;
 	struct fimc_frame *src_frame = &ctx->s_frame;
 	struct fimc_frame *dst_frame = &ctx->d_frame;
-	u32 cfg = 0;
+
+	u32 cfg = readl(dev->regs + S3C_CISCCTRL);
+
+	cfg &= ~(S3C_CISCCTRL_CSCR2Y_WIDE | S3C_CISCCTRL_CSCY2R_WIDE |
+		 S3C_CISCCTRL_SCALEUP_H | S3C_CISCCTRL_SCALEUP_V |
+		 S3C_CISCCTRL_SCALERBYPASS | S3C_CISCCTRL_ONE2ONE |
+		 S3C_CISCCTRL_INRGB_FMT_MASK | S3C_CISCCTRL_OUTRGB_FMT_MASK |
+		 S3C_CISCCTRL_INTERLACE | S3C_CISCCTRL_RGB_EXT);
 
 	if (!(ctx->flags & FIMC_COLOR_RANGE_NARROW))
 		cfg |= (S3C_CISCCTRL_CSCR2Y_WIDE | S3C_CISCCTRL_CSCY2R_WIDE);
