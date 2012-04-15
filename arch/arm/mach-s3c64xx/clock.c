@@ -972,7 +972,7 @@ static struct clksrc_clk clksrcs[] = {
 		.disable	= 1,
 	}, {
 		.clk	= {
-			.name		= "camera",
+			.name		= "sclk_cam0",
 			.id		= -1,
 			.ctrlbit        = S3C_CLKCON_SCLK_CAM,
 			.enable		= s3c64xx_sclk_ctrl,

@@ -32,6 +32,7 @@
 #include <media/videobuf2-dma-contig.h>
 
 #include "fimc-core.h"
+#include "fimc-mdevice.h"
 
 static char *fimc_clocks[MAX_FIMC_CLOCKS] = {
 	"fimc", "camif"
@@ -1787,6 +1788,7 @@ static struct fimc_pix_limit s3c_pix_limit[4] = {
 };
 
 static struct samsung_fimc_variant fimc_variant_s3c64xx = {
+	.has_cam_if	 = 1,
 	.min_inp_pixsize = 16,
 	.min_out_pixsize = 16,
 	.hor_offs_align	 = 8,
@@ -1803,7 +1805,7 @@ static struct samsung_fimc_driverdata fimc_drvdata_s3c64xx = {
 
 static struct platform_device_id fimc_driver_ids[] = {
 	{
-		.name		= "s3c64xx-fimc",
+		.name		= "s3c-fimc",
 		.driver_data	= (unsigned long)&fimc_drvdata_s3c64xx,
 	},
 	{},
@@ -1820,30 +1822,18 @@ static struct platform_driver fimc_driver = {
 	.remove		= __devexit_p(fimc_remove),
 	.id_table	= fimc_driver_ids,
 	.driver = {
-		.name	= MODULE_NAME,
+		.name	= FIMC_MODULE_NAME,
 		.owner	= THIS_MODULE,
 		.pm     = &fimc_pm_ops,
 	}
 };
 
-static int __init fimc_init(void)
+int __init fimc_register_driver(void)
 {
-	int ret = platform_driver_register(&fimc_driver);
-	if (ret)
-		err("platform_driver_register failed: %d\n", ret);
-	return ret;
+	return platform_driver_probe(&fimc_driver, fimc_probe);
 }
 
-static void __exit fimc_exit(void)
+void __exit fimc_unregister_driver(void)
 {
 	platform_driver_unregister(&fimc_driver);
 }
-
-module_init(fimc_init);
-module_exit(fimc_exit);
-
-MODULE_AUTHOR("Sylwester Nawrocki <s.nawrocki@samsung.com>");
-MODULE_AUTHOR("Tomasz Figa <tomasz.figa at gmail.com>");
-MODULE_DESCRIPTION("S3C64xx FIMC camera host interface/video postprocessor driver");
-MODULE_LICENSE("GPL");
-MODULE_VERSION("1.0.1");

@@ -33,6 +33,7 @@ struct i2c_board_info;
  * @bus_type: determines bus type, MIPI, ITU-R BT.601 etc.
  * @i2c_bus_num: i2c control bus id the sensor is attached to
  * @flags: flags defining bus signals polarity inversion (High by default)
+ * @clk_id: index of the SoC peripheral clock for sensors
  */
 struct s3c_fimc_isp_info {
 	struct i2c_board_info *board_info;
@@ -40,6 +41,7 @@ struct s3c_fimc_isp_info {
 	enum cam_bus_type bus_type;
 	u16 i2c_bus_num;
 	u16 flags;
+	u8 clk_id;
 };
 
 /**
