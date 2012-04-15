@@ -183,7 +183,7 @@ int fimc_pipeline_s_stream(struct fimc_dev *fimc, int on)
 
 	if (!on)
 		ret = v4l2_subdev_call(p->sensor, video, s_stream, on);
-	if (ret && ret != -ENOIOCTLCMD)
+	if (ret < 0 && ret != -ENOIOCTLCMD)
 		return ret;
 	if (on)
 		ret = v4l2_subdev_call(p->sensor, video, s_stream, on);
