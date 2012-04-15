@@ -624,8 +624,8 @@ static void fimc_job_abort(void *priv)
 }
 
 static int fimc_queue_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
-			   unsigned int *num_buffers, unsigned int *num_planes,
-			   unsigned int sizes[], void *alloc_ctxs[])
+			    unsigned int *num_buffers, unsigned int *num_planes,
+			    unsigned int sizes[], void *allocators[])
 {
 	struct fimc_ctx *ctx = vb2_get_drv_priv(vq);
 	struct fimc_frame *f;
@@ -644,7 +644,7 @@ static int fimc_queue_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
 	*num_planes = f->fmt->memplanes;
 	for (i = 0; i < f->fmt->memplanes; i++) {
 		sizes[i] = (f->f_width * f->f_height * f->fmt->depth[i]) / 8;
-		alloc_ctxs[i] = ctx->fimc_dev->alloc_ctx;
+		allocators[i] = ctx->fimc_dev->alloc_ctx;
 	}
 	return 0;
 }
