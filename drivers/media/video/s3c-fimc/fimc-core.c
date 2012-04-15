@@ -1566,7 +1566,6 @@ static int fimc_probe(struct platform_device *pdev)
 	pdata = pdev->dev.platform_data;
 	fimc->pdata = pdata;
 
-	set_bit(ST_LPM, &fimc->state);
 
 	init_waitqueue_head(&fimc->irq_queue);
 	spin_lock_init(&fimc->slock);
@@ -1727,7 +1726,6 @@ static int __devexit fimc_remove(struct platform_device *pdev)
 
 	pm_runtime_get_sync(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
-	fimc_runtime_suspend(&pdev->dev);
 	pm_runtime_set_suspended(&pdev->dev);
 	pm_runtime_put(&pdev->dev);
 
