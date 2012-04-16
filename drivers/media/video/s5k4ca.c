@@ -69,6 +69,7 @@ struct s5k4ca_format {
 	unsigned int height;
 	struct s5k4ca_request *table;
 	unsigned int table_length;
+	unsigned int preview;
 };
 
 struct s5k4ca_state {
@@ -105,12 +106,16 @@ struct s5k4ca_state {
 	u8 burst_buffer[2500];
 };
 
+#define S5K4CA_FORMAT_PREVIEW(w, h, table) \
+	{ (w), (h), (table), ARRAY_SIZE((table)), 1 }
 #define S5K4CA_FORMAT(w, h, table) \
-	{ (w), (h), (table), ARRAY_SIZE((table)) }
+	{ (w), (h), (table), ARRAY_SIZE((table)), 0 }
 
 static struct s5k4ca_format s5k4ca_formats[] = {
-	S5K4CA_FORMAT( 640,  480, s5k4ca_res_vga),
-	S5K4CA_FORMAT(1024,  768, s5k4ca_res_xga),
+	/* Formats supported by both preview and capture */
+	S5K4CA_FORMAT_PREVIEW( 640,  480, s5k4ca_res_vga),
+	S5K4CA_FORMAT_PREVIEW(1024,  768, s5k4ca_res_xga),
+	/* Formats supported only in capture mode */
 	S5K4CA_FORMAT(1280,  960, s5k4ca_res_sxga),
 	S5K4CA_FORMAT(1600, 1200, s5k4ca_res_uxga),
 	S5K4CA_FORMAT(2048, 1536, s5k4ca_res_qxga),
@@ -948,16 +953,21 @@ static const struct v4l2_ctrl_ops s5k4ca_ctrl_ops = {
  * V4L2 subdev pad ops
  */
 
-static void s5k4ca_bound_image(u32 *w, u32 *h)
+static void s5k4ca_bound_image(struct s5k4ca_state *state, u32 *w, u32 *h)
 {
 	int i;
 
 	TRACE_CALL;
 
-	for (i = 0; i < ARRAY_SIZE(s5k4ca_formats); ++i)
+	for (i = 0; i < ARRAY_SIZE(s5k4ca_formats); ++i) {
+		if (!((!state->capture) & s5k4ca_formats[i].preview)) {
+			--i;
+			break;
+		}
 		if (*w <= s5k4ca_formats[i].width
 		    && *h <= s5k4ca_formats[i].height)
 			break;
+	}
 
 	if (i >= ARRAY_SIZE(s5k4ca_formats))
 		i = ARRAY_SIZE(s5k4ca_formats) - 1;
@@ -979,7 +989,7 @@ static int s5k4ca_enum_frame_interval(struct v4l2_subdev *sd,
 	if (fie->index > ARRAY_SIZE(s5k4ca_intervals))
 		return -EINVAL;
 
-	s5k4ca_bound_image(&fie->width, &fie->height);
+	s5k4ca_bound_image(state, &fie->width, &fie->height);
 
 	mutex_lock(&state->lock);
 	fi = &s5k4ca_intervals[fie->index];
@@ -1009,9 +1019,14 @@ static int s5k4ca_enum_frame_size(struct v4l2_subdev *sd,
 				  struct v4l2_subdev_fh *fh,
 				  struct v4l2_subdev_frame_size_enum *fse)
 {
+	struct s5k4ca_state *state = to_state(sd);
+
 	TRACE_CALL;
 
 	if (fse->index >= ARRAY_SIZE(s5k4ca_formats))
+		return -EINVAL;
+
+	if (!((!state->capture) & s5k4ca_formats[fse->index].preview))
 		return -EINVAL;
 
 	fse->code	= V4L2_MBUS_FMT_VYUY8_2X8;
@@ -1028,7 +1043,7 @@ static void s5k4ca_try_format(struct s5k4ca_state *state,
 {
 	TRACE_CALL;
 
-	s5k4ca_bound_image(&mf->width, &mf->height);
+	s5k4ca_bound_image(state, &mf->width, &mf->height);
 
 	mf->colorspace	= V4L2_COLORSPACE_JPEG;
 	mf->code	= V4L2_MBUS_FMT_VYUY8_2X8;
