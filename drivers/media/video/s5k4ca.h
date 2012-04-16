@@ -1604,13 +1604,13 @@ static struct s5k4ca_request s5k4ca_init[] = {
 	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
 	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange  */
-	S5K4CA_DATA(0x0001),
+	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02B2),	/* REG_TC_GP_EnablePreview	*/
-	S5K4CA_DATA(0x0001),
+	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02B4),	/* REG_TC_GP_EnablePreviewChanged  */
 	S5K4CA_DATA(0x0001),
 
@@ -3398,13 +3398,13 @@ static struct s5k4ca_request s5k4ca_init[] = {
 	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
 	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange  */
-	S5K4CA_DATA(0x0001),
+	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02B2),	/* REG_TC_GP_EnablePreview	*/
-	S5K4CA_DATA(0x0001),
+	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02B4),	/* REG_TC_GP_EnablePreviewChanged  */
 	S5K4CA_DATA(0x0001),
 
@@ -3856,12 +3856,10 @@ static struct s5k4ca_request s5k4ca_iso_auto[] = {
 	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
 	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange  */
-	S5K4CA_DATA(0x0001),
+	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02B2),	/* REG_TC_GP_EnablePreview */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02B4),	/* REG_TC_GP_EnablePreviewChanged  */
 	S5K4CA_DATA(0x0001),
@@ -3908,12 +3906,10 @@ static struct s5k4ca_request s5k4ca_iso100[] = {
 	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
 	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange  */
-	S5K4CA_DATA(0x0001),
+	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02B2),	/* REG_TC_GP_EnablePreview */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02B4),	/* REG_TC_GP_EnablePreviewChanged  */
 	S5K4CA_DATA(0x0001),
@@ -3947,12 +3943,10 @@ static struct s5k4ca_request s5k4ca_iso200[] = {
 	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
 	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange  */
-	S5K4CA_DATA(0x0001),
+	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02B2),	/* REG_TC_GP_EnablePreview */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02B4),	/* REG_TC_GP_EnablePreviewChanged  */
 	S5K4CA_DATA(0x0001),
@@ -3986,12 +3980,10 @@ static struct s5k4ca_request s5k4ca_iso400[] = {
 	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
 	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange  */
-	S5K4CA_DATA(0x0001),
+	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02B2),	/* REG_TC_GP_EnablePreview */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02B4),	/* REG_TC_GP_EnablePreviewChanged  */
 	S5K4CA_DATA(0x0001),
@@ -4099,13 +4091,12 @@ static struct s5k4ca_request s5k4ca_scene_auto[] = {
 	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
 	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange  */
-	S5K4CA_DATA(0x0001),
+	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
 	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02B2),
-	S5K4CA_DATA(0x0001),	/* REG_TC_GP_EnablePreview  */
+	S5K4CA_REG(0x02B4),
 	S5K4CA_DATA(0x0001),	/* REG_TC_GP_EnablePreviewChanged */
 	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
 	S5K4CA_DATA(0x0001),
@@ -4298,14 +4289,12 @@ static struct s5k4ca_request s5k4ca_scene_night[] = {
 	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
 	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange */
-	S5K4CA_DATA(0x0001),
+	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
 	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02B2),	/* REG_TC_GP_EnablePreview */
-	S5K4CA_DATA(0x0001),
-/*	S5K4CA_REG(0x02B4),	//REG_TC_GP_EnablePreviewChanged */
+	S5K4CA_REG(0x02B4),	/* REG_TC_GP_EnablePreviewChanged */
 	S5K4CA_DATA(0x0001),
 
 	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
@@ -4338,14 +4327,12 @@ static struct s5k4ca_request s5k4ca_scene_sport[] = {
 	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
 	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange  */
-	S5K4CA_DATA(0x0001),
+	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
 	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02B2),	/* REG_TC_GP_EnablePreview */
-	S5K4CA_DATA(0x0001),
-/*	S5K4CA_REG(0x02B4),	//REG_TC_GP_EnablePreviewChanged  */
+	S5K4CA_REG(0x02B4),	/* REG_TC_GP_EnablePreviewChanged */
 	S5K4CA_DATA(0x0001),
 
 	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
@@ -4532,13 +4519,12 @@ static struct s5k4ca_request s5k4ca_scene_fireworks[] = {
 	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
 	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange */
-	S5K4CA_DATA(0x0001),
+	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
 	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02B2),	/* REG_TC_GP_EnablePreview */
-	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02B4),
 	S5K4CA_DATA(0x0001),	/* REG_TC_GP_EnablePreviewChanged */
 
 	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
