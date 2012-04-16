@@ -1121,6 +1121,7 @@ static int s5k4ca_s_power(struct v4l2_subdev *sd, int on)
 {
 	struct s5k4ca_state *state = to_state(sd);
 	int ret = 0;
+	u16 stat = 0;
 
 	TRACE_CALL;
 
@@ -1149,6 +1150,12 @@ static int s5k4ca_s_power(struct v4l2_subdev *sd, int on)
 		goto unlock;
 
 	TRACE_CALL;
+
+	ret = s5k4ca_sensor_read(state, 0x02e8, &stat);
+	if (ret < 0)
+		goto unlock;
+
+	v4l2_info(sd, "Camera preview status = %d\n", stat);
 
 	state->powered = 1;
 
@@ -1204,6 +1211,7 @@ static int s5k4ca_apply_cfg(struct s5k4ca_state *state)
 static int s5k4ca_stream(struct s5k4ca_state *s5k4ca, int enable)
 {
 	int ret = 0;
+	u16 stat = 0;
 
 	TRACE_CALL;
 
@@ -1216,6 +1224,17 @@ static int s5k4ca_stream(struct s5k4ca_state *s5k4ca, int enable)
 
 	if (ret < 0)
 		return ret;
+
+	if (enable) {
+		ret = s5k4ca_sensor_read(s5k4ca, 0x02e8, &stat);
+		if (ret < 0)
+			return ret;
+		if (stat) {
+			v4l2_err(&s5k4ca->sd,
+				"Failed to enable streaming (stat=%d)\n", stat);
+			return -EFAULT;
+		}
+	}
 
 	s5k4ca->streaming = enable;
 	return 0;
