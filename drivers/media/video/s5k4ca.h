@@ -3444,43 +3444,17 @@ static struct s5k4ca_request s5k4ca_init[] = {
 static struct s5k4ca_request s5k4ca_preview_enable[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
-
-	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
-	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange  */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
-	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02B2),	/* REG_TC_GP_EnablePreview	*/
 	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02B4),	/* REG_TC_GP_EnablePreviewChanged  */
-	S5K4CA_DATA(0x0001),
-
-	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
-	S5K4CA_DATA(0x0001),
+	S5K4CA_DATA(0x0001),	/* REG_TC_GP_EnablePreviewChanged  */
 };
 
 static struct s5k4ca_request s5k4ca_preview_disable[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
-
-	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
-	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange  */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
-	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02B2),	/* REG_TC_GP_EnablePreview	*/
 	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02B4),	/* REG_TC_GP_EnablePreviewChanged  */
-	S5K4CA_DATA(0x0001),
-
-	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
-	S5K4CA_DATA(0x0001),
+	S5K4CA_DATA(0x0001),	/* REG_TC_GP_EnablePreviewChanged  */
 };
 
 /*
@@ -3490,35 +3464,17 @@ static struct s5k4ca_request s5k4ca_preview_disable[] = {
 static struct s5k4ca_request s5k4ca_snapshot_enable[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
-
-	S5K4CA_REG(0x02EA),	/* REG_TC_GP_ActiveCapConfig  */
-	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync  */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02EC),	/* REG_TC_GP_CapConfigChanged  */
-	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02B6),	/* REG_TC_GP_EnableCapture  */
 	S5K4CA_DATA(0x0001),
 	S5K4CA_DATA(0x0001),	/* REG_TC_GP_EnableCaptureChanged */
-	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
-	S5K4CA_DATA(0x0001),
 };
 
 static struct s5k4ca_request s5k4ca_snapshot_disable[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
-
-	S5K4CA_REG(0x02EA),	/* REG_TC_GP_ActiveCapConfig  */
-	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync  */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02EC),	/* REG_TC_GP_CapConfigChanged  */
-	S5K4CA_DATA(0x0001),
 	S5K4CA_REG(0x02B6),	/* REG_TC_GP_EnableCapture  */
 	S5K4CA_DATA(0x0000),
 	S5K4CA_DATA(0x0001),	/* REG_TC_GP_EnableCaptureChanged */
-	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
-	S5K4CA_DATA(0x0001),
 };
 
 /*
