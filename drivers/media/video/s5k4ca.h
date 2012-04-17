@@ -3533,14 +3533,6 @@ static struct s5k4ca_request s5k4ca_effect_sketch[] = {
  * White balance
  */
 
-static struct s5k4ca_request s5k4ca_wb_auto[] = {
-	/* 1201 SEMCO */
-	S5K4CA_BANK(0xD000),
-	S5K4CA_PAGE(0x7000),
-	S5K4CA_REG(0x0578),
-	S5K4CA_DATA(0x007F),
-};
-
 static struct s5k4ca_request s5k4ca_wb_sunny[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
@@ -3948,6 +3940,7 @@ static struct s5k4ca_request s5k4ca_iso400[] = {
 	S5K4CA_DATA(0x0001),
 };
 
+#if 0
 /*
  * Scene modes
  */
@@ -4504,6 +4497,7 @@ static struct s5k4ca_request s5k4ca_scene_beach[] = {
 	S5K4CA_DATA(0x0000), /* Sharpness */
 	S5K4CA_DATA(0x0000), /* Glamour */
 };
+#endif
 
 /*
  * Photometry
