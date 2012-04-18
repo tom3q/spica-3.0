@@ -1212,6 +1212,9 @@ static int s5k4ca_apply_cfg(struct s5k4ca_state *state)
 	if (i >= ARRAY_SIZE(s5k4ca_formats))
 		return -EINVAL;
 
+	if (s5k4ca_formats[i].preview & !state->capture)
+		return -EINVAL;
+
 	ret = s5k4ca_write_regs(state, s5k4ca_formats[i].table,
 						s5k4ca_formats[i].table_length);
 	if (ret < 0)
