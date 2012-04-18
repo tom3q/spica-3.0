@@ -794,6 +794,7 @@ static int s5k4ca_set_focus_mode(struct v4l2_subdev *sd, int mode)
 static int s5k4ca_set_capture(struct v4l2_subdev *sd, int mode)
 {
 	struct s5k4ca_state *state = to_state(sd);
+	u16 stat = 0;
 	int ret;
 
 	TRACE_CALL;
@@ -810,6 +811,17 @@ static int s5k4ca_set_capture(struct v4l2_subdev *sd, int mode)
 
 	if (ret < 0)
 		return ret;
+
+	if (mode) {
+		ret = s5k4ca_sensor_read(state, 0x02ee, &stat);
+		if (ret < 0)
+			return ret;
+		if (stat) {
+			v4l2_err(&state->sd,
+				"Failed to enable capture (stat=%d)\n", stat);
+			return -EFAULT;
+		}
+	}
 
 	state->apply_cfg = 1;
 	state->capture = mode;
