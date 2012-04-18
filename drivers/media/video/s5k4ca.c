@@ -798,6 +798,9 @@ static int s5k4ca_set_capture(struct v4l2_subdev *sd, int mode)
 
 	TRACE_CALL;
 
+	if (state->streaming)
+		return -EBUSY;
+
 	if (mode)
 		ret = s5k4ca_write_regs(state, s5k4ca_snapshot_enable,
 					ARRAY_SIZE(s5k4ca_snapshot_enable));
@@ -808,6 +811,7 @@ static int s5k4ca_set_capture(struct v4l2_subdev *sd, int mode)
 	if (ret < 0)
 		return ret;
 
+	state->apply_cfg = 1;
 	state->capture = mode;
 	return ret;
 }
