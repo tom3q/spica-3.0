@@ -5025,10 +5025,6 @@ static struct s5k4ca_request s5k4ca_res_qxga[] = {
 	S5K4CA_BANK(0xd000),
 	S5K4CA_PAGE(0x7000),
 
-	S5K4CA_REG(0x032A),	/* Normal Preview */
-	S5K4CA_DATA(2048),	/* REG_0TC_PCFG_usWidth */
-	S5K4CA_DATA(1536),	/* REG_0TC_PCFG_usHeight */
-
 	S5K4CA_REG(0x03F4),	/* Normal capture */
 	S5K4CA_DATA(2048),	/* REG_0TC_CCFG_usWidth */
 	S5K4CA_DATA(1536),	/* REG_0TC_CCFG_usHeight */
@@ -5052,10 +5048,6 @@ static struct s5k4ca_request s5k4ca_res_uxga[] = {
 	S5K4CA_BANK(0xd000),
 	S5K4CA_PAGE(0x7000),
 
-	S5K4CA_REG(0x032A),	/* Normal Preview */
-	S5K4CA_DATA(1600),	/* REG_0TC_PCFG_usWidth */
-	S5K4CA_DATA(1200),	/* REG_0TC_PCFG_usHeight */
-
 	S5K4CA_REG(0x03F4),	/* Normal capture */
 	S5K4CA_DATA(1600),	/* REG_0TC_CCFG_usWidth */
 	S5K4CA_DATA(1200),	/* REG_0TC_CCFG_usHeight */
@@ -5078,10 +5070,6 @@ static struct s5k4ca_request s5k4ca_res_uxga[] = {
 static struct s5k4ca_request s5k4ca_res_sxga[] = {
 	S5K4CA_BANK(0xd000),
 	S5K4CA_PAGE(0x7000),
-
-	S5K4CA_REG(0x032A),	/* Normal Preview */
-	S5K4CA_DATA(1280),	/* REG_0TC_PCFG_usWidth */
-	S5K4CA_DATA(960),	/* REG_0TC_PCFG_usHeight */
 
 	S5K4CA_REG(0x03F4),	/* Normal capture */
 	S5K4CA_DATA(1280),	/* REG_0TC_CCFG_usWidth */
