@@ -28,14 +28,8 @@
 
 #include "s5k4ca.h"
 
-#define VIEW_FUNCTION_CALL
-
-#ifdef VIEW_FUNCTION_CALL
 #define TRACE_CALL	\
-	printk("[S5k4CA] function %s line %d executed\n", __func__, __LINE__);
-#else
-#define TRACE_CALL
-#endif
+	pr_debug("[S5k4CA] function %s line %d executed\n", __func__, __LINE__);
 
 #define S5K4CA_WIN_WIDTH_MAX		2048
 #define S5K4CA_WIN_HEIGHT_MAX		1536
