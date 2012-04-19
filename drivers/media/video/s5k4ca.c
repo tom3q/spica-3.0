@@ -966,7 +966,7 @@ static void s5k4ca_bound_image(struct s5k4ca_state *state, u32 *w, u32 *h)
 	TRACE_CALL;
 
 	for (i = 0; i < ARRAY_SIZE(s5k4ca_formats); ++i) {
-		if (!((!state->capture) & s5k4ca_formats[i].preview)) {
+		if (!state->capture && !s5k4ca_formats[i].preview) {
 			--i;
 			break;
 		}
@@ -1032,7 +1032,7 @@ static int s5k4ca_enum_frame_size(struct v4l2_subdev *sd,
 	if (fse->index >= ARRAY_SIZE(s5k4ca_formats))
 		return -EINVAL;
 
-	if (!((!state->capture) & s5k4ca_formats[fse->index].preview))
+	if (!state->capture && !s5k4ca_formats[fse->index].preview)
 		return -EINVAL;
 
 	fse->code	= V4L2_MBUS_FMT_VYUY8_2X8;
@@ -1206,7 +1206,7 @@ static int s5k4ca_apply_cfg(struct s5k4ca_state *state)
 	if (i >= ARRAY_SIZE(s5k4ca_formats))
 		return -EINVAL;
 
-	if (s5k4ca_formats[i].preview & !state->capture)
+	if (!s5k4ca_formats[i].preview && !state->capture)
 		return -EINVAL;
 
 	ret = s5k4ca_write_regs(state, s5k4ca_formats[i].table,
