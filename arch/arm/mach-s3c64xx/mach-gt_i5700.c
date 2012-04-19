@@ -393,9 +393,6 @@ static void spica_s5k4ca_set_power(int on)
 }
 
 static struct s5k4ca_platform_data spica_s5k4ca_pdata = {
-	.default_width	= 640,
-	.default_height	= 480,
-	.freq		= 24000000,
 	.set_power	= spica_s5k4ca_set_power,
 };
 

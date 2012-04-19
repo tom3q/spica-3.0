@@ -15,11 +15,6 @@
 #define _MEDIA_S5K4CA_PLATFORM_H_
 
 struct s5k4ca_platform_data {
-	unsigned int default_width;
-	unsigned int default_height;
-	unsigned int pixelformat;
-	int freq;	/* MCLK in KHz */
-
 	void (*set_power)(int);
 };
 
