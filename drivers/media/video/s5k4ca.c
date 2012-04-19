@@ -47,16 +47,12 @@ struct s5k4ca_ctrls {
 
 	struct v4l2_ctrl *auto_wb;
 	struct v4l2_ctrl *wb_preset;
-
-	struct v4l2_ctrl *auto_focus;
-	struct v4l2_ctrl *focus_absolute;
 };
 
 struct s5k4ca_preset {
 	/* output pixel format and resolution */
 	struct v4l2_mbus_framefmt mbus_fmt;
 	u8 clk_id;
-	u8 index;
 };
 
 struct s5k4ca_interval {
