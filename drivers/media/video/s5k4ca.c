@@ -1153,6 +1153,12 @@ static int s5k4ca_s_power(struct v4l2_subdev *sd, int on)
 
 	v4l2_info(sd, "Camera preview status = %d\n", stat);
 
+	ret = s5k4ca_sensor_read(state, 0x02ee, &stat);
+	if (ret < 0)
+		goto unlock;
+
+	v4l2_info(sd, "Camera capture status = %d\n", stat);
+
 	state->powered = 1;
 
 unlock:
