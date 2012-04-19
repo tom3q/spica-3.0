@@ -15,6 +15,8 @@
  * (at your option) any later version.
  */
 
+#define DEBUG
+
 #include <linux/slab.h>
 #include <linux/i2c.h>
 #include <linux/delay.h>
