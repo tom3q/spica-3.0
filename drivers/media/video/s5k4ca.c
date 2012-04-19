@@ -28,8 +28,6 @@
 
 #include "s5k4ca.h"
 
-#define S5K4CA_DRIVER_NAME	"s5k4ca"
-
 #define VIEW_FUNCTION_CALL
 
 #ifdef VIEW_FUNCTION_CALL
@@ -1478,7 +1476,7 @@ static int s5k4ca_probe(struct i2c_client *client,
 	state->pdata = pdata;
 
 	sd = &state->sd;
-	strcpy(sd->name, S5K4CA_DRIVER_NAME);
+	strcpy(sd->name, "s5k4ca");
 
 	v4l2_i2c_subdev_init(sd, client, &s5k4ca_ops);
 
@@ -1522,14 +1520,14 @@ static int s5k4ca_remove(struct i2c_client *client)
 }
 
 static const struct i2c_device_id s5k4ca_id[] = {
-	{ S5K4CA_DRIVER_NAME, 0 },
+	{ "s5k4ca", 0 },
 	{ },
 };
 MODULE_DEVICE_TABLE(i2c, s5k4ca_id);
 
 static struct i2c_driver s5k4ca_i2c_driver = {
 	.driver = {
-		.name = S5K4CA_DRIVER_NAME,
+		.name = "s5k4ca",
 	},
 	.probe		= s5k4ca_probe,
 	.remove		= s5k4ca_remove,
