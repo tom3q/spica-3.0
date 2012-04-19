@@ -794,38 +794,16 @@ static int s5k4ca_set_focus_mode(struct v4l2_subdev *sd, int mode)
 static int s5k4ca_set_capture(struct v4l2_subdev *sd, int mode)
 {
 	struct s5k4ca_state *state = to_state(sd);
-	u16 stat = 0;
-	int ret;
 
 	TRACE_CALL;
 
 	if (state->streaming)
 		return -EBUSY;
 
-	if (mode)
-		ret = s5k4ca_write_regs(state, s5k4ca_snapshot_enable,
-					ARRAY_SIZE(s5k4ca_snapshot_enable));
-	else
-		ret = s5k4ca_write_regs(state, s5k4ca_snapshot_disable,
-					ARRAY_SIZE(s5k4ca_snapshot_disable));
-
-	if (ret < 0)
-		return ret;
-
-	if (mode) {
-		ret = s5k4ca_sensor_read(state, 0x02ee, &stat);
-		if (ret < 0)
-			return ret;
-		if (stat) {
-			v4l2_err(&state->sd,
-				"Failed to enable capture (stat=%d)\n", stat);
-			return -EFAULT;
-		}
-	}
-
 	state->apply_cfg = 1;
 	state->capture = mode;
-	return ret;
+
+	return 0;
 }
 
 static int s5k4ca_set_auto_focus(struct v4l2_subdev *sd)
@@ -1248,26 +1226,43 @@ static int s5k4ca_stream(struct s5k4ca_state *s5k4ca, int enable)
 
 	TRACE_CALL;
 
-	if (enable)
-		ret = s5k4ca_write_regs(s5k4ca, s5k4ca_preview_enable,
+	if (s5k4ca->capture) {
+		if (enable)
+			ret = s5k4ca_write_regs(s5k4ca, s5k4ca_snapshot_enable,
+					ARRAY_SIZE(s5k4ca_snapshot_enable));
+		else
+			ret = s5k4ca_write_regs(s5k4ca, s5k4ca_snapshot_disable,
+					ARRAY_SIZE(s5k4ca_snapshot_disable));
+	} else {
+		if (enable)
+			ret = s5k4ca_write_regs(s5k4ca, s5k4ca_preview_enable,
 					ARRAY_SIZE(s5k4ca_preview_enable));
-	else
-		ret = s5k4ca_write_regs(s5k4ca, s5k4ca_preview_disable,
+		else
+			ret = s5k4ca_write_regs(s5k4ca, s5k4ca_preview_disable,
 					ARRAY_SIZE(s5k4ca_preview_disable));
+	}
 
 	if (ret < 0)
 		return ret;
 
 	if (enable) {
-		ret = s5k4ca_sensor_read(s5k4ca, 0x02e8, &stat);
+		if (s5k4ca->capture)
+			ret = s5k4ca_sensor_read(s5k4ca, 0x02ee, &stat);
+		else
+			ret = s5k4ca_sensor_read(s5k4ca, 0x02e8, &stat);
 		if (ret < 0)
 			return ret;
 		if (stat) {
 			v4l2_err(&s5k4ca->sd,
-				"Failed to enable streaming (stat=%d)\n", stat);
+				"Failed to enable %s (stat=%d)\n",
+				(s5k4ca->capture) ? "capture" : "preview", stat);
 			return -EFAULT;
 		}
 	}
+
+	v4l2_info(&s5k4ca->sd, "%s %s\n",
+				(s5k4ca->capture) ? "capture" : "preview",
+				(enable) ? "enabled" : "disabled");
 
 	s5k4ca->streaming = enable;
 	return 0;
