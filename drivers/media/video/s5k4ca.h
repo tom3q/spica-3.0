@@ -4914,16 +4914,16 @@ static struct s5k4ca_request s5k4ca_fps_30[] = {
 	S5K4CA_PAGE(0x7000),
 
 	S5K4CA_REG(0x0338),	/* 29.940fps Fixcamcoderpreview */
-	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_usFrTimeType	frame ae enable: 0000h : dynamic	0001h :Fixed	2	70000338 */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_usFrTimeType	frame ae enable: 0000h : dynamic	0001h :Fixed	2	70000338 */
 	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_FrRateQualityType	2	7000033A */
-	S5K4CA_DATA(0x014e),	/* REG_1TC_PCFG_usMaxFrTimeMsecMult10 1104 02bc->029A  */
-	S5K4CA_DATA(0x014e),	/* REG_1TC_PCFG_usMinFrTimeMsecMult10 1104 02bc->029A  */
+	S5K4CA_DATA(0x016f),	/* REG_1TC_PCFG_usMaxFrTimeMsecMult10 1104 02bc->029A  */
+	S5K4CA_DATA(0x012d),	/* REG_1TC_PCFG_usMinFrTimeMsecMult10 1104 02bc->029A  */
 
 	S5K4CA_REG(0x0402),
-	S5K4CA_DATA(0x0001),	/* REG_0TC_CCFG_usFrTimeType	2	70000402 */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_usFrTimeType	2	70000402 */
 	S5K4CA_DATA(0x0001),	/* REG_0TC_CCFG_FrRateQualityType	2	70000404 */
-	S5K4CA_DATA(0x014e),	/* REG_0TC_CCFG_usMaxFrTimeMsecMult10 4fps	2	70000406 */
-	S5K4CA_DATA(0x014e),	/* REG_0TC_CCFG_usMinFrTimeMsecMult10 7.5fps	2	70000408 */
+	S5K4CA_DATA(0x016f),	/* REG_0TC_CCFG_usMaxFrTimeMsecMult10 4fps	2	70000406 */
+	S5K4CA_DATA(0x012d),	/* REG_0TC_CCFG_usMinFrTimeMsecMult10 7.5fps	2	70000408 */
 
 	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
 	S5K4CA_DATA(0x0000),
@@ -4950,16 +4950,16 @@ static struct s5k4ca_request s5k4ca_fps_15[] = {
 	S5K4CA_PAGE(0x7000),
 
 	S5K4CA_REG(0x0338), 	/* 15.015fps Fixcamcoderpreview */
-	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_usFrTimeType	frame ae enable: 0000h : dynamic	0001h :Fixed	2	70000338 */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_usFrTimeType	frame ae enable: 0000h : dynamic	0001h :Fixed	2	70000338 */
 	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_FrRateQualityType	2	7000033A */
-	S5K4CA_DATA(0x029A),	/* REG_1TC_PCFG_usMaxFrTimeMsecMult10 1104 02bc->029A  */
-	S5K4CA_DATA(0x029A),	/* REG_1TC_PCFG_usMinFrTimeMsecMult10 1104 02bc->029A  */
+	S5K4CA_DATA(0x02bb),	/* REG_1TC_PCFG_usMaxFrTimeMsecMult10 1104 02bc->029A  */
+	S5K4CA_DATA(0x0279),	/* REG_1TC_PCFG_usMinFrTimeMsecMult10 1104 02bc->029A  */
 
 	S5K4CA_REG(0x0402),
-	S5K4CA_DATA(0x0001),	/* REG_0TC_CCFG_usFrTimeType	2	70000402 */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_usFrTimeType	2	70000402 */
 	S5K4CA_DATA(0x0001),	/* REG_0TC_CCFG_FrRateQualityType	2	70000404 */
-	S5K4CA_DATA(0x029A),	/* REG_0TC_CCFG_usMaxFrTimeMsecMult10 4fps	2	70000406 */
-	S5K4CA_DATA(0x029A),	/* REG_0TC_CCFG_usMinFrTimeMsecMult10 7.5fps	2	70000408 */
+	S5K4CA_DATA(0x02bb),	/* REG_0TC_CCFG_usMaxFrTimeMsecMult10 4fps	2	70000406 */
+	S5K4CA_DATA(0x0279),	/* REG_0TC_CCFG_usMinFrTimeMsecMult10 7.5fps	2	70000408 */
 
 	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
 	S5K4CA_DATA(0x0000),
@@ -4986,16 +4986,16 @@ static struct s5k4ca_request s5k4ca_fps_7[] = {
 	S5K4CA_PAGE(0x7000),
 
 	S5K4CA_REG(0x0338), 	/* 7.138fps Fixcamcoderpreview */
-	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_usFrTimeType	frame ae enable: 0000h : dynamic	0001h :Fixed	2	70000338 */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_usFrTimeType	frame ae enable: 0000h : dynamic	0001h :Fixed	2	70000338 */
 	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_FrRateQualityType	2	7000033A */
-	S5K4CA_DATA(0x0579),	/* REG_1TC_PCFG_usMaxFrTimeMsecMult10 */
-	S5K4CA_DATA(0x0579),	/* REG_1TC_PCFG_usMinFrTimeMsecMult10 */
+	S5K4CA_DATA(0x059a),	/* REG_1TC_PCFG_usMaxFrTimeMsecMult10 */
+	S5K4CA_DATA(0x0558),	/* REG_1TC_PCFG_usMinFrTimeMsecMult10 */
 
 	S5K4CA_REG(0x0402),
-	S5K4CA_DATA(0x0001),	/* REG_0TC_CCFG_usFrTimeType	2	70000402 */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_usFrTimeType	2	70000402 */
 	S5K4CA_DATA(0x0001),	/* REG_0TC_CCFG_FrRateQualityType	2	70000404 */
-	S5K4CA_DATA(0x0579),	/* REG_0TC_CCFG_usMaxFrTimeMsecMult10 4fps	2	70000406 */
-	S5K4CA_DATA(0x0579),	/* REG_0TC_CCFG_usMinFrTimeMsecMult10 7.5fps	2	70000408 */
+	S5K4CA_DATA(0x059a),	/* REG_0TC_CCFG_usMaxFrTimeMsecMult10 4fps	2	70000406 */
+	S5K4CA_DATA(0x0558),	/* REG_0TC_CCFG_usMinFrTimeMsecMult10 7.5fps	2	70000408 */
 
 	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
 	S5K4CA_DATA(0x0000),
