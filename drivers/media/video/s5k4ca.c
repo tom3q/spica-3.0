@@ -1266,7 +1266,7 @@ static int s5k4ca_s_stream(struct v4l2_subdev *sd, int on)
 	mutex_lock(&s5k4ca->lock);
 
 	if (s5k4ca->streaming == !on) {
-		if (s5k4ca->apply_cfg)
+		if (on && s5k4ca->apply_cfg)
 			ret = s5k4ca_apply_cfg(s5k4ca);
 		if (!ret)
 			ret = s5k4ca_stream(s5k4ca, !!on);
