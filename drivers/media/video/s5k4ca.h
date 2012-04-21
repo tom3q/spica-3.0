@@ -1607,6 +1607,13 @@ static struct s5k4ca_request s5k4ca_init[] = {
 	S5K4CA_DATA(0x0000),	/* REG_TC_GP_EnableCapture  */
 	S5K4CA_DATA(0x0001),	/* REG_TC_GP_EnableCaptureChanged */
 
+	S5K4CA_REG(0x02EA),	/* REG_TC_GP_ActiveCapConfig  */
+	S5K4CA_DATA(0x0000),
+	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x02EC),	/* REG_TC_GP_CapConfigChanged  */
+	S5K4CA_DATA(0x0001),
+
 	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
 	S5K4CA_DATA(0x0000),
 	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange  */
