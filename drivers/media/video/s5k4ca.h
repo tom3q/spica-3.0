@@ -4898,17 +4898,6 @@ static struct s5k4ca_request s5k4ca_fps_auto[] = {
 	S5K4CA_DATA(0x0682),	/* REG_0TC_CCFG_usMaxFrTimeMsecMult10 4fps	2	70000406 */
 	S5K4CA_DATA(0x012d),	/* REG_0TC_CCFG_usMinFrTimeMsecMult10 7.5fps	2	70000408 */
 
-	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
-	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02EA),	/* REG_TC_GP_ActiveCapConfig  */
-	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02EC),	/* REG_TC_GP_CapConfigChanged  */
-	S5K4CA_DATA(0x0001),
-
 	S5K4CA_REG(0x028a),	/* REG_TC_IPRM_InitParamsUpdated  */
 	S5K4CA_DATA(0x0001),
 
@@ -4933,17 +4922,6 @@ static struct s5k4ca_request s5k4ca_fps_30[] = {
 	S5K4CA_DATA(0x0002),	/* REG_0TC_CCFG_FrRateQualityType	2	70000404 */
 	S5K4CA_DATA(0x016f),	/* REG_0TC_CCFG_usMaxFrTimeMsecMult10 4fps	2	70000406 */
 	S5K4CA_DATA(0x012d),	/* REG_0TC_CCFG_usMinFrTimeMsecMult10 7.5fps	2	70000408 */
-
-	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
-	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02EA),	/* REG_TC_GP_ActiveCapConfig  */
-	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02EC),	/* REG_TC_GP_CapConfigChanged  */
-	S5K4CA_DATA(0x0001),
 
 	S5K4CA_REG(0x028a),	/* REG_TC_IPRM_InitParamsUpdated  */
 	S5K4CA_DATA(0x0001),
@@ -4970,17 +4948,6 @@ static struct s5k4ca_request s5k4ca_fps_15[] = {
 	S5K4CA_DATA(0x02bb),	/* REG_0TC_CCFG_usMaxFrTimeMsecMult10 4fps	2	70000406 */
 	S5K4CA_DATA(0x0279),	/* REG_0TC_CCFG_usMinFrTimeMsecMult10 7.5fps	2	70000408 */
 
-	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
-	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02EA),	/* REG_TC_GP_ActiveCapConfig  */
-	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02EC),	/* REG_TC_GP_CapConfigChanged  */
-	S5K4CA_DATA(0x0001),
-
 	S5K4CA_REG(0x028a),	/* REG_TC_IPRM_InitParamsUpdated  */
 	S5K4CA_DATA(0x0001),
 
@@ -5005,17 +4972,6 @@ static struct s5k4ca_request s5k4ca_fps_7[] = {
 	S5K4CA_DATA(0x0002),	/* REG_0TC_CCFG_FrRateQualityType	2	70000404 */
 	S5K4CA_DATA(0x059a),	/* REG_0TC_CCFG_usMaxFrTimeMsecMult10 4fps	2	70000406 */
 	S5K4CA_DATA(0x0558),	/* REG_0TC_CCFG_usMinFrTimeMsecMult10 7.5fps	2	70000408 */
-
-	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
-	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02EA),	/* REG_TC_GP_ActiveCapConfig  */
-	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02EC),	/* REG_TC_GP_CapConfigChanged  */
-	S5K4CA_DATA(0x0001),
 
 	S5K4CA_REG(0x028a),	/* REG_TC_IPRM_InitParamsUpdated  */
 	S5K4CA_DATA(0x0001),
