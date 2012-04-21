@@ -1544,49 +1544,48 @@ static struct s5k4ca_request s5k4ca_init[] = {
 
 /*
  * 6. Config
- *  PCFG 0:Normal Preview 1:Camcoder 2:Night Preview
- *  CCFG 0:Normal Capture 1:Night Capture 2: Lowlux Capture
+ * Only preset 0 is used
  */
 
-	S5K4CA_REG(0x032A),	/* Normal Preview */
-	S5K4CA_DATA(0x0280),	/* REG_0TC_PCFG_usWidth	2	7000032A */
-	S5K4CA_DATA(0x01e0),	/* REG_0TC_PCFG_usHeight	2	7000032C */
-	S5K4CA_DATA(0x0005),	/* REG_0TC_PCFG_Format	0005h : YUV . 0009h : MJPG	2	7000032E */
-	S5K4CA_DATA(0x2FF0),	/* REG_0TC_PCFG_usMaxOut4KHzRate	48(49.088)Mhz=(2FF0h(12272d)/1000d)x4 2	70000330 */
-	S5K4CA_DATA(0x2DE0),	/* REG_0TC_PCFG_usMinOut4KHzRate	48(46.976)Mhz={2DE0h(11744d)/1000d }x4 2	70000332 */
-	S5K4CA_DATA(0x0072),	/* 1019 SEMC0 52->72REG_0TC_PCFG_PVIMask	(1) PCLK inversion	(4)1b_C first	2	70000334 */
-	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_uClockInd	2	70000336 */
-	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_usFrTimeType	frame ae enable: 0000h : dynamic	0001h :Fixed	2	70000338 */
-	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_FrRateQualityType	2	7000033A */
-	S5K4CA_DATA(0x0682),	/* REG_0TC_PCFG_usMaxFrTimeMsecMult10	0682h(1666)= 166.6 ms	2	7000033C */
-	S5K4CA_DATA(0x02B2),	/* REG_0TC_PCFG_usMinFrTimeMsecMult10	0242h(578) =57.8ms	2	7000033E */
-	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_sSaturation	2	70000340 */
-	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_sSharpBlur	2	70000342 */
-	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_sGlamour	2	70000344 */
-	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_sColorTemp	2	70000346 */
-	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_uDeviceGammaIndex	2	70000348 */
-	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_uPrevMirror	2	7000034A */
-	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_uCaptureMirror	2	7000034C */
-	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_uRotation	2	7000034E */
+	S5K4CA_REG(0x032A),	/* Preset 0 preview configuration */
+	S5K4CA_DATA(0x0280),	/* 0x032a - REG_0TC_PCFG_usWidth */
+	S5K4CA_DATA(0x01e0),	/* 0x032c - REG_0TC_PCFG_usHeight */
+	S5K4CA_DATA(0x0005),	/* 0x032e - REG_0TC_PCFG_Format */
+	S5K4CA_DATA(0x2FF0),	/* 0x0330 - REG_0TC_PCFG_usMaxOut4KHzRate */
+	S5K4CA_DATA(0x2DE0),	/* 0x0332 - REG_0TC_PCFG_usMinOut4KHzRate */
+	S5K4CA_DATA(0x0072),	/* 0x0334 - REG_0TC_PCFG_PVIMask */
+	S5K4CA_DATA(0x0000),	/* 0x0336 - REG_0TC_PCFG_uClockInd */
+	S5K4CA_DATA(0x0000),	/* 0x0338 - REG_0TC_PCFG_usFrTimeType */
+	S5K4CA_DATA(0x0001),	/* 0x033a - REG_0TC_PCFG_FrRateQualityType */
+	S5K4CA_DATA(0x0682),	/* 0x033c - REG_0TC_PCFG_usMaxFrTimeMsecMult10 */
+	S5K4CA_DATA(0x02B2),	/* 0x033e - REG_0TC_PCFG_usMinFrTimeMsecMult10 */
+	S5K4CA_DATA(0x0000),	/* 0x0340 - REG_0TC_PCFG_sSaturation */
+	S5K4CA_DATA(0x0000),	/* 0x0342 - REG_0TC_PCFG_sSharpBlur */
+	S5K4CA_DATA(0x0000),	/* 0x0344 - REG_0TC_PCFG_sGlamour */
+	S5K4CA_DATA(0x0000),	/* 0x0346 - REG_0TC_PCFG_sColorTemp */
+	S5K4CA_DATA(0x0000),	/* 0x0348 - REG_0TC_PCFG_uDeviceGammaIndex */
+	S5K4CA_DATA(0x0000),	/* 0x034a - REG_0TC_PCFG_uPrevMirror */
+	S5K4CA_DATA(0x0000),	/* 0x034c - REG_0TC_PCFG_uCaptureMirror */
+	S5K4CA_DATA(0x0000),	/* 0x034e - REG_0TC_PCFG_uRotation */
 
-	S5K4CA_REG(0x03F2),	/* Normal capture  */
-	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_uCaptureMode	2	700003F2 */
-	S5K4CA_DATA(0x0280),	/* REG_0TC_CCFG_usWidth	2	700003F4 */
-	S5K4CA_DATA(0x01e0),	/* REG_0TC_CCFG_usHeight	2	700003F6 */
-	S5K4CA_DATA(0x0005),	/* REG_0TC_CCFG_Format	2	700003F8 */
-	S5K4CA_DATA(0x2FF0),	/* REG_0TC_CCFG_usMaxOut4KHzRate	2	700003FA */
-	S5K4CA_DATA(0x2DE0),	/* REG_0TC_CCFG_usMinOut4KHzRate	2	700003FC */
-	S5K4CA_DATA(0x0072),	/* 1019 SEMCO 52->72 REG_0TC_CCFG_PVIMask	2	700003FE */
-	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_uClockInd	2	70000400 */
-	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_usFrTimeType	2	70000402 */
-	S5K4CA_DATA(0x0002),	/* REG_0TC_CCFG_FrRateQualityType	2	70000404 */
-	S5K4CA_DATA(0x09C4),	/* REG_0TC_CCFG_usMaxFrTimeMsecMult10 4fps	2	70000406 */
-	S5K4CA_DATA(0x0535),	/* REG_0TC_CCFG_usMinFrTimeMsecMult10 7.5fps	2	70000408 */
-	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_sSaturation	2	7000040A */
-	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_sSharpBlur	2	7000040C */
-	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_sGlamour	2	7000040E */
-	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_sColorTemp	2	70000410 */
-	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_uDeviceGammaIndex	2	70000412 */
+	S5K4CA_REG(0x03F2),	/* Preset 0 capture configuration */
+	S5K4CA_DATA(0x0000),	/* 0x03f2 - REG_0TC_CCFG_uCaptureMode */
+	S5K4CA_DATA(0x0800),	/* 0x03f4 - REG_0TC_CCFG_usWidth */
+	S5K4CA_DATA(0x0600),	/* 0x03f6 - REG_0TC_CCFG_usHeight */
+	S5K4CA_DATA(0x0005),	/* 0x03f8 - REG_0TC_CCFG_Format */
+	S5K4CA_DATA(0x2FF0),	/* 0x03fa - REG_0TC_CCFG_usMaxOut4KHzRate */
+	S5K4CA_DATA(0x2DE0),	/* 0x03fc - REG_0TC_CCFG_usMinOut4KHzRate */
+	S5K4CA_DATA(0x0072),	/* 0x03fe - REG_0TC_CCFG_PVIMask */
+	S5K4CA_DATA(0x0000),	/* 0x0400 - REG_0TC_CCFG_uClockInd */
+	S5K4CA_DATA(0x0000),	/* 0x0402 - REG_0TC_CCFG_usFrTimeType */
+	S5K4CA_DATA(0x0002),	/* 0x0404 - REG_0TC_CCFG_FrRateQualityType */
+	S5K4CA_DATA(0x09C4),	/* 0x0406 - REG_0TC_CCFG_usMaxFrTimeMsecMult10 */
+	S5K4CA_DATA(0x0535),	/* 0x0408 - REG_0TC_CCFG_usMinFrTimeMsecMult10 */
+	S5K4CA_DATA(0x0000),	/* 0x040a - REG_0TC_CCFG_sSaturation */
+	S5K4CA_DATA(0x0000),	/* 0x040c - REG_0TC_CCFG_sSharpBlur */
+	S5K4CA_DATA(0x0000),	/* 0x040e - REG_0TC_CCFG_sGlamour */
+	S5K4CA_DATA(0x0000),	/* 0x0410 - REG_0TC_CCFG_sColorTemp */
+	S5K4CA_DATA(0x0000),	/* 0x0412 - REG_0TC_CCFG_uDeviceGammaIndex */
 
 	/* Etc _ improvement Preview line error when using XY mirror  */
 
