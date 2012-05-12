@@ -12,6 +12,11 @@ config ANDROID_BINDER_IPC
 	bool "Android Binder IPC Driver"
 	default n
 
+config ANDROID_BINDER_IPC_NEW
+	bool "Use new implementation of Binder IPC"
+	default n
+	depends on ANDROID_BINDER_IPC
+
 config ANDROID_LOGGER
 	tristate "Android log driver"
 	default n
