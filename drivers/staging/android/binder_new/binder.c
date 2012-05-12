@@ -1293,7 +1293,7 @@ static int bcmd_write_free_buffer(struct binder_proc *proc, struct binder_thread
 	if (!proc->slob || !proc->ustart || (unsigned long)uaddr < proc->ustart) {
 		printk("binder: pid %d (tid %d) trying to free an invalid buffer %p, slob %p, ustart %lx\n",
 			proc->pid, thread->pid, uaddr, proc->slob, proc->ustart);
-		return -EINVAL;
+		return 0;
 	}
 
 	off = (unsigned long)uaddr - proc->ustart - (unsigned long)(((struct slob_buf *)0)->data);
@@ -1303,7 +1303,7 @@ static int bcmd_write_free_buffer(struct binder_proc *proc, struct binder_thread
 	if (bucket < 0 || (sbuf->uaddr_data != (unsigned long)uaddr)) {
 		printk("binder: pid %d (tid %d) trying to free an invalid buffer %p, bucket %d, sbuf %p\n",
 			proc->pid, thread->pid, uaddr, bucket, sbuf);
-		return -EINVAL;
+		return 0;
 	}
 
 	if (sbuf->offsets_size > 0) {
