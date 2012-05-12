@@ -31,6 +31,7 @@
 #include <linux/miscdevice.h>
 #include <linux/seq_file.h>
 #include <linux/debugfs.h>
+#include <linux/vmalloc.h>
 
 #include <asm/atomic.h>
 
@@ -456,7 +457,7 @@ static struct bcmd_msg *binder_alloc_msg(size_t data_size, size_t offsets_size)
 	msg_size = sizeof(*msg) + msg_buf_size;
 	buf_size = msg_size + MSG_BUF_ALIGN(data_size) + MSG_BUF_ALIGN(offsets_size);
 
-	msg = kmalloc(buf_size, GFP_KERNEL);
+	msg = vmalloc(buf_size);
 	if (!msg)
 		return NULL;
 
@@ -494,7 +495,7 @@ static struct bcmd_msg *binder_realloc_msg(struct bcmd_msg *msg, size_t data_siz
 		return msg;
 	}
 
-	kfree(msg);
+	vfree(msg);
 	return binder_alloc_msg(data_size, offsets_size);
 }
 
@@ -514,7 +515,7 @@ static inline int _binder_write_cmd(struct msg_queue *q, void *binder, void *coo
 
 	r = _bcmd_write_msg(q, msg);
 	if (r < 0) {
-		kfree(msg);
+		vfree(msg);
 		return r;
 	}
 
@@ -537,7 +538,7 @@ static inline int binder_write_cmd(msg_queue_id q, void *binder, void *cookie, u
 
 	r = bcmd_write_msg(q, msg);
 	if (r < 0) {
-		kfree(msg);
+		vfree(msg);
 		return r;
 	}
 
@@ -605,7 +606,7 @@ static int _binder_free_obj(struct binder_proc *proc, struct binder_obj *obj)
 			kfree(notifier);
 		}
 		if (msg)
-			kfree(msg);
+			vfree(msg);
 	} else {
 		// reference - tell the owner we are no longer referencing the object
 		if (atomic_read(&obj->refs) > 0)
@@ -712,7 +713,7 @@ static void clear_msg_queue(struct binder_proc *proc, struct msg_queue *q)
 			}
 		}
 
-		kfree(msg);
+		vfree(msg);
 	}
 }
 
@@ -732,7 +733,7 @@ static void thread_queue_release(struct msg_queue *q, void *data)
 
 		msg->type = BR_DEAD_REPLY;
 		if (bcmd_write_msg(msg->reply_to, msg) < 0)
-			kfree(msg);
+			vfree(msg);
 	}
 
 	spin_lock(&proc->lock);
@@ -934,7 +935,7 @@ static inline int binder_acquire_obj(struct binder_proc *proc, struct binder_thr
 		}
 
 		if (r < 0) {
-			kfree(msg);
+			vfree(msg);
 			return r;
 		}
 	}
@@ -966,7 +967,7 @@ static inline int binder_release_obj(struct binder_proc *proc, struct binder_thr
 		}
 
 		if (r < 0) {
-			kfree(msg);
+			vfree(msg);
 			return r;
 		}
 
@@ -1279,7 +1280,7 @@ static int bcmd_write_transaction(struct binder_proc *proc, struct binder_thread
 failed_write:
 	clear_msg_buf(proc, msg);
 failed_msg:
-	kfree(msg);
+	vfree(msg);
 failed_reply:
 	return _binder_write_cmd(thread->queue, NULL, NULL, BR_FAILED_REPLY);
 }
@@ -1379,7 +1380,7 @@ static int bcmd_write_notifier(struct binder_proc *proc, struct binder_thread *t
 	msg->reply_to = (bcmd == BC_REQUEST_DEATH_NOTIFICATION) ? msg_queue_id(proc->queue) : msg_queue_id(thread->queue);
 
 	if ((r = bcmd_write_msg(obj->owner, msg)) < 0) {
-		kfree(msg);
+		vfree(msg);
 		return r;
 	}
 
@@ -1640,7 +1641,7 @@ static long bcmd_read_transaction(struct binder_proc *proc, struct binder_thread
 	}
 
 	if (msg)
-		kfree(msg);
+		vfree(msg);
 	*pmsg = NULL;
 
 	return (sizeof(cmd) + sizeof(tdata));
@@ -1660,7 +1661,7 @@ static long bcmd_read_notifier(struct binder_proc *proc, struct binder_thread *t
 		    put_user((uint32_t)msg->cookie, (uint32_t *)((char *)buf + sizeof(uint32_t))))
 			return -EFAULT;
 
-		kfree(msg);
+		vfree(msg);
 		*pmsg = NULL;
 		return sizeof(uint32_t) * 2;
 	}
@@ -1683,7 +1684,7 @@ static long bcmd_read_notifier(struct binder_proc *proc, struct binder_thread *t
 		list_add_tail(&notifier->list, &obj->notifiers);
 		spin_unlock(&obj->lock);
 
-		kfree(msg);
+		vfree(msg);
 	} else {
 		struct binder_notifier *next;
 		int found = 0;
@@ -1702,10 +1703,10 @@ static long bcmd_read_notifier(struct binder_proc *proc, struct binder_thread *t
 		if (found) {
 			msg->type = BR_CLEAR_DEATH_NOTIFICATION_DONE;
 			if (bcmd_write_msg(msg->reply_to, msg) < 0)
-				kfree(msg);
+				vfree(msg);
 			kfree(notifier);
 		} else
-			kfree(msg);
+			vfree(msg);
 	}
 
 	*pmsg = NULL;
@@ -1722,7 +1723,7 @@ static long bcmd_read_transaction_complete(struct binder_proc *proc, struct bind
 	if (put_user(cmd, (uint32_t *)buf))
 		return -EFAULT;
 
-	kfree(*pmsg);
+	vfree(*pmsg);
 	*pmsg = NULL;
 	return sizeof(cmd);
 }
@@ -1745,7 +1746,7 @@ static long bcmd_read_dead_binder(struct binder_proc *proc, struct binder_thread
 			return -EFAULT;
 	}
 
-	kfree(msg);
+	vfree(msg);
 	*pmsg = NULL;
 	return sizeof(cmd) * 2;
 }
@@ -1763,7 +1764,7 @@ static long bcmd_read_dead_reply(struct binder_proc *proc, struct binder_thread 
 	if (put_user(cmd, (uint32_t *)buf))
 		return -EFAULT;
 
-	kfree(*pmsg);
+	vfree(*pmsg);
 	*pmsg = NULL;
 	return sizeof(cmd);
 }
@@ -1814,7 +1815,7 @@ static long bcmd_read_acquire(struct binder_proc *proc, struct binder_thread *th
 		r = 0;
 
 obj_removed:
-	kfree(*pmsg);
+	vfree(*pmsg);
 	*pmsg = NULL;
 	return r;
 }
@@ -1920,13 +1921,13 @@ static long binder_thread_read(struct binder_proc *proc, struct binder_thread *t
 				break;
 
 			default:
-				kfree(msg);
+				vfree(msg);
 				n = -EFAULT;
 				goto clean_up;
 		}
 
 		if (msg && (n != -ENOSPC))
-			kfree(msg);
+			vfree(msg);
 
 		if (n > 0) {
 			p += n;
@@ -1938,7 +1939,7 @@ static long binder_thread_read(struct binder_proc *proc, struct binder_thread *t
 						proc->pid, thread->pid);
 					n = _bcmd_write_msg_head(q, msg);
 					if (n < 0) {
-						kfree(msg);
+						vfree(msg);
 						goto clean_up;
 					}
 				}
