@@ -1,4 +1,6 @@
-ifeq ($(CONFIG_ANDROID_BINDER_IPC_NEW),n)
+ifeq ($(CONFIG_ANDROID_BINDER_IPC_NEW),y)
+obj-$(CONFIG_ANDROID_BINDER_IPC_NEW)    += binder_new/
+else
 obj-$(CONFIG_ANDROID_BINDER_IPC)	+= binder.o
 endif
 obj-$(CONFIG_ANDROID_LOGGER)		+= logger.o
@@ -6,6 +8,3 @@ obj-$(CONFIG_ANDROID_RAM_CONSOLE)	+= ram_console.o
 obj-$(CONFIG_ANDROID_TIMED_OUTPUT)	+= timed_output.o
 obj-$(CONFIG_ANDROID_TIMED_GPIO)	+= timed_gpio.o
 obj-$(CONFIG_ANDROID_LOW_MEMORY_KILLER)	+= lowmemorykiller.o
-ifeq ($(CONFIG_ANDROID_BINDER_IPC_NEW),y)
-obj-$(CONFIG_ANDROID_BINDER_IPC_NEW)	+= binder_new/
-endif
