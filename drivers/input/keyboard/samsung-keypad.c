@@ -101,7 +101,7 @@ static void samsung_keypad_scan(struct samsung_keypad *keypad,
 		}
 
 		writel(val, keypad->base + SAMSUNG_KEYIFCOL);
-		mdelay(1);
+		udelay(50);
 
 		val = readl(keypad->base + SAMSUNG_KEYIFROW);
 		row_state[col] = ~val & ((1 << keypad->rows) - 1);
