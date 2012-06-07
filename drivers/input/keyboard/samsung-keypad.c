@@ -454,6 +454,9 @@ static struct platform_device_id samsung_keypad_driver_ids[] = {
 	}, {
 		.name		= "s5pv210-keypad",
 		.driver_data	= KEYPAD_TYPE_TRI_STATE,
+	}, {
+		.name		= "s3c6410-keypad",
+		.driver_data	= KEYPAD_TYPE_TRI_STATE,
 	},
 	{ },
 };
