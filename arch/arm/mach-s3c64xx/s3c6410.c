@@ -42,6 +42,7 @@
 #include <plat/iic-core.h>
 #include <plat/onenand-core.h>
 #include <plat/pwm-core.h>
+#include <plat/keypad-core.h>
 #include <mach/s3c6400.h>
 #include <mach/s3c6410.h>
 
@@ -62,6 +63,9 @@ void __init s3c6410_map_io(void)
 	s3c64xx_onenand1_setname("s3c6410-onenand");
 	s3c_cfcon_setname("s3c64xx-pata");
 	s3c_pwm_setname("s3c64xx-pwm");
+
+	/* Use s3c6410-keypad instead of samsung-keypad */
+	samsung_keypad_setname("s3c6410-keypad");
 }
 
 void __init s3c6410_init_clocks(int xtal)
