@@ -184,9 +184,14 @@ static void samsung_keypad_start(struct samsung_keypad *keypad)
 
 	clk_enable(keypad->clk);
 
+	/* Setup filtering delay */
+	val = readl(keypad->base + SAMSUNG_KEYIFFC);
+	writel(val | 1, keypad->base + SAMSUNG_KEYIFFC);
+
 	/* Enable interrupt bits. */
 	val = readl(keypad->base + SAMSUNG_KEYIFCON);
 	val |= SAMSUNG_KEYIFCON_INT_F_EN | SAMSUNG_KEYIFCON_INT_R_EN;
+	val |= SAMSUNG_KEYIFCON_DF_EN | SAMSUNG_KEYIFCON_FC_EN;
 	writel(val, keypad->base + SAMSUNG_KEYIFCON);
 
 	/* KEYIFCOL reg clear. */
