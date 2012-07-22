@@ -3862,18 +3862,6 @@ static struct s5k4ca_request s5k4ca_iso_auto[] = {
 	S5K4CA_DATA(0x0600),	/* lt_uMaxAnGain2 5+5/16 =5.3125  */
 	S5K4CA_DATA(0x0100),	/* lt_uMaxDigGain */
 
-	S5K4CA_PAGE(0x7000),	/* Preview Return */
-	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
-	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange  */
-	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02B4),	/* REG_TC_GP_EnablePreviewChanged  */
-	S5K4CA_DATA(0x0001),
-
 	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
 	S5K4CA_DATA(0x0001),
 };
@@ -3882,13 +3870,33 @@ static struct s5k4ca_request s5k4ca_iso50[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 
-	S5K4CA_REG(0x0490),	/* t_usKISOGain */
-	S5K4CA_DATA(0x0100),	/* To Set the same as It_uMaxAnGain2 */
+// 	S5K4CA_REG(0x0490),	/* t_usKISOGain */
+// 	S5K4CA_DATA(0x0100),	/* To Set the same as It_uMaxAnGain2 */
+// 	S5K4CA_REG(0x0616),
+// 	S5K4CA_DATA(0x0100),	/* lt_uMaxAnGain2 5+5/16 =5.3125  */
+// 	S5K4CA_DATA(0x0200),	/* lt_uMaxDigGain : To set the Dgain x2 for the flicker */
+// 	S5K4CA_REG(0x048E),
+// 	S5K4CA_DATA(0x30D4),	/* 7000048E	//t_usMaxExposure */
+
+	S5K4CA_REG(0x047C),
+	S5K4CA_DATA(0x0C80),	/* 7000047C	//t_usLTtable1_1 32ms */
+	S5K4CA_DATA(0x15E0),	/* 7000047E	//t_usLTtable1_2 Control for 700lux */
+	S5K4CA_DATA(0x2B2F),	/* 70000480	//t_usLTtable2_1 67ms */
+	S5K4CA_DATA(0x2EE0),	/* 70000482	//t_usLTtable2_2 Control for 400lux */
+	S5K4CA_DATA(0x3A5C),	/* 70000484	//t_usLTtable3_1 83ms */
+	S5K4CA_DATA(0x4650),	/* 70000486	//t_usLTtable3_2 Control for 200lux */
+	S5K4CA_DATA(0xFFFF),	/* 70000488	//t_usMaxLTtable ?? */
+
+	S5K4CA_DATA(0x1A2C),	/* 7000048A	//t_usLTExposure2 67ms */
+	S5K4CA_DATA(0x206C),	/* 7000048C	//t_usLTExposure3 83ms */
+	S5K4CA_DATA(0x30D4),	/* 7000048E	//t_usMaxExposure Control for 200lux */
+
 	S5K4CA_REG(0x0616),
-	S5K4CA_DATA(0x0100),	/* lt_uMaxAnGain2 5+5/16 =5.3125  */
-	S5K4CA_DATA(0x0200),	/* lt_uMaxDigGain : To set the Dgain x2 for the flicker */
-	S5K4CA_REG(0x048E),
-	S5K4CA_DATA(0x30D4),	/* 7000048E	//t_usMaxExposure */
+	S5K4CA_DATA(0x0600),	/* lt_uMaxAnGain2 5+5/16 =5.3125  */
+	S5K4CA_DATA(0x0100),	/* lt_uMaxDigGain */
+
+	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
+	S5K4CA_DATA(0x0001),
 };
 
 static struct s5k4ca_request s5k4ca_iso100[] = {
@@ -3911,18 +3919,6 @@ static struct s5k4ca_request s5k4ca_iso100[] = {
 	S5K4CA_REG(0x0616),
 	S5K4CA_DATA(0x0580),	/* lt_uMaxAnGain2 5+5/16 =5.3125  */
 	S5K4CA_DATA(0x0100),	/* lt_uMaxDigGain */
-
-	S5K4CA_PAGE(0x7000),	/* Preview Return */
-	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
-	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange  */
-	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02B4),	/* REG_TC_GP_EnablePreviewChanged  */
-	S5K4CA_DATA(0x0001),
 
 	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
 	S5K4CA_DATA(0x0001),
@@ -3949,18 +3945,6 @@ static struct s5k4ca_request s5k4ca_iso200[] = {
 	S5K4CA_DATA(0x0600),	/* lt_uMaxAnGain2 5+5/16 =5.3125  */
 	S5K4CA_DATA(0x0100),	/* lt_uMaxDigGain */
 
-	S5K4CA_PAGE(0x7000),	/* Preview Return */
-	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
-	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange  */
-	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02B4),	/* REG_TC_GP_EnablePreviewChanged  */
-	S5K4CA_DATA(0x0001),
-
 	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
 	S5K4CA_DATA(0x0001),
 };
@@ -3985,18 +3969,6 @@ static struct s5k4ca_request s5k4ca_iso400[] = {
 	S5K4CA_REG(0x0616),
 	S5K4CA_DATA(0x0700),	/* lt_uMaxAnGain2 5+5/16 =5.3125  */
 	S5K4CA_DATA(0x0100),	/* lt_uMaxDigGain */
-
-	S5K4CA_PAGE(0x7000),	/* Preview Return */
-	S5K4CA_REG(0x02E2),	/* REG_TC_GP_ActivePrevConfig */
-	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02E6),	/* REG_TC_GP_PrevOpenAfterChange  */
-	S5K4CA_DATA(0x0000),
-	S5K4CA_REG(0x02BE),	/* REG_TC_GP_NewConfigSync */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02E4),	/* REG_TC_GP_PrevConfigChanged_main */
-	S5K4CA_DATA(0x0001),
-	S5K4CA_REG(0x02B4),	/* REG_TC_GP_EnablePreviewChanged  */
-	S5K4CA_DATA(0x0001),
 
 	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
 	S5K4CA_DATA(0x0001),
