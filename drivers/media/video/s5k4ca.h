@@ -3707,7 +3707,7 @@ static struct s5k4ca_request s5k4ca_contrast_p2[] = {
 };
 
 /*
- *  Saturation Mode (from -2 to +2)
+ *  Saturation Mode (from -2 to +4)
  */
 
 static struct s5k4ca_request s5k4ca_Saturation_m2[] = {
@@ -3743,6 +3743,20 @@ static struct s5k4ca_request s5k4ca_Saturation_p2[] = {
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x02AA),
 	S5K4CA_DATA(0x0028),
+};
+
+static struct s5k4ca_request s5k4ca_Saturation_p3[] = {
+	S5K4CA_BANK(0xD000),
+	S5K4CA_PAGE(0x7000),
+	S5K4CA_REG(0x02AA),
+	S5K4CA_DATA(0x003c),
+};
+
+static struct s5k4ca_request s5k4ca_Saturation_p4[] = {
+	S5K4CA_BANK(0xD000),
+	S5K4CA_PAGE(0x7000),
+	S5K4CA_REG(0x02AA),
+	S5K4CA_DATA(0x0050),
 };
 
 /*
