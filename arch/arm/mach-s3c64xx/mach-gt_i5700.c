@@ -1606,6 +1606,7 @@ static struct platform_device spica_wlan_device = {
 #define S3C_RNDIS_PRODUCT_ID		0x4E23
 #define S3C_RNDIS_ADB_PRODUCT_ID	0x4E24
 
+#ifdef CONFIG_USB_ANDROID_RNDIS
 static char *usb_functions_rndis[] = {
 	"rndis",
 };
@@ -1614,6 +1615,7 @@ static char *usb_functions_rndis_adb[] = {
 	"rndis",
 	"adb",
 };
+#endif
 
 #ifdef CONFIG_USB_ANDROID_ACCESSORY
 static char *usb_functions_accessory[] = {
@@ -1647,7 +1649,9 @@ static char *usb_functions_mtp_adb[] = {
 #endif
 
 static char *usb_functions_all[] = {
+#ifdef CONFIG_USB_ANDROID_RNDIS
 	"rndis",
+#endif
 #ifdef CONFIG_USB_ANDROID_ACCESSORY
 	"accessory",
 #endif
@@ -1679,6 +1683,7 @@ static struct android_usb_product usb_products[] = {
 		.functions	= usb_functions_mtp_adb,
 	},
 #endif
+#ifdef CONFIG_USB_ANDROID_RNDIS
 	{
 		.product_id	= S3C_RNDIS_PRODUCT_ID,
 		.num_functions	= ARRAY_SIZE(usb_functions_rndis),
@@ -1688,6 +1693,7 @@ static struct android_usb_product usb_products[] = {
 		.num_functions	= ARRAY_SIZE(usb_functions_rndis_adb),
 		.functions	= usb_functions_rndis_adb,
 	},
+#endif
 #ifdef CONFIG_USB_ANDROID_ACCESSORY
 	{
 		.vendor_id	= USB_ACCESSORY_VENDOR_ID,
