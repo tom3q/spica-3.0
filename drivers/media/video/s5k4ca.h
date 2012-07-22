@@ -4555,6 +4555,31 @@ static struct s5k4ca_request s5k4ca_fps_7[] = {
 	S5K4CA_DATA(0x0001),
 };
 
+static struct s5k4ca_request s5k4ca_fps_1[] = {
+	S5K4CA_BANK(0xd000),
+	S5K4CA_PAGE(0x7000),
+
+	S5K4CA_REG(0x0338), 	/* ~4 fps dynamic rate */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_PCFG_usFrTimeType	frame ae enable: 0000h : dynamic	0001h :Fixed	2	70000338 */
+	S5K4CA_DATA(0x0001),	/* REG_0TC_PCFG_FrRateQualityType	2	7000033A */
+	S5K4CA_DATA(0x09c4),	/* REG_1TC_PCFG_usMaxFrTimeMsecMult10 */
+	S5K4CA_DATA(0x0242),	/* REG_1TC_PCFG_usMinFrTimeMsecMult10 */
+
+	S5K4CA_REG(0x0402),	/* ~1 fps dynamic rate */
+	S5K4CA_DATA(0x0000),	/* REG_0TC_CCFG_usFrTimeType	2	70000402 */
+	S5K4CA_DATA(0x0002),	/* REG_0TC_CCFG_FrRateQualityType	2	70000404 */
+	S5K4CA_DATA(0x2710),	/* REG_0TC_CCFG_usMaxFrTimeMsecMult10 4fps	2	70000406 */
+	S5K4CA_DATA(0x0535),	/* REG_0TC_CCFG_usMinFrTimeMsecMult10 7.5fps	2	70000408 */
+
+	S5K4CA_REG(0x028a),	/* REG_TC_IPRM_InitParamsUpdated  */
+	S5K4CA_DATA(0x0001),
+
+	S5K4CA_REG(0x057c),
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0x057c),
+	S5K4CA_DATA(0x0001),
+};
+
 /*
  * Image resolution
  */
