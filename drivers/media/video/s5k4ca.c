@@ -115,8 +115,6 @@ static struct s5k4ca_format s5k4ca_formats[] = {
 	S5K4CA_FORMAT(2048, 1536, s5k4ca_res_qxga),
 };
 
-
-
 static const struct s5k4ca_interval s5k4ca_intervals[] = {
 	{ 1401, {140100, 1000000}, {2048, 1536} }, /*  7.138 fps */
 	{ 666,  { 66600, 1000000}, {2048, 1536} }, /* 15.015 fps */
