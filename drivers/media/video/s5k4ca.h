@@ -3767,14 +3767,14 @@ static struct s5k4ca_request s5k4ca_Sharpness_m2[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x02AC),
-	S5K4CA_DATA(0xFFE0),
+	S5K4CA_DATA(0xffd8),
 };
 
 static struct s5k4ca_request s5k4ca_Sharpness_m1[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x02AC),
-	S5K4CA_DATA(0xFFF0),
+	S5K4CA_DATA(0xffec),
 };
 
 static struct s5k4ca_request s5k4ca_Sharpness_0[] = {
@@ -3788,14 +3788,14 @@ static struct s5k4ca_request s5k4ca_Sharpness_p1[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x02AC),
-	S5K4CA_DATA(0x0010),
+	S5K4CA_DATA(0x0014),
 };
 
 static struct s5k4ca_request s5k4ca_Sharpness_p2[] = {
 	S5K4CA_BANK(0xD000),
 	S5K4CA_PAGE(0x7000),
 	S5K4CA_REG(0x02AC),
-	S5K4CA_DATA(0x0020),
+	S5K4CA_DATA(0x0028),
 };
 
 /*
