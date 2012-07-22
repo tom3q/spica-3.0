@@ -116,6 +116,14 @@ static struct fimc_fmt fimc_formats[] = {
 		.colplanes	= 3,
 		.flags		= FMT_FLAGS_M2M,
 	}, {
+		.name		= "YUV 4:2:0 planar, YCrCb",
+		.fourcc		= V4L2_PIX_FMT_YVU420,
+		.depth		= { 12 },
+		.color		= S3C_FIMC_YCBCR420,
+		.memplanes	= 1,
+		.colplanes	= 3,
+		.flags		= FMT_FLAGS_M2M,
+	}, {
 		.name		= "YUV 4:2:0 non-contiguous 3-planar, Y/Cb/Cr",
 		.fourcc		= V4L2_PIX_FMT_YUV420M,
 		.color		= S3C_FIMC_YCBCR420,
@@ -413,14 +421,21 @@ int fimc_prepare_addr(struct fimc_ctx *ctx, struct vb2_buffer *vb,
 			paddr->cr = 0;
 			break;
 		case 3:
-			paddr->cb = (u32)(paddr->y + pix_size);
 			/* decompose Y into Y/Cb/Cr */
-			if (S3C_FIMC_YCBCR420 == frame->fmt->color)
-				paddr->cr = (u32)(paddr->cb
-						+ (pix_size >> 2));
-			else /* 422 */
-				paddr->cr = (u32)(paddr->cb
-						+ (pix_size >> 1));
+			switch (frame->fmt->fourcc) {
+			case V4L2_PIX_FMT_YUV420:
+				paddr->cb = (u32)(paddr->y + pix_size);
+				paddr->cr = (u32)(paddr->cb + (pix_size >> 2));
+				break;
+			case V4L2_PIX_FMT_YVU420:
+				paddr->cr = (u32)(paddr->y + pix_size);
+				paddr->cb = (u32)(paddr->cr + (pix_size >> 2));
+				break;
+			default:
+				/* 422 */
+				paddr->cb = (u32)(paddr->y + pix_size);
+				paddr->cr = (u32)(paddr->cb + (pix_size >> 1));
+			}
 			break;
 		default:
 			return -EINVAL;
