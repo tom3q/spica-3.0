@@ -43,6 +43,7 @@
 #define V4L2_CID_S5K4CA_METERING	(V4L2_CTRL_CLASS_CAMERA | 0x1003)
 #define V4L2_CID_S5K4CA_FRAME_RATE	(V4L2_CTRL_CLASS_CAMERA | 0x1004)
 #define V4L2_CID_S5K4CA_CAPTURE		(V4L2_CTRL_CLASS_CAMERA | 0x1005)
+#define V4L2_CID_S5K4CA_GLAMOUR		(V4L2_CTRL_CLASS_CAMERA | 0x1006)
 
 struct s5k4ca_ctrls {
 	struct v4l2_ctrl_handler handler;
@@ -479,6 +480,42 @@ static int s5k4ca_set_sharpness(struct v4l2_subdev *sd, int type)
 	return ret;
 }
 
+static int s5k4ca_set_glamour(struct v4l2_subdev *sd, int type)
+{
+	int ret;
+	struct s5k4ca_state *state = to_state(sd);
+
+	TRACE_CALL;
+
+	v4l2_info(sd, "[CAM-SENSOR] =Glamour Mode %d",type);
+
+	switch (type) {
+	case -2:
+		ret = s5k4ca_write_regs(state, s5k4ca_Glamour_m2,
+					ARRAY_SIZE(s5k4ca_Glamour_m2));
+		break;
+	case -1:
+		ret = s5k4ca_write_regs(state, s5k4ca_Glamour_m1,
+					ARRAY_SIZE(s5k4ca_Glamour_m1));
+		break;
+	case 0:
+		ret = s5k4ca_write_regs(state, s5k4ca_Glamour_0,
+					ARRAY_SIZE(s5k4ca_Glamour_0));
+		break;
+	case 1:
+		ret = s5k4ca_write_regs(state, s5k4ca_Glamour_p1,
+					ARRAY_SIZE(s5k4ca_Glamour_p1));
+		break;
+	case 2:
+		ret = s5k4ca_write_regs(state, s5k4ca_Glamour_p2,
+					ARRAY_SIZE(s5k4ca_Glamour_p2));
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return ret;
+}
 
 static int s5k4ca_set_iso(struct v4l2_subdev *sd, int type)
 {
@@ -804,6 +841,9 @@ static int s5k4ca_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_S5K4CA_CAPTURE:
 		err = s5k4ca_set_capture(sd, ctrl->val);
+		break;
+	case V4L2_CID_S5K4CA_GLAMOUR:
+		err = s5k4ca_set_glamour(sd, ctrl->val);
 		break;
 	}
 
@@ -1260,6 +1300,15 @@ static const struct v4l2_ctrl_config s5k4ca_ctrls[] = {
 		.def	= 0,
 	}, {
 		.ops	= &s5k4ca_ctrl_ops,
+		.id	= V4L2_CID_S5K4CA_GLAMOUR,
+		.type	= V4L2_CTRL_TYPE_INTEGER,
+		.name	= "Glamour",
+		.min	= -2,
+		.max	= 2,
+		.step	= 1,
+		.def	= 0,
+	}, {
+		.ops	= &s5k4ca_ctrl_ops,
 		.id	= V4L2_CID_FOCUS_AUTO,
 		.type	= V4L2_CTRL_TYPE_BUTTON,
 		.name	= "Run auto focus",
@@ -1288,6 +1337,7 @@ static int s5k4ca_initialize_ctrls(struct s5k4ca_state *state)
 	v4l2_ctrl_new_custom(hdl, &s5k4ca_ctrls[2], NULL);
 	v4l2_ctrl_new_custom(hdl, &s5k4ca_ctrls[3], NULL);
 	v4l2_ctrl_new_custom(hdl, &s5k4ca_ctrls[4], NULL);
+	v4l2_ctrl_new_custom(hdl, &s5k4ca_ctrls[5], NULL);
 
 	v4l2_ctrl_new_std(hdl, ops, V4L2_CID_BRIGHTNESS, -4, 4, 1, 0);
 	v4l2_ctrl_new_std(hdl, ops, V4L2_CID_CONTRAST, -2, 2, 1, 0);
@@ -1297,7 +1347,7 @@ static int s5k4ca_initialize_ctrls(struct s5k4ca_state *state)
 	v4l2_ctrl_new_std_menu(hdl, ops, V4L2_CID_EXPOSURE_AUTO,
 				V4L2_EXPOSURE_MANUAL, 0, V4L2_EXPOSURE_AUTO);
 
-	v4l2_ctrl_new_custom(hdl, &s5k4ca_ctrls[5], NULL);
+	v4l2_ctrl_new_custom(hdl, &s5k4ca_ctrls[6], NULL);
 	v4l2_ctrl_new_std(hdl, ops, V4L2_CID_FOCUS_ABSOLUTE, -1, 1, 1, 0);
 
 	v4l2_ctrl_new_std_menu(hdl, ops, V4L2_CID_COLORFX,
