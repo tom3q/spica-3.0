@@ -44,6 +44,7 @@
 #define V4L2_CID_S5K4CA_FRAME_RATE	(V4L2_CTRL_CLASS_CAMERA | 0x1004)
 #define V4L2_CID_S5K4CA_CAPTURE		(V4L2_CTRL_CLASS_CAMERA | 0x1005)
 #define V4L2_CID_S5K4CA_GLAMOUR		(V4L2_CTRL_CLASS_CAMERA | 0x1006)
+#define V4L2_CID_S5K4CA_NIGHTSHOT	(V4L2_CTRL_CLASS_CAMERA | 0x1007)
 
 struct s5k4ca_ctrls {
 	struct v4l2_ctrl_handler handler;
@@ -689,6 +690,23 @@ static int s5k4ca_set_focus_mode(struct v4l2_subdev *sd, int mode)
 	return ret;
 }
 
+static int s5k4ca_set_nightshot(struct v4l2_subdev *sd, int on)
+{
+	struct s5k4ca_state *state = to_state(sd);
+	int ret;
+
+	TRACE_CALL;
+
+	if (on)
+		ret = s5k4ca_write_regs(state, s5k4ca_night_on,
+						ARRAY_SIZE(s5k4ca_night_on));
+	else
+		ret = s5k4ca_write_regs(state, s5k4ca_night_off,
+						ARRAY_SIZE(s5k4ca_night_off));
+
+	return ret;
+}
+
 static int s5k4ca_set_capture(struct v4l2_subdev *sd, int mode)
 {
 	struct s5k4ca_state *state = to_state(sd);
@@ -844,6 +862,9 @@ static int s5k4ca_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_S5K4CA_GLAMOUR:
 		err = s5k4ca_set_glamour(sd, ctrl->val);
+		break;
+	case V4L2_CID_S5K4CA_NIGHTSHOT:
+		err = s5k4ca_set_nightshot(sd, ctrl->val);
 		break;
 	}
 
@@ -1309,6 +1330,14 @@ static const struct v4l2_ctrl_config s5k4ca_ctrls[] = {
 		.def	= 0,
 	}, {
 		.ops	= &s5k4ca_ctrl_ops,
+		.id	= V4L2_CID_S5K4CA_NIGHTSHOT,
+		.type	= V4L2_CTRL_TYPE_BOOLEAN,
+		.name	= "Nightshot",
+		.min	= 0,
+		.max	= 1,
+		.def	= 0,
+	}, {
+		.ops	= &s5k4ca_ctrl_ops,
 		.id	= V4L2_CID_FOCUS_AUTO,
 		.type	= V4L2_CTRL_TYPE_BUTTON,
 		.name	= "Run auto focus",
@@ -1338,6 +1367,7 @@ static int s5k4ca_initialize_ctrls(struct s5k4ca_state *state)
 	v4l2_ctrl_new_custom(hdl, &s5k4ca_ctrls[3], NULL);
 	v4l2_ctrl_new_custom(hdl, &s5k4ca_ctrls[4], NULL);
 	v4l2_ctrl_new_custom(hdl, &s5k4ca_ctrls[5], NULL);
+	v4l2_ctrl_new_custom(hdl, &s5k4ca_ctrls[6], NULL);
 
 	v4l2_ctrl_new_std(hdl, ops, V4L2_CID_BRIGHTNESS, -4, 4, 1, 0);
 	v4l2_ctrl_new_std(hdl, ops, V4L2_CID_CONTRAST, -2, 2, 1, 0);
@@ -1347,7 +1377,7 @@ static int s5k4ca_initialize_ctrls(struct s5k4ca_state *state)
 	v4l2_ctrl_new_std_menu(hdl, ops, V4L2_CID_EXPOSURE_AUTO,
 				V4L2_EXPOSURE_MANUAL, 0, V4L2_EXPOSURE_AUTO);
 
-	v4l2_ctrl_new_custom(hdl, &s5k4ca_ctrls[6], NULL);
+	v4l2_ctrl_new_custom(hdl, &s5k4ca_ctrls[7], NULL);
 	v4l2_ctrl_new_std(hdl, ops, V4L2_CID_FOCUS_ABSOLUTE, -1, 1, 1, 0);
 
 	v4l2_ctrl_new_std_menu(hdl, ops, V4L2_CID_COLORFX,
