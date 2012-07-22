@@ -843,7 +843,9 @@ static struct platform_device spica_fimc_device = {
 	.resource	= s3c_fimc_resource,
 	.num_resources	= ARRAY_SIZE(s3c_fimc_resource),
 	.dev	= {
+#ifdef CONFIG_SAMSUNG_PD
 		.parent		= &s3c64xx_device_pd[S3C64XX_DOMAIN_I].dev,
+#endif
 		.dma_mask		= &spica_fimc_dma_mask,
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	},
@@ -2086,7 +2088,9 @@ static struct platform_device *spica_mod_devices[] __initdata = {
 		.num_resources	= ARRAY_SIZE(s3c_g3d_resource),
 		.resource	= s3c_g3d_resource,
 		.dev		= {
+#ifdef CONFIG_SAMSUNG_PD
 			.parent	= &s3c64xx_device_pd[S3C6410_DOMAIN_G].dev,
+#endif
 		},
 	}, &(struct platform_device){
 		.name		= "s3c-mfc",
@@ -2094,7 +2098,9 @@ static struct platform_device *spica_mod_devices[] __initdata = {
 		.num_resources	= ARRAY_SIZE(s3c_mfc_resource),
 		.resource	= s3c_mfc_resource,
 		.dev		= {
+#ifdef CONFIG_SAMSUNG_PD
 			.parent	= &s3c64xx_device_pd[S3C64XX_DOMAIN_V].dev,
+#endif
 		},
 	}, &(struct platform_device){
 		.name		= "s3c-jpeg",
@@ -2102,7 +2108,9 @@ static struct platform_device *spica_mod_devices[] __initdata = {
 		.num_resources	= ARRAY_SIZE(s3c_jpeg_resource),
 		.resource	= s3c_jpeg_resource,
 		.dev		= {
+#ifdef CONFIG_SAMSUNG_PD
 			.parent	= &s3c64xx_device_pd[S3C64XX_DOMAIN_I].dev,
+#endif
 			.dma_mask = &full_dmamask,
 			.coherent_dma_mask = DMA_BIT_MASK(32),
 		},
@@ -2112,7 +2120,9 @@ static struct platform_device *spica_mod_devices[] __initdata = {
 		.num_resources	= ARRAY_SIZE(s3c_g2d_resource),
 		.resource	= s3c_g2d_resource,
 		.dev		= {
+#ifdef CONFIG_SAMSUNG_PD
 			.parent	= &s3c64xx_device_pd[S3C64XX_DOMAIN_P].dev,
+#endif
 		},
 	}, &(struct platform_device){
 		.name		= "s3c-rotator",
@@ -2120,7 +2130,9 @@ static struct platform_device *spica_mod_devices[] __initdata = {
 		.num_resources	= ARRAY_SIZE(s3c_rotator_resource),
 		.resource	= s3c_rotator_resource,
 		.dev		= {
+#ifdef CONFIG_SAMSUNG_PD
 			.parent	= &s3c64xx_device_pd[S3C64XX_DOMAIN_F].dev,
+#endif
 		},
 	}, &(struct platform_device){
 		.name		= "s3c-pp",
@@ -2128,7 +2140,9 @@ static struct platform_device *spica_mod_devices[] __initdata = {
 		.num_resources	= ARRAY_SIZE(s3c_pp_resource),
 		.resource	= s3c_pp_resource,
 		.dev		= {
+#ifdef CONFIG_SAMSUNG_PD
 			.parent	= &s3c64xx_device_pd[S3C64XX_DOMAIN_F].dev,
+#endif
 		},
 	}
 };
@@ -2627,10 +2641,12 @@ static void __init spica_machine_init(void)
 	s3c_set_platdata(&spica_i2s_pdata, sizeof(spica_i2s_pdata),
 							&s3c64xx_device_iis0);
 
+#ifdef CONFIG_SAMSUNG_PD
 	/* Setup power domains */
 	s3c_device_fb.dev.parent = &s3c64xx_device_pd[S3C64XX_DOMAIN_F].dev;
 	samsung_pd_set_persistent(&s3c64xx_device_pd[S3C64XX_DOMAIN_F]);
 	s3c64xx_add_pd_devices();
+#endif
 
 	/* Setup RAM console */
 	spica_ram_console_resources[0].start =
