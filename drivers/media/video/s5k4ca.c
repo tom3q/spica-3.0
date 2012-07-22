@@ -655,6 +655,10 @@ static int s5k4ca_framerate_set(struct v4l2_subdev *sd, int rate)
 		ret = s5k4ca_write_regs(state, s5k4ca_fps_auto,
 						ARRAY_SIZE(s5k4ca_fps_auto));
 		break;
+	case 1:
+		ret = s5k4ca_write_regs(state, s5k4ca_fps_1,
+						ARRAY_SIZE(s5k4ca_fps_1));
+		break;
 	case 7:
 		ret = s5k4ca_write_regs(state, s5k4ca_fps_7,
 						ARRAY_SIZE(s5k4ca_fps_7));
