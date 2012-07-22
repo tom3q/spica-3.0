@@ -435,6 +435,14 @@ static int s5k4ca_set_saturation(struct v4l2_subdev *sd, int type)
 		ret = s5k4ca_write_regs(state, s5k4ca_Saturation_p2,
 					ARRAY_SIZE(s5k4ca_Saturation_p2));
 		break;
+	case 3:
+		ret = s5k4ca_write_regs(state, s5k4ca_Saturation_p3,
+					ARRAY_SIZE(s5k4ca_Saturation_p3));
+		break;
+	case 4:
+		ret = s5k4ca_write_regs(state, s5k4ca_Saturation_p4,
+					ARRAY_SIZE(s5k4ca_Saturation_p4));
+		break;
 	default:
 		return -EINVAL;
 	}
@@ -1369,7 +1377,7 @@ static int s5k4ca_initialize_ctrls(struct s5k4ca_state *state)
 
 	v4l2_ctrl_new_std(hdl, ops, V4L2_CID_BRIGHTNESS, -4, 4, 1, 0);
 	v4l2_ctrl_new_std(hdl, ops, V4L2_CID_CONTRAST, -2, 2, 1, 0);
-	v4l2_ctrl_new_std(hdl, ops, V4L2_CID_SATURATION, -2, 2, 1, 0);
+	v4l2_ctrl_new_std(hdl, ops, V4L2_CID_SATURATION, -2, 4, 1, 0);
 	v4l2_ctrl_new_std(hdl, ops, V4L2_CID_SHARPNESS, -2, 2, 1, 0);
 
 	v4l2_ctrl_new_std_menu(hdl, ops, V4L2_CID_EXPOSURE_AUTO,
