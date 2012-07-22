@@ -4025,6 +4025,63 @@ static struct s5k4ca_request s5k4ca_iso_sport[] = {
 };
 
 /*
+ * Special
+ */
+
+static struct s5k4ca_request s5k4ca_night_on[] = {
+	/*
+	 * 13. NIGHT ON
+	 *
+	 * Min FPS = 4
+	 * Max FPS = 15
+	 */
+	S5K4CA_BANK(0xD000),
+	S5K4CA_PAGE(0xD000),
+
+	S5K4CA_REG(0xA06E),	/* ADLC */
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0xA074),
+	S5K4CA_DATA(0x0081),
+	S5K4CA_DATA(0x0001),
+	S5K4CA_DATA(0x0001),
+	S5K4CA_DATA(0x0003),	/* 0006 */
+
+	S5K4CA_PAGE(0x7000),
+
+	S5K4CA_REG(0x0688),
+	S5K4CA_DATA(0x0468),
+	S5K4CA_REG(0x06AA),
+	S5K4CA_DATA(0x0A68),
+	S5K4CA_REG(0x06CC),
+	S5K4CA_DATA(0x0A60),
+};
+
+static struct s5k4ca_request s5k4ca_night_off[] = {
+	/*
+	 * Disable low light settings
+	 */
+	S5K4CA_BANK(0xD000),
+	S5K4CA_PAGE(0xD000),
+
+	S5K4CA_REG(0xA06E),	/* ADLC_1	*/
+	S5K4CA_DATA(0x0001),
+	S5K4CA_REG(0xA074),
+	S5K4CA_DATA(0x0000),
+	S5K4CA_DATA(0x0000),
+	S5K4CA_DATA(0x0000),
+	S5K4CA_DATA(0x0002),
+
+	S5K4CA_PAGE(0x7000),
+
+	S5K4CA_REG(0x0688),	/* lowlight recovery R */
+	S5K4CA_DATA(0x0900),
+	S5K4CA_REG(0x06AA),	/* lowlight recovery G */
+	S5K4CA_DATA(0x0900),
+	S5K4CA_REG(0x06CC),	/* lowlight recovery B */
+	S5K4CA_DATA(0x0800),
+};
+
+/*
  * Photometry
  */
 
