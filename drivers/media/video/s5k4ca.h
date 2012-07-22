@@ -3974,6 +3974,56 @@ static struct s5k4ca_request s5k4ca_iso400[] = {
 	S5K4CA_DATA(0x0001),
 };
 
+static struct s5k4ca_request s5k4ca_iso_night[] = {
+	S5K4CA_BANK(0xD000),
+	S5K4CA_PAGE(0x7000),
+
+	S5K4CA_REG(0x047C),
+	S5K4CA_DATA(0x2710),	/* 7000047C	//t_usLTtable1_1 50ms */
+	S5K4CA_DATA(0x2EE0),	/* 7000047E	//t_usLTtable1_2 Control for 700lux */
+	S5K4CA_DATA(0x5DC0),	/* 70000480	//t_usLTtable2_1 */
+	S5K4CA_DATA(0x7530),	/* 70000482	//t_usLTtable2_2 Control for 400lux */
+	S5K4CA_DATA(0xEA60),	/* 70000484	//t_usLTtable3_1 */
+	S5K4CA_DATA(0xF618),	/* 70000486	//t_usLTtable3_2 Control for 200lux */
+	S5K4CA_DATA(0xFFFF),	/* 70000488	//t_usMaxLTtable */
+
+	S5K4CA_DATA(0x4E20),	/* 7000048A	//t_usLTExposure2 100ms */
+	S5K4CA_DATA(0x7530),	/* 7000048C	//t_usLTExposure3 200ms */
+	S5K4CA_DATA(0xFA60),	/* 7000048E	//t_usMaxExposure 250ms */
+
+	S5K4CA_REG(0x0616),
+	S5K4CA_DATA(0x0700),	/* lt_uMaxAnGain2 5+5/16 =5.3125  */
+	S5K4CA_DATA(0x0100),	/* lt_uMaxDigGain */
+
+	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
+	S5K4CA_DATA(0x0001),
+};
+
+static struct s5k4ca_request s5k4ca_iso_sport[] = {
+	S5K4CA_BANK(0xD000),
+	S5K4CA_PAGE(0x7000),
+
+	S5K4CA_REG(0x047C),
+	S5K4CA_DATA(0x07D0),	/* 7000047C	//t_usLTtable1_1 20ms */
+	S5K4CA_DATA(0x1388),	/* 7000047E	//t_usLTtable1_2 Control for 700lux */
+	S5K4CA_DATA(0x2EE0),	/* 70000480	//t_usLTtable2_1 40ms */
+	S5K4CA_DATA(0x3E80),	/* 70000482	//t_usLTtable2_2 Control for 400lux */
+	S5K4CA_DATA(0x5DC0),	/* 70000484	//t_usLTtable3_1 60ms */
+	S5K4CA_DATA(0x7530),	/* 70000486	//t_usLTtable3_2 Control for 200lux */
+	S5K4CA_DATA(0xFFFF),	/* 70000488	//t_usMaxLTtable */
+
+	S5K4CA_DATA(0x0FA0),	/* 7000048A	//t_usLTExposure2 40ms */
+	S5K4CA_DATA(0x1770),	/* 7000048C	//t_usLTExposure3 60ms */
+	S5K4CA_DATA(0x1F40),	/* 7000048E	//t_usMaxExposure Control for 20lux 80ms */
+
+	S5K4CA_REG(0x0616),
+	S5K4CA_DATA(0x0600),	/* lt_uMaxAnGain2 5+5/16 =5.3125  */
+	S5K4CA_DATA(0x0100),	/* lt_uMaxDigGain */
+
+	S5K4CA_REG(0x028A),	/* REG_TC_IPRM_InitParamsUpdated */
+	S5K4CA_DATA(0x0001),
+};
+
 /*
  * Photometry
  */
