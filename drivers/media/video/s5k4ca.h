@@ -3799,6 +3799,45 @@ static struct s5k4ca_request s5k4ca_Sharpness_p2[] = {
 };
 
 /*
+ * Glamour (from -2 to +2)
+ */
+
+static struct s5k4ca_request s5k4ca_Glamour_m2[] = {
+	S5K4CA_BANK(0xD000),
+	S5K4CA_PAGE(0x7000),
+	S5K4CA_REG(0x02ae),
+	S5K4CA_DATA(0xffd8),
+};
+
+static struct s5k4ca_request s5k4ca_Glamour_m1[] = {
+	S5K4CA_BANK(0xD000),
+	S5K4CA_PAGE(0x7000),
+	S5K4CA_REG(0x02ae),
+	S5K4CA_DATA(0xffec),
+};
+
+static struct s5k4ca_request s5k4ca_Glamour_0[] = {
+	S5K4CA_BANK(0xD000),
+	S5K4CA_PAGE(0x7000),
+	S5K4CA_REG(0x02ae),
+	S5K4CA_DATA(0x0000),
+};
+
+static struct s5k4ca_request s5k4ca_Glamour_p1[] = {
+	S5K4CA_BANK(0xD000),
+	S5K4CA_PAGE(0x7000),
+	S5K4CA_REG(0x02ae),
+	S5K4CA_DATA(0x0014),
+};
+
+static struct s5k4ca_request s5k4ca_Glamour_p2[] = {
+	S5K4CA_BANK(0xD000),
+	S5K4CA_PAGE(0x7000),
+	S5K4CA_REG(0x02ae),
+	S5K4CA_DATA(0x0028),
+};
+
+/*
  * ISO modes
  */
 
