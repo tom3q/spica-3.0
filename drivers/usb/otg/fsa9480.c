@@ -482,6 +482,7 @@ out:
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_unlock(&usbsw->wakelock);
 #endif
+	return;
 }
 
 static void fsa9480_reg_init(struct fsa9480_usbsw *usbsw)
