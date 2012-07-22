@@ -559,6 +559,16 @@ static int s5k4ca_set_iso(struct v4l2_subdev *sd, int type)
 		ret = s5k4ca_write_regs(state, s5k4ca_iso400,
 					ARRAY_SIZE(s5k4ca_iso400));
 		break;
+	case 5:
+		v4l2_info(sd, "-> Night\n");
+		ret = s5k4ca_write_regs(state, s5k4ca_iso_night,
+					ARRAY_SIZE(s5k4ca_iso_night));
+		break;
+	case 6:
+		v4l2_info(sd, "-> Sport\n");
+		ret = s5k4ca_write_regs(state, s5k4ca_iso_sport,
+					ARRAY_SIZE(s5k4ca_iso_sport));
+		break;
 	default:
 		return -EINVAL;
 	}
@@ -1272,6 +1282,8 @@ static const char * const s5k4ca_iso_presets[] = {
 	"ISO 100",
 	"ISO 200",
 	"ISO 400",
+	"Night",
+	"Sport",
 };
 
 static const char * const s5k4ca_photometry_modes[] = {
