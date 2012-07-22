@@ -68,8 +68,8 @@ struct s3c_gpio_chip {
 	int			irq_base;
 	int			group;
 	spinlock_t		 lock;
-#ifdef CONFIG_PM
 	int			alive;
+#ifdef CONFIG_PM
 	u32			pm_save[6];
 #endif
 };
