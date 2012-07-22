@@ -79,18 +79,7 @@ struct s5k4ca_state {
 	struct i2c_client *client;
 	struct s5k4ca_platform_data *pdata;
 
-	int frame_rate;
 	int focus_mode;
-	int auto_focus_result;
-	int color_effect;
-	int scene_mode;
-	int brightness;
-	int contrast;
-	int saturation;
-	int sharpness;
-	int iso;
-	int photometry;
-	int white_balance;
 	int capture;
 
 #define AE_FLAG		(1 << 0)
@@ -253,25 +242,21 @@ static int s5k4ca_set_wb(struct v4l2_subdev *sd, int type)
 
 	switch (type) {
 	case 0:
-		state->white_balance = 1;
 		v4l2_info(sd, "-> WB Sunny mode\n");
 		ret = s5k4ca_write_regs(state, s5k4ca_wb_sunny,
 					ARRAY_SIZE(s5k4ca_wb_sunny));
 		break;
 	case 1:
-		state->white_balance = 2;
 		v4l2_info(sd, "-> WB Cloudy mode\n");
 		ret = s5k4ca_write_regs(state, s5k4ca_wb_cloudy,
 					ARRAY_SIZE(s5k4ca_wb_cloudy));
 		break;
 	case 2:
-		state->white_balance = 3;
 		v4l2_info(sd, "-> WB Tungsten mode\n");
 		ret = s5k4ca_write_regs(state, s5k4ca_wb_tungsten,
 					ARRAY_SIZE(s5k4ca_wb_tungsten));
 		break;
 	case 3:
-		state->white_balance = 4;
 		v4l2_info(sd, "-> WB Flourescent mode\n");
 		ret = s5k4ca_write_regs(state, s5k4ca_wb_fluorescent,
 					ARRAY_SIZE(s5k4ca_wb_fluorescent));
@@ -280,11 +265,7 @@ static int s5k4ca_set_wb(struct v4l2_subdev *sd, int type)
 		return -EINVAL;
 	}
 
-	if (ret < 0)
-		return ret;
-
-	state->white_balance = type;
-	return 0;
+	return ret;
 }
 
 static int s5k4ca_set_effect(struct v4l2_subdev *sd, int type)
@@ -331,11 +312,7 @@ static int s5k4ca_set_effect(struct v4l2_subdev *sd, int type)
 		return -EINVAL;
 	}
 
-	if (ret < 0)
-		return ret;
-
-	state->color_effect = type;
-	return 0;
+	return ret;
 }
 
 static int s5k4ca_set_br(struct v4l2_subdev *sd, int type)
@@ -388,11 +365,7 @@ static int s5k4ca_set_br(struct v4l2_subdev *sd, int type)
 		return -EINVAL;
 	}
 
-	if (ret < 0)
-		return ret;
-
-	state->brightness = type;
-	return 0;
+	return ret;
 }
 
 static int s5k4ca_set_contrast(struct v4l2_subdev *sd, int type)
@@ -429,11 +402,7 @@ static int s5k4ca_set_contrast(struct v4l2_subdev *sd, int type)
 		return -EINVAL;
 	}
 
-	if (ret < 0)
-		return ret;
-
-	state->contrast = type;
-	return 0;
+	return ret;
 }
 
 static int s5k4ca_set_saturation(struct v4l2_subdev *sd, int type)
@@ -470,11 +439,7 @@ static int s5k4ca_set_saturation(struct v4l2_subdev *sd, int type)
 		return -EINVAL;
 	}
 
-	if (ret < 0)
-		return ret;
-
-	state->saturation = type;
-	return 0;
+	return ret;
 }
 
 static int s5k4ca_set_sharpness(struct v4l2_subdev *sd, int type)
@@ -511,12 +476,9 @@ static int s5k4ca_set_sharpness(struct v4l2_subdev *sd, int type)
 		return -EINVAL;
 	}
 
-	if (ret < 0)
-		return ret;
-
-	state->sharpness = type;
-	return 0;
+	return ret;
 }
+
 
 static int s5k4ca_set_iso(struct v4l2_subdev *sd, int type)
 {
@@ -557,11 +519,7 @@ static int s5k4ca_set_iso(struct v4l2_subdev *sd, int type)
 		return -EINVAL;
 	}
 
-	if (ret < 0)
-		return ret;
-
-	state->iso = type;
-	return 0;
+	return ret;
 }
 
 static int s5k4ca_set_photometry(struct v4l2_subdev *sd, int type)
@@ -590,11 +548,7 @@ static int s5k4ca_set_photometry(struct v4l2_subdev *sd, int type)
 		return -EINVAL;
 	}
 
-	if (ret < 0)
-		return ret;
-
-	state->photometry = type;
-	return 0;
+	return ret;
 }
 
 static int s5k4ca_update_ae_awb(struct v4l2_subdev *sd)
@@ -663,12 +617,8 @@ static int s5k4ca_framerate_set(struct v4l2_subdev *sd, int rate)
 		return -EINVAL;
 	}
 
-	if (ret < 0)
-		return ret;
-
 	msleep(300);
-	state->frame_rate = rate;
-	return 0;
+	return ret;
 }
 
 static int s5k4ca_set_focus_mode(struct v4l2_subdev *sd, int mode)
