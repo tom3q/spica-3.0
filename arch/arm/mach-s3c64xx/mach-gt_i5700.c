@@ -690,7 +690,7 @@ static struct i2c_board_info spica_audio_i2c_devs[] __initdata = {
 static struct i2c_gpio_platform_data spica_touch_i2c_pdata = {
 	.sda_pin		= GPIO_TOUCH_I2C_SDA,
 	.scl_pin		= GPIO_TOUCH_I2C_SCL,
-	.udelay			= 6, /* 83,3KHz */
+	.udelay			= 2, /* 250KHz */
 };
 
 static struct platform_device spica_touch_i2c = {
