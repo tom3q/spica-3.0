@@ -2539,6 +2539,7 @@ static void __init spica_map_io(void)
 	__raw_writel(reg, S3C64XX_OTHERS);
 
 	do {
+		nop(); nop(); nop(); nop();
 		reg = __raw_readl(S3C64XX_OTHERS);
 		reg &= S3C64XX_OTHERS_SYNCACK_MASK;
 	} while (reg != S3C64XX_OTHERS_SYNCACK_MASK);

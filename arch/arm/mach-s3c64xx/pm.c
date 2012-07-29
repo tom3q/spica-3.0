@@ -120,6 +120,7 @@ void s3c_pm_restore_core(void)
 		val = 0;
 
 	do {
+		nop(); nop(); nop(); nop();
 		reg = __raw_readl(S3C64XX_OTHERS);
 		reg &= S3C64XX_OTHERS_SYNCACK_MASK;
 	} while (reg != val);
