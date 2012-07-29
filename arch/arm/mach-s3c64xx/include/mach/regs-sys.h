@@ -15,6 +15,8 @@
 #ifndef __PLAT_REGS_SYS_H
 #define __PLAT_REGS_SYS_H __FILE__
 
+#include <linux/delay.h>
+
 #define S3C_SYSREG(x)		(S3C_VA_SYS + (x))
 
 #define S3C64XX_AHB_CON0	S3C_SYSREG(0x100)
@@ -34,5 +36,38 @@
 #define S3C64XX_OTHERS_SYNCACK_MASK	(0xf << 8)
 #define S3C64XX_OTHERS_SYNCMODE		(1 << 7)
 #define S3C64XX_OTHERS_SYNCMUXSEL	(1 << 6)
+
+static inline void s3c6410_enter_sync_mode(void)
+{
+	u32 reg;
+
+	reg = __raw_readl(S3C64XX_OTHERS);
+	reg |= S3C64XX_OTHERS_SYNCMUXSEL | (1 << 11);
+	__raw_writel(reg, S3C64XX_OTHERS);
+
+	mdelay(10);
+
+	reg = __raw_readl(S3C64XX_OTHERS);
+	reg |= S3C64XX_OTHERS_SYNCMODE;
+	__raw_writel(reg, S3C64XX_OTHERS);
+
+	do {
+		mdelay(10);
+		reg = __raw_readl(S3C64XX_OTHERS);
+		reg &= S3C64XX_OTHERS_SYNCACK_MASK;
+	} while (reg != S3C64XX_OTHERS_SYNCACK_MASK);
+}
+
+static inline void s3c6410_exit_sync_mode(void)
+{
+	u32 reg;
+
+	reg = __raw_readl(S3C64XX_OTHERS);
+	reg &= ~S3C64XX_OTHERS_SYNCMODE;
+	reg &= ~S3C64XX_OTHERS_SYNCMUXSEL;
+	__raw_writel(reg, S3C64XX_OTHERS);
+
+	while (__raw_readl(S3C64XX_OTHERS) & S3C64XX_OTHERS_SYNCACK_MASK);
+}
 
 #endif /* _PLAT_REGS_SYS_H */

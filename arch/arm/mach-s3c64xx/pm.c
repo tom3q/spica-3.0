@@ -106,24 +106,17 @@ void s3c_pm_restore_core(void)
 {
 	u32 pclkgate, tmp;
 	int i;
-	u32 reg, val;
 
 	__raw_writel(0, S3C64XX_EINT_MASK);
 
 	s3c_pm_debug_smdkled(1 << 2, 0);
 
-	__raw_writel(s3c64xx_others_save, S3C64XX_OTHERS);
-
 	if (s3c64xx_others_save & S3C64XX_OTHERS_SYNCMUXSEL)
-		val = S3C64XX_OTHERS_SYNCACK_MASK;
+		s3c6410_enter_sync_mode();
 	else
-		val = 0;
+		s3c6410_exit_sync_mode();
 
-	do {
-		nop(); nop(); nop(); nop();
-		reg = __raw_readl(S3C64XX_OTHERS);
-		reg &= S3C64XX_OTHERS_SYNCACK_MASK;
-	} while (reg != val);
+	__raw_writel(s3c64xx_others_save, S3C64XX_OTHERS);
 
 	s3c_pm_do_restore_core(core_save, ARRAY_SIZE(core_save));
 	s3c_pm_do_restore(misc_save, ARRAY_SIZE(misc_save));
