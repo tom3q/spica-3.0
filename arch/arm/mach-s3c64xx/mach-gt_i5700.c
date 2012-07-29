@@ -701,9 +701,7 @@ static struct platform_device spica_touch_i2c = {
 
 static struct qt5480_platform_data spica_qt5480_pdata = {
 	.rst_gpio	= GPIO_TOUCH_RST,
-	.rst_inverted	= 0,
-	.en_gpio	= GPIO_TOUCH_EN,
-	.en_inverted	= 0,
+	.change_gpio	= GPIO_TOUCH_INT_N
 };
 
 static struct i2c_board_info spica_touch_i2c_devs[] __initdata = {
