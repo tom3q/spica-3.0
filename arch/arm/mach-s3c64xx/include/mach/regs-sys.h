@@ -42,17 +42,11 @@ static inline void s3c6410_enter_sync_mode(void)
 	u32 reg;
 
 	reg = __raw_readl(S3C64XX_OTHERS);
-	reg |= S3C64XX_OTHERS_SYNCMUXSEL | (1 << 11);
-	__raw_writel(reg, S3C64XX_OTHERS);
-
-	mdelay(10);
-
-	reg = __raw_readl(S3C64XX_OTHERS);
-	reg |= S3C64XX_OTHERS_SYNCMODE;
+	reg |= S3C64XX_OTHERS_SYNCMUXSEL | S3C64XX_OTHERS_SYNCMODE;
 	__raw_writel(reg, S3C64XX_OTHERS);
 
 	do {
-		mdelay(10);
+		nop(); nop(); nop(); nop(); nop();
 		reg = __raw_readl(S3C64XX_OTHERS);
 		reg &= S3C64XX_OTHERS_SYNCACK_MASK;
 	} while (reg != S3C64XX_OTHERS_SYNCACK_MASK);
@@ -63,11 +57,14 @@ static inline void s3c6410_exit_sync_mode(void)
 	u32 reg;
 
 	reg = __raw_readl(S3C64XX_OTHERS);
-	reg &= ~S3C64XX_OTHERS_SYNCMODE;
-	reg &= ~S3C64XX_OTHERS_SYNCMUXSEL;
+	reg &= ~(S3C64XX_OTHERS_SYNCMODE | S3C64XX_OTHERS_SYNCMUXSEL);
 	__raw_writel(reg, S3C64XX_OTHERS);
 
-	while (__raw_readl(S3C64XX_OTHERS) & S3C64XX_OTHERS_SYNCACK_MASK);
+	do {
+		nop(); nop(); nop(); nop(); nop();
+		reg = __raw_readl(S3C64XX_OTHERS);
+		reg &= S3C64XX_OTHERS_SYNCACK_MASK;
+	} while (reg != 0);
 }
 
 #endif /* _PLAT_REGS_SYS_H */
