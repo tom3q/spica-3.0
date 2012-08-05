@@ -11,10 +11,7 @@
 
 struct qt5480_platform_data {
 	int rst_gpio;
-	int rst_inverted;
-
-	int en_gpio;
-	int en_inverted;
+	int change_gpio;
 };
 
 #endif

@@ -690,7 +690,7 @@ static struct i2c_board_info spica_audio_i2c_devs[] __initdata = {
 static struct i2c_gpio_platform_data spica_touch_i2c_pdata = {
 	.sda_pin		= GPIO_TOUCH_I2C_SDA,
 	.scl_pin		= GPIO_TOUCH_I2C_SCL,
-	.udelay			= 6, /* 83,3KHz */
+	.udelay			= 2, /* 250KHz */
 };
 
 static struct platform_device spica_touch_i2c = {
@@ -701,9 +701,7 @@ static struct platform_device spica_touch_i2c = {
 
 static struct qt5480_platform_data spica_qt5480_pdata = {
 	.rst_gpio	= GPIO_TOUCH_RST,
-	.rst_inverted	= 0,
-	.en_gpio	= GPIO_TOUCH_EN,
-	.en_inverted	= 0,
+	.change_gpio	= GPIO_TOUCH_INT_N
 };
 
 static struct i2c_board_info spica_touch_i2c_devs[] __initdata = {
@@ -1180,9 +1178,9 @@ static struct mtd_partition spica_onenand_parts[] = {
 		.offset		= 0x09ec0000,
 	},
 	[7] = {
-		.name		= "oops",
-		.size		= SZ_8M,
-		.offset		= 0x1c540000,
+		.name		= "boot",
+		.size		= SZ_16M + SZ_8M + SZ_512K,
+		.offset		= 0x1b4c0000,
 	},
 	[8] = {
 		.name		= "cache",
@@ -2272,7 +2270,7 @@ static struct s3c_pin_cfg_entry spica_pin_config[] __initdata = {
 	/* Outputs */
 	S3C_PIN(GPIO_USB_SEL), S3C_PIN_OUT(0), S3C_PIN_PULL(NONE),
 	S3C_PIN(GPIO_MSENSE_RST), S3C_PIN_OUT(0), S3C_PIN_PULL(NONE),
-	S3C_PIN(GPIO_TOUCH_EN), S3C_PIN_OUT(0), S3C_PIN_PULL(NONE),
+	S3C_PIN(GPIO_TOUCH_EN), S3C_PIN_OUT(1), S3C_PIN_PULL(NONE),
 	S3C_PIN(GPIO_PM_SET1), S3C_PIN_OUT(0), S3C_PIN_PULL(NONE),
 	S3C_PIN(GPIO_PM_SET2), S3C_PIN_OUT(0), S3C_PIN_PULL(NONE),
 	S3C_PIN(GPIO_PM_SET3), S3C_PIN_OUT(0), S3C_PIN_PULL(NONE),
@@ -2500,51 +2498,51 @@ static void __init spica_fixup(struct machine_desc *desc,
 	mi->bank[0].size = PHYS_SIZE;
 }
 
+static char spica_clock_config[12] __initdata = "";
+
+static int __init spica_clock_config_setup(char *str)
+{
+	if (!str)
+		return 1;
+
+	strlcpy(spica_clock_config, str, sizeof(spica_clock_config));
+	return 0;
+}
+
+early_param("clock_config", spica_clock_config_setup);
+
 static void __init spica_map_io(void)
 {
-#if defined(CONFIG_SPICA_AHB_166) || defined(CONFIG_SPICA_CPU_667_AHB_166)
 	u32 reg;
-#endif
+
 	s3c64xx_init_io(spica_iodesc, ARRAY_SIZE(spica_iodesc));
-#if defined(CONFIG_SPICA_AHB_166)
-	reg = __raw_readl(S3C64XX_OTHERS);
-	reg &= ~S3C64XX_OTHERS_SYNCMODE;
-	reg &= ~S3C64XX_OTHERS_SYNCMUXSEL;
-	__raw_writel(reg, S3C64XX_OTHERS);
 
-	while (__raw_readl(S3C64XX_OTHERS) & S3C64XX_OTHERS_SYNCACK_MASK);
+	if (!strcmp(spica_clock_config, "ahb166")) {
+		s3c6410_exit_sync_mode();
 
-	reg = __raw_readl(S3C_CLK_DIV0);
-	reg &= ~S3C6400_CLKDIV0_HCLK2_MASK;
-	reg |= 0x0 << S3C6400_CLKDIV0_HCLK2_SHIFT;
-	__raw_writel(reg, S3C_CLK_DIV0);
+		reg = __raw_readl(S3C_CLK_DIV0);
+		reg &= ~S3C6410_CLKDIV0_ARM_MASK;
+		reg |= 0x1 << S3C6400_CLKDIV0_ARM_SHIFT;
+		reg &= ~S3C6400_CLKDIV0_HCLK2_MASK;
+		reg |= 0x0 << S3C6400_CLKDIV0_HCLK2_SHIFT;
+		__raw_writel(reg, S3C_CLK_DIV0);
 
-	__raw_writel(0xc14d0302, S3C_MPLL_CON);
-#elif defined(CONFIG_SPICA_CPU_667_AHB_166)
-	reg = __raw_readl(S3C64XX_OTHERS);
-	reg &= ~S3C64XX_OTHERS_SYNCMODE;
-	reg &= ~S3C64XX_OTHERS_SYNCMUXSEL;
-	__raw_writel(reg, S3C64XX_OTHERS);
+		__raw_writel(0xc14d0302, S3C_MPLL_CON);
+	} else if (!strcmp(spica_clock_config, "ahb166sync")) {
+		s3c6410_exit_sync_mode();
 
-	while (__raw_readl(S3C64XX_OTHERS) & S3C64XX_OTHERS_SYNCACK_MASK);
+		__raw_writel(0xc14d0301, S3C_APLL_CON);
 
-	__raw_writel(0xc14d0301, S3C_APLL_CON);
+		reg = __raw_readl(S3C_CLK_DIV0);
+		reg &= ~S3C6410_CLKDIV0_ARM_MASK;
+		reg |= 0x1 << S3C6400_CLKDIV0_ARM_SHIFT;
+		reg &= ~S3C6400_CLKDIV0_HCLK2_MASK;
+		reg |= 0x1 << S3C6400_CLKDIV0_HCLK2_SHIFT;
+		__raw_writel(reg, S3C_CLK_DIV0);
 
-	reg = __raw_readl(S3C_CLK_DIV0);
-	reg &= ~S3C6400_CLKDIV0_HCLK2_MASK;
-	reg |= 0x1 << S3C6400_CLKDIV0_HCLK2_SHIFT;
-	__raw_writel(reg, S3C_CLK_DIV0);
+		s3c6410_enter_sync_mode();
+	}
 
-	reg = __raw_readl(S3C64XX_OTHERS);
-	reg |= S3C64XX_OTHERS_SYNCMODE;
-	reg |= S3C64XX_OTHERS_SYNCMUXSEL;
-	__raw_writel(reg, S3C64XX_OTHERS);
-
-	do {
-		reg = __raw_readl(S3C64XX_OTHERS);
-		reg &= S3C64XX_OTHERS_SYNCACK_MASK;
-	} while (reg != S3C64XX_OTHERS_SYNCACK_MASK);
-#endif
 	s3c24xx_init_clocks(12000000);
 	s3c24xx_init_uarts(spica_uartcfgs, ARRAY_SIZE(spica_uartcfgs));
 }

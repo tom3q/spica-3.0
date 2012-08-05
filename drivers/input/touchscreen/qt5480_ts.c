@@ -255,7 +255,11 @@ static u8 qt5480_default_config[] = {
 #define QT5480_MAX_ZC			63
 #define QT5480_MAX_WIDTH		63
 #define QT5480_MAX_FINGER		2
-#define QT5480_RESET_TIME		100
+#define QT5480_HARD_RESET_TIMEOUT	10
+#define QT5480_HARD_RESET_DELAY		20
+#define QT5480_SOFT_RESET_TIMEOUT	10
+#define QT5480_SOFT_RESET_DELAY		50
+#define QT5480_REGISTER_READ_TIMEOUT	20
 #define QT5480_RESET_ASSERT_TIME	10
 #define QT5480_MIN_FW_VERSION		0x5502
 
@@ -390,28 +394,96 @@ static inline int qt5480_i2c_read_regs(struct qt5480 *qt,
 /*
  * Hardware configuration
  */
-static void qt5480_power_up(struct qt5480 *qt)
+static int qt5480_power_up(struct qt5480 *qt)
 {
-	int timeout = 100, ret;
+	int timeout, ret;
 	struct qt5480_ctrl_word ctrl;
 
-	gpio_set_value(qt->pdata->rst_gpio, qt->pdata->rst_inverted);
-	gpio_set_value(qt->pdata->en_gpio, !qt->pdata->en_inverted);
+	gpio_set_value(qt->pdata->rst_gpio, 0);
 
 	msleep(QT5480_RESET_ASSERT_TIME);
 
-	gpio_set_value(qt->pdata->rst_gpio, !qt->pdata->rst_inverted);
+	gpio_set_value(qt->pdata->rst_gpio, 1);
 
-	msleep(QT5480_RESET_TIME);
+	timeout = QT5480_HARD_RESET_TIMEOUT;
+	do {
+		msleep(QT5480_HARD_RESET_DELAY);
+	} while (--timeout && gpio_get_value(qt->pdata->change_gpio));
 
+	if (!timeout && gpio_get_value(qt->pdata->change_gpio)) {
+		dev_err(qt->dev, "Device power up reset timed out\n");
+		return -EFAULT;
+	}
+
+	dev_dbg(qt->dev, "timeout = %d\n", timeout);
+
+	timeout = QT5480_REGISTER_READ_TIMEOUT;
+	while (--timeout && !gpio_get_value(qt->pdata->change_gpio)) {
+		/* receive i2c data*/
+		ret = qt5480_i2c_read(qt, &ctrl);
+		if (ret < 0) {
+			dev_err(qt->dev, "i2c_read failed.");
+			return -EFAULT;
+		}
+	}
+
+	if (!timeout && !gpio_get_value(qt->pdata->change_gpio)) {
+		dev_err(qt->dev, "Device power up reset timed out\n");
+		return -EFAULT;
+	}
+
+	dev_dbg(qt->dev, "timeout = %d\n", timeout);
+
+	ret = qt5480_i2c_write(qt, REG_RESET, 1);
+	if (ret < 0) {
+		dev_err(qt->dev, "i2c_read failed.");
+		return -EFAULT;
+	}
+
+	timeout = QT5480_SOFT_RESET_TIMEOUT;
+	do {
+		msleep(QT5480_SOFT_RESET_DELAY);
+	} while (--timeout && gpio_get_value(qt->pdata->change_gpio));
+
+	if (!timeout && gpio_get_value(qt->pdata->change_gpio)) {
+		dev_err(qt->dev, "Device power up reset timed out\n");
+		return -EFAULT;
+	}
+
+	dev_dbg(qt->dev, "timeout = %d\n", timeout);
+
+	timeout = QT5480_REGISTER_READ_TIMEOUT;
+	while (--timeout && !gpio_get_value(qt->pdata->change_gpio)) {
+		/* receive i2c data*/
+		ret = qt5480_i2c_read(qt, &ctrl);
+		if (ret < 0) {
+			dev_err(qt->dev, "i2c_read failed.");
+			return -EFAULT;
+		}
+	}
+
+	if (!timeout && !gpio_get_value(qt->pdata->change_gpio)) {
+		dev_err(qt->dev, "Device power up reset timed out\n");
+		return -EFAULT;
+	}
+
+	dev_dbg(qt->dev, "timeout = %d\n", timeout);
+
+	timeout = QT5480_REGISTER_READ_TIMEOUT;
 	ctrl.class = REG_CLASS(REG_CHIP_ID);
 	do {
 		msleep(1);
 		ret = qt5480_i2c_read_regs(qt, &ctrl);
 	} while(--timeout && (ret < 0 || ctrl.data[0] != QT5480_CHIP_ID));
 
-	if (ret < 0 || ctrl.data[0] != QT5480_CHIP_ID)
+	if (ret < 0 || ctrl.data[0] != QT5480_CHIP_ID) {
 		dev_err(qt->dev, "Device power up timed out\n");
+		return -EFAULT;
+	}
+
+	dev_dbg(qt->dev, "timeout = %d\n", timeout);
+
+	return 0;
 }
 
 static int qt5480_check_chip_id(struct qt5480 *qt)
@@ -541,15 +613,18 @@ static int qt5480_init_hw(struct qt5480 *qt)
 		dev_err(qt->dev, "Failed to request reset GPIO\n");
 		return ret;
 	}
-	gpio_direction_output(qt->pdata->rst_gpio, qt->pdata->rst_inverted);
+	gpio_direction_output(qt->pdata->rst_gpio, 0);
 
-	if ((ret = gpio_request(qt->pdata->en_gpio, "qt5480 enable")) != 0) {
-		dev_err(qt->dev, "Failed to request enable GPIO\n");
+	if ((ret = gpio_request(qt->pdata->change_gpio, "qt5480 chg")) != 0) {
+		dev_err(qt->dev, "Failed to request change GPIO\n");
 		return ret;
 	}
-	gpio_direction_output(qt->pdata->en_gpio, qt->pdata->en_inverted);
+	gpio_direction_input(qt->pdata->change_gpio);
 
-	qt5480_power_up(qt);
+	if ((ret = qt5480_power_up(qt)) != 0) {
+		dev_err(qt->dev, "Failed to power up the chip\n");
+		return ret;
+	}
 
 	if(qt5480_check_chip_id(qt) < 0) {
 		dev_err(qt->dev, "Device is not a AT42QT5480\n");
