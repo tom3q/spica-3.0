@@ -1378,8 +1378,8 @@ static int s3c_jpeg_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto m2m_init_rollback;
 	}
-	strlcpy(jpeg->vfd_encoder->name, S3C_JPEG_M2M_NAME,
-		sizeof(jpeg->vfd_encoder->name));
+	snprintf(jpeg->vfd_encoder->name, sizeof(jpeg->vfd_encoder->name),
+		"%s.enc", dev_name(&pdev->dev));
 	jpeg->vfd_encoder->fops		= &s3c_jpeg_fops;
 	jpeg->vfd_encoder->ioctl_ops	= &s3c_jpeg_ioctl_ops;
 	jpeg->vfd_encoder->minor	= -1;
@@ -1405,8 +1405,8 @@ static int s3c_jpeg_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto enc_vdev_register_rollback;
 	}
-	strlcpy(jpeg->vfd_decoder->name, S3C_JPEG_M2M_NAME,
-		sizeof(jpeg->vfd_decoder->name));
+	snprintf(jpeg->vfd_decoder->name, sizeof(jpeg->vfd_decoder->name),
+		"%s.dec", dev_name(&pdev->dev));
 	jpeg->vfd_decoder->fops		= &s3c_jpeg_fops;
 	jpeg->vfd_decoder->ioctl_ops	= &s3c_jpeg_ioctl_ops;
 	jpeg->vfd_decoder->minor	= -1;
