@@ -2529,18 +2529,41 @@ static void __init spica_map_io(void)
 
 		__raw_writel(0xc14d0302, S3C_MPLL_CON);
 	} else if (!strcmp(spica_clock_config, "ahb166sync")) {
-		s3c6410_exit_sync_mode();
-
-		__raw_writel(0xc14d0301, S3C_APLL_CON);
-
 		reg = __raw_readl(S3C_CLK_DIV0);
-		reg &= ~S3C6410_CLKDIV0_ARM_MASK;
-		reg |= 0x1 << S3C6400_CLKDIV0_ARM_SHIFT;
 		reg &= ~S3C6400_CLKDIV0_HCLK2_MASK;
 		reg |= 0x1 << S3C6400_CLKDIV0_HCLK2_SHIFT;
-		__raw_writel(reg, S3C_CLK_DIV0);
+		reg &= ~S3C6410_CLKDIV0_ARM_MASK;
+		reg |= 0x3 << S3C6400_CLKDIV0_ARM_SHIFT;
 
-		s3c6410_enter_sync_mode();
+		__asm__ __volatile__ (
+			"\t	mrc\t	p15, 0, r0, c1, c0, 0\n"
+			"\t	orr\t	r1, r0, #0x800\n"
+			"\t	mcr\t	p15, 0, r1, c1, c0, 0\n"
+			"\n"
+			"\t	mov\t	r2, #0\n"
+			"\t	mov\t	r3, #0\n"
+			"loop:\n"
+			"\t	add\t	r3, r3, #1\n"
+			"\t	mov\t	r1, #0\n"
+			"\t	mcr\t	p15, 0, r2, c7, c10, 4\n"
+			"\t	mcr\t	p15, 0, r2, c7, c10, 5\n"
+			"\t	cmp\t	r3, #2\n"
+			"\t	streq\t %2, [%3]\n"
+			"\t	streq\t	%0, [%1]\n"
+			"\n"
+			"1:\n"
+			"\t	add\t	r1, r1, #1\n"
+			"\t	cmp\t	r1, #0x100\n"
+			"\t	bne\t	1b\n"
+			"\t	cmp\t	r3, #2\n"
+			"\t	bne\t	loop\n"
+			"\n"
+			"\t	mcr\t	p15, 0, r0, c1, c0, 0\n"
+			: /* No output */
+			: "r"(reg), "r"(S3C_CLK_DIV0),
+				"r"(0xc14d0301), "r"(S3C_APLL_CON)
+			: "r0", "r1", "r2", "r3"
+		);
 	}
 
 	s3c24xx_init_clocks(12000000);
