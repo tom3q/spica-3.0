@@ -803,6 +803,7 @@ struct snd_soc_pcm_runtime  {
 	struct snd_soc_platform *platform;
 	struct snd_soc_dai *codec_dai;
 	struct snd_soc_dai *cpu_dai;
+	struct snd_pcm_ops ops;
 
 	struct delayed_work delayed_work;
 };

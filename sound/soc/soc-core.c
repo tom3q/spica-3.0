@@ -2138,23 +2138,24 @@ static int soc_new_pcm(struct snd_soc_pcm_runtime *rtd, int num)
 		return ret;
 	}
 
+	rtd->ops = soc_pcm_ops;
 	rtd->pcm = pcm;
 	pcm->private_data = rtd;
 	if (platform->driver->ops) {
-		soc_pcm_ops.mmap = platform->driver->ops->mmap;
-		soc_pcm_ops.pointer = platform->driver->ops->pointer;
-		soc_pcm_ops.ioctl = platform->driver->ops->ioctl;
-		soc_pcm_ops.copy = platform->driver->ops->copy;
-		soc_pcm_ops.silence = platform->driver->ops->silence;
-		soc_pcm_ops.ack = platform->driver->ops->ack;
-		soc_pcm_ops.page = platform->driver->ops->page;
+		rtd->ops.mmap = platform->driver->ops->mmap;
+		rtd->ops.pointer = platform->driver->ops->pointer;
+		rtd->ops.ioctl = platform->driver->ops->ioctl;
+		rtd->ops.copy = platform->driver->ops->copy;
+		rtd->ops.silence = platform->driver->ops->silence;
+		rtd->ops.ack = platform->driver->ops->ack;
+		rtd->ops.page = platform->driver->ops->page;
 	}
 
 	if (playback)
-		snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_PLAYBACK, &soc_pcm_ops);
+		snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_PLAYBACK, &rtd->ops);
 
 	if (capture)
-		snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_CAPTURE, &soc_pcm_ops);
+		snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_CAPTURE, &rtd->ops);
 
 	if (platform->driver->pcm_new) {
 		ret = platform->driver->pcm_new(rtd->card->snd_card,
