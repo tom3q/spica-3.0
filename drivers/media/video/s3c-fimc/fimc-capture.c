@@ -494,12 +494,7 @@ static struct fimc_fmt *fimc_capture_try_format(struct fimc_ctx *ctx,
 	u32 mask = FMT_FLAGS_CAM;
 	struct fimc_fmt *ffmt;
 
-	/* Color conversion from/to JPEG is not supported */
-	if (code && ctx->s_frame.fmt && pad == FIMC_SD_PAD_SOURCE &&
-	    fimc_fmt_is_jpeg(ctx->s_frame.fmt->color))
-		*code = V4L2_MBUS_FMT_JPEG_1X8;
-
-	if (fourcc && *fourcc != V4L2_PIX_FMT_JPEG && pad != FIMC_SD_PAD_SINK)
+	if (fourcc && pad != FIMC_SD_PAD_SINK)
 		mask |= FMT_FLAGS_M2M;
 
 	ffmt = fimc_find_format(fourcc, code, mask, 0);
@@ -511,20 +506,11 @@ static struct fimc_fmt *fimc_capture_try_format(struct fimc_ctx *ctx,
 		*fourcc = ffmt->fourcc;
 
 	if (pad == FIMC_SD_PAD_SINK) {
-		max_w = fimc_fmt_is_jpeg(ffmt->color) ?
-			pl->scaler_dis_w : pl->scaler_en_w;
+		max_w = pl->scaler_en_w;
 		/* Apply the camera input interface pixel constraints */
 		v4l_bound_align_image(width, max_t(u32, *width, 32), max_w, 4,
 				      height, max_t(u32, *height, 32),
-				      FIMC_CAMIF_MAX_HEIGHT,
-				      fimc_fmt_is_jpeg(ffmt->color) ? 3 : 1,
-				      0);
-		return ffmt;
-	}
-	/* Can't scale or crop in transparent (JPEG) transfer mode */
-	if (fimc_fmt_is_jpeg(ffmt->color)) {
-		*width  = ctx->s_frame.f_width;
-		*height = ctx->s_frame.f_height;
+				      FIMC_CAMIF_MAX_HEIGHT, 1, 0);
 		return ffmt;
 	}
 	/* Apply the scaler and the output DMA constraints */
@@ -560,13 +546,6 @@ static void fimc_capture_try_crop(struct fimc_ctx *ctx, struct v4l2_rect *r,
 	u32 align_sz = 0, align_h = 4;
 	u32 max_sc_h, max_sc_v;
 
-	/* In JPEG transparent transfer mode cropping is not supported */
-	if (fimc_fmt_is_jpeg(ctx->d_frame.fmt->color)) {
-		r->width  = sink->f_width;
-		r->height = sink->f_height;
-		r->left   = r->top = 0;
-		return;
-	}
 	if (pad == FIMC_SD_PAD_SOURCE) {
 		if (ctx->rotation != 90 && ctx->rotation != 270)
 			align_h = 1;
@@ -748,13 +727,6 @@ static int fimc_cap_try_fmt_mplane(struct file *file, void *fh,
 	if (f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
 		return -EINVAL;
 
-	if (pix->pixelformat == V4L2_PIX_FMT_JPEG) {
-		fimc_capture_try_format(ctx, &pix->width, &pix->height,
-					NULL, &pix->pixelformat,
-					FIMC_SD_PAD_SINK);
-		ctx->s_frame.f_width  = pix->width;
-		ctx->s_frame.f_height = pix->height;
-	}
 	ffmt = fimc_capture_try_format(ctx, &pix->width, &pix->height,
 				       NULL, &pix->pixelformat,
 				       FIMC_SD_PAD_SOURCE);
@@ -779,17 +751,6 @@ static int fimc_cap_try_fmt_mplane(struct file *file, void *fh,
 	return 0;
 }
 
-static void fimc_capture_mark_jpeg_xfer(struct fimc_ctx *ctx, bool jpeg)
-{
-	ctx->scaler.enabled = !jpeg;
-	fimc_ctrls_activate(ctx, !jpeg);
-
-	if (jpeg)
-		set_bit(ST_CAPT_JPEG, &ctx->fimc_dev->state);
-	else
-		clear_bit(ST_CAPT_JPEG, &ctx->fimc_dev->state);
-}
-
 static int fimc_capture_set_format(struct fimc_dev *fimc, struct v4l2_format *f)
 {
 	struct fimc_ctx *ctx = fimc->vid_cap.ctx;
@@ -804,14 +765,6 @@ static int fimc_capture_set_format(struct fimc_dev *fimc, struct v4l2_format *f)
 	if (vb2_is_busy(&fimc->vid_cap.vbq))
 		return -EBUSY;
 
-	/* Pre-configure format at camera interface input, for JPEG only */
-	if (pix->pixelformat == V4L2_PIX_FMT_JPEG) {
-		fimc_capture_try_format(ctx, &pix->width, &pix->height,
-					NULL, &pix->pixelformat,
-					FIMC_SD_PAD_SINK);
-		ctx->s_frame.f_width  = pix->width;
-		ctx->s_frame.f_height = pix->height;
-	}
 	/* Try the format at the scaler and the DMA output */
 	ff->fmt = fimc_capture_try_format(ctx, &pix->width, &pix->height,
 					  NULL, &pix->pixelformat,
@@ -842,7 +795,8 @@ static int fimc_capture_set_format(struct fimc_dev *fimc, struct v4l2_format *f)
 	if (!(ctx->state & FIMC_DST_CROP))
 		set_frame_crop(ff, 0, 0, pix->width, pix->height);
 
-	fimc_capture_mark_jpeg_xfer(ctx, fimc_fmt_is_jpeg(ff->fmt->color));
+	ctx->scaler.enabled = true;
+	fimc_ctrls_activate(ctx, true);
 
 	/* Reset cropping and set format at the camera interface input */
 	if (!fimc->vid_cap.user_subdev_api) {
@@ -1241,7 +1195,8 @@ static int fimc_subdev_set_fmt(struct v4l2_subdev *sd,
 		*mf = fmt->format;
 		return 0;
 	}
-	fimc_capture_mark_jpeg_xfer(ctx, fimc_fmt_is_jpeg(ffmt->color));
+	ctx->scaler.enabled = true;
+	fimc_ctrls_activate(ctx, true);
 
 	ff = fmt->pad == FIMC_SD_PAD_SINK ?
 		&ctx->s_frame : &ctx->d_frame;

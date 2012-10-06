@@ -131,15 +131,6 @@ static struct fimc_fmt fimc_formats[] = {
 		.memplanes	= 3,
 		.colplanes	= 3,
 		.flags		= FMT_FLAGS_M2M,
-	}, {
-		.name		= "JPEG encoded data",
-		.fourcc		= V4L2_PIX_FMT_JPEG,
-		.color		= S3C_FIMC_JPEG,
-		.depth		= { 8 },
-		.memplanes	= 1,
-		.colplanes	= 1,
-		.mbus_code	= V4L2_MBUS_FMT_JPEG_1X8,
-		.flags		= FMT_FLAGS_CAM,
 	},
 };
 
@@ -380,8 +371,7 @@ static irqreturn_t fimc_irq_handler(int irq, void *priv)
 		}
 		return IRQ_HANDLED;
 	} else if (test_bit(ST_CAPT_PEND, &fimc->state)) {
-		fimc_capture_irq_handler(fimc,
-				 !test_bit(ST_CAPT_JPEG, &fimc->state));
+		fimc_capture_irq_handler(fimc, 1);
 		if (cap->active_buf_cnt == 1) {
 			fimc_deactivate_capture(fimc);
 			clear_bit(ST_CAPT_STREAM, &fimc->state);

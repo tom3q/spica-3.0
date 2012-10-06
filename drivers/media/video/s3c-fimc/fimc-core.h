@@ -67,7 +67,6 @@ enum fimc_dev_flags {
 	ST_CAPT_SHUT,
 	ST_CAPT_BUSY,
 	ST_CAPT_APPLY_CFG,
-	ST_CAPT_JPEG,
 };
 
 #define fimc_m2m_active(dev) test_bit(ST_M2M_RUN, &(dev)->state)
@@ -95,11 +94,9 @@ enum fimc_color_fmt {
 	S3C_FIMC_CBYCRY422,
 	S3C_FIMC_CRYCBY422,
 	S3C_FIMC_YCBCR444_LOCAL,
-	S3C_FIMC_JPEG = 0x80,
 };
 
 #define fimc_fmt_is_rgb(x) (!!((x) & 0x10))
-#define fimc_fmt_is_jpeg(x) (!!((x) & 0x80))
 
 #define IS_M2M(__strt) ((__strt) == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE || \
 			__strt == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
