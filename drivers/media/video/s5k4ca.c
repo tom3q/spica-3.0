@@ -4,9 +4,8 @@
  * 1/4" 3.2Mp CMOS Image Sensor SoC with an Embedded Image Processor
  *
  * Original driver for Samsung Galaxy GT-i5800:
+ * Copyright (C) 2009-2012, Samsung Electronics Co., Ltd.
  * Copyright (C) 2009, Jinsung Yang <jsgood.yang@samsung.com>
- *
- * Complete rewrite:
  * Copyright 2012, Tomasz Figa <tomasz.figa at gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -45,6 +44,8 @@
 #define V4L2_CID_S5K4CA_CAPTURE		(V4L2_CTRL_CLASS_CAMERA | 0x1005)
 #define V4L2_CID_S5K4CA_GLAMOUR		(V4L2_CTRL_CLASS_CAMERA | 0x1006)
 #define V4L2_CID_S5K4CA_NIGHTSHOT	(V4L2_CTRL_CLASS_CAMERA | 0x1007)
+#define V4L2_CID_S5K4CA_FOCUS_RESULT	(V4L2_CTRL_CLASS_CAMERA | 0x1008)
+#define V4L2_CID_S5K4CA_FOCUS_CANCEL	(V4L2_CTRL_CLASS_CAMERA | 0x1009)
 
 struct s5k4ca_ctrls {
 	struct v4l2_ctrl_handler handler;
@@ -96,6 +97,11 @@ struct s5k4ca_state {
 	unsigned int powered:1;
 	unsigned int streaming:1;
 	unsigned int apply_cfg:1;
+
+	struct workqueue_struct	*workqueue;
+	struct work_struct af_work;
+	volatile bool af_cancel;
+	int af_result;
 
 	u8 burst_buffer[2500];
 };
@@ -686,6 +692,9 @@ static int s5k4ca_set_focus_mode(struct v4l2_subdev *sd, int mode)
 
 	TRACE_CALL;
 
+	state->af_cancel = true;
+	cancel_work_sync(&state->af_work);
+
 	switch(mode) {
 	case -1:
 		ret = s5k4ca_write_regs(state, s5k4ca_focus_mode_infinity,
@@ -742,9 +751,34 @@ static int s5k4ca_set_capture(struct v4l2_subdev *sd, int mode)
 	return 0;
 }
 
-static int s5k4ca_set_auto_focus(struct v4l2_subdev *sd)
+static int s5k4ca_set_auto_focus(struct v4l2_subdev *sd, int val)
 {
 	struct s5k4ca_state *state = to_state(sd);
+
+	TRACE_CALL;
+
+	if (!state->streaming || state->focus_mode == -1)
+		return -EINVAL;
+
+	state->af_cancel = true;
+	cancel_work_sync(&state->af_work);
+
+	if (!val) {
+		state->af_result = 0;
+		return 0;
+	}
+
+	state->af_result = 1;
+	state->af_cancel = false;
+	queue_work(state->workqueue, &state->af_work);
+
+	return 0;
+}
+
+static void s5k4ca_af_workfunc(struct work_struct *work)
+{
+	struct s5k4ca_state *state = container_of(work,
+						struct s5k4ca_state, af_work);
 	int count = 50;
 	u16 stat = 0;
 	u16 lux_value = 0;
@@ -752,13 +786,12 @@ static int s5k4ca_set_auto_focus(struct v4l2_subdev *sd)
 
 	TRACE_CALL;
 
-	if (state->focus_mode == -1)
-		return 0;
-
 	/* Get lux_value. */
 	ret = s5k4ca_sensor_read(state, 0x12FE, &lux_value);
-	if (ret < 0)
-		return ret;
+	if (ret < 0) {
+		state->af_result = -1;
+		return;
+	}
 
 	if (lux_value < 128)  /* Low light AF */
 		ret = s5k4ca_write_regs(state, s5k4ca_af_low_lux_val,
@@ -767,8 +800,10 @@ static int s5k4ca_set_auto_focus(struct v4l2_subdev *sd)
 		ret = s5k4ca_write_regs(state, s5k4ca_af_normal_lux_val,
 					ARRAY_SIZE(s5k4ca_af_normal_lux_val));
 
-	if (ret < 0)
-		return ret;
+	if (ret < 0) {
+		state->af_result = -1;
+		return;
+	}
 
 	if (state->focus_mode == 1)
 		ret = s5k4ca_write_regs(state, s5k4ca_af_start_macro,
@@ -777,8 +812,10 @@ static int s5k4ca_set_auto_focus(struct v4l2_subdev *sd)
 		ret = s5k4ca_write_regs(state, s5k4ca_af_start_normal,
 					ARRAY_SIZE(s5k4ca_af_start_normal));
 
-	if (ret < 0)
-		return ret;
+	if (ret < 0) {
+		state->af_result = -1;
+		return;
+	}
 
 	do {
 		if (lux_value < 128)
@@ -787,9 +824,11 @@ static int s5k4ca_set_auto_focus(struct v4l2_subdev *sd)
 			msleep(100);
 
 		ret = s5k4ca_sensor_read(state, 0x130E, &stat);
-		if (ret < 0)
-			return ret;
-	} while (--count && (stat & 3) < 2);
+		if (ret < 0) {
+			state->af_result = -1;
+			return;
+		}
+	} while (!state->af_cancel && --count && (stat & 3) < 2);
 
 	if (!count || (stat & 3) == 2) {
 		if (state->focus_mode == 1)
@@ -799,15 +838,18 @@ static int s5k4ca_set_auto_focus(struct v4l2_subdev *sd)
 			ret = s5k4ca_write_regs(state, s5k4ca_af_stop_normal,
 					ARRAY_SIZE(s5k4ca_af_stop_normal));
 
-		if (ret < 0)
-			return ret;
+		if (ret < 0) {
+			state->af_result = -1;
+			return;
+		}
 
-		v4l2_info(sd, "[CAM-SENSOR] =Auto focus failed\n");
-		return -EFAULT;
+		v4l2_info(&state->sd, "[CAM-SENSOR] =Auto focus failed\n");
+		state->af_result = -1;
+		return;
 	}
 
-	v4l2_info(sd, "[CAM-SENSOR] =Auto focus successful\n");
-	return 0;
+	v4l2_info(&state->sd, "[CAM-SENSOR] =Auto focus successful\n");
+	state->af_result = 2;
 }
 
 /*
@@ -818,7 +860,7 @@ static int s5k4ca_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct v4l2_subdev *sd = ctrl_to_sd(ctrl);
 	struct s5k4ca_state *state = to_state(sd);
-	int err = 0;
+	int err = -EINVAL;
 
 	TRACE_CALL;
 
@@ -837,7 +879,7 @@ static int s5k4ca_s_ctrl(struct v4l2_ctrl *ctrl)
 		err = s5k4ca_set_focus_mode(sd, ctrl->val);
 		break;
 	case V4L2_CID_FOCUS_AUTO:
-		err = s5k4ca_set_auto_focus(sd);
+		err = s5k4ca_set_auto_focus(sd, 1);
 		break;
 	case V4L2_CID_AUTO_WHITE_BALANCE:
 		if (ctrl->val)
@@ -886,6 +928,36 @@ static int s5k4ca_s_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_S5K4CA_NIGHTSHOT:
 		err = s5k4ca_set_nightshot(sd, ctrl->val);
 		break;
+	case V4L2_CID_S5K4CA_FOCUS_CANCEL:
+		err = s5k4ca_set_auto_focus(sd, 0);
+		break;
+	}
+
+unlock:
+	mutex_unlock(&state->lock);
+	return err;
+}
+
+static int s5k4ca_g_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct v4l2_subdev *sd = ctrl_to_sd(ctrl);
+	struct s5k4ca_state *state = to_state(sd);
+	int err = -EINVAL;
+
+	TRACE_CALL;
+
+	mutex_lock(&state->lock);
+
+	if (!state->powered)
+		goto unlock;
+
+	v4l2_info(sd, "[S5k4CA] %s function ctrl->id : %d \n", __func__, ctrl->id);
+
+	switch (ctrl->id) {
+	case V4L2_CID_S5K4CA_FOCUS_RESULT:
+		ctrl->val = state->af_result;
+		err = 0;
+		break;
 	}
 
 unlock:
@@ -895,6 +967,7 @@ unlock:
 
 static const struct v4l2_ctrl_ops s5k4ca_ctrl_ops = {
 	.s_ctrl	= s5k4ca_s_ctrl,
+	.g_volatile_ctrl = s5k4ca_g_ctrl,
 };
 
 /*
@@ -1225,6 +1298,9 @@ static int s5k4ca_s_stream(struct v4l2_subdev *sd, int on)
 
 	mutex_lock(&s5k4ca->lock);
 
+	s5k4ca->af_cancel = true;
+	cancel_work_sync(&s5k4ca->af_work);
+
 	if (s5k4ca->streaming == !on) {
 		if (on && s5k4ca->apply_cfg)
 			ret = s5k4ca_apply_cfg(s5k4ca);
@@ -1363,6 +1439,20 @@ static const struct v4l2_ctrl_config s5k4ca_ctrls[] = {
 		.id	= V4L2_CID_FOCUS_AUTO,
 		.type	= V4L2_CTRL_TYPE_BUTTON,
 		.name	= "Run auto focus",
+	}, {
+		.ops	= &s5k4ca_ctrl_ops,
+		.id	= V4L2_CID_S5K4CA_FOCUS_RESULT,
+		.type	= V4L2_CTRL_TYPE_BOOLEAN,
+		.flags	= V4L2_CTRL_FLAG_READ_ONLY | V4L2_CTRL_FLAG_VOLATILE,
+		.name	=" Auto focus result",
+		.min	= -1,
+		.max	= 2,
+		.def	= 0,
+	}, {
+		.ops	= &s5k4ca_ctrl_ops,
+		.id	= V4L2_CID_S5K4CA_FOCUS_CANCEL,
+		.type	= V4L2_CTRL_TYPE_BUTTON,
+		.name	= "Cancel auto focus",
 	}
 };
 
@@ -1400,6 +1490,8 @@ static int s5k4ca_initialize_ctrls(struct s5k4ca_state *state)
 				V4L2_EXPOSURE_MANUAL, 0, V4L2_EXPOSURE_AUTO);
 
 	v4l2_ctrl_new_custom(hdl, &s5k4ca_ctrls[7], NULL);
+	v4l2_ctrl_new_custom(hdl, &s5k4ca_ctrls[8], NULL);
+	v4l2_ctrl_new_custom(hdl, &s5k4ca_ctrls[9], NULL);
 	v4l2_ctrl_new_std(hdl, ops, V4L2_CID_FOCUS_ABSOLUTE, -1, 1, 1, 0);
 
 	v4l2_ctrl_new_std_menu(hdl, ops, V4L2_CID_COLORFX,
@@ -1442,12 +1534,20 @@ static int s5k4ca_probe(struct i2c_client *client,
 		return -ENOMEM;
 
 	mutex_init(&state->lock);
+	INIT_WORK(&state->af_work, s5k4ca_af_workfunc);
 
 	state->client = client;
 	state->pdata = pdata;
 
 	sd = &state->sd;
 	strcpy(sd->name, "s5k4ca");
+
+	state->workqueue = create_singlethread_workqueue("sk54ca");
+	if (!state->workqueue) {
+		dev_err(&client->dev, "failed to create workqueue.\n");
+		ret = -ENOMEM;
+		goto err_free_mem;
+	}
 
 	v4l2_i2c_subdev_init(sd, client, &s5k4ca_ops);
 
@@ -1458,7 +1558,7 @@ static int s5k4ca_probe(struct i2c_client *client,
 	sd->entity.type = MEDIA_ENT_T_V4L2_SUBDEV_SENSOR;
 	ret = media_entity_init(&sd->entity, 1, &state->pad, 0);
 	if (ret)
-		goto err_free_mem;
+		goto err_destroy_workqueue;
 
 	ret = s5k4ca_initialize_ctrls(state);
 	if (ret)
@@ -1470,6 +1570,8 @@ static int s5k4ca_probe(struct i2c_client *client,
 
 err_media_entity_cleanup:
 	media_entity_cleanup(&sd->entity);
+err_destroy_workqueue:
+	destroy_workqueue(state->workqueue);
 err_free_mem:
 	kfree(state);
 
@@ -1479,13 +1581,15 @@ err_free_mem:
 static int s5k4ca_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct s5k4ca_state *state = to_state(sd);
 
 	TRACE_CALL;
 
 	v4l2_device_unregister_subdev(sd);
 	v4l2_ctrl_handler_free(sd->ctrl_handler);
 	media_entity_cleanup(&sd->entity);
-	kfree(to_state(sd));
+	destroy_workqueue(state->workqueue);
+	kfree(state);
 
 	return 0;
 }
