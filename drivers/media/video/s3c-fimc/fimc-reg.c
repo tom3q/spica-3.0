@@ -85,11 +85,11 @@ void fimc_hw_set_target_format(struct fimc_ctx *ctx)
 	case S3C_FIMC_YCBCR420:
 		cfg |= S3C_CITRGFMT_YCBCR420;
 		break;
+	case S3C_FIMC_YCBCR422P:
+		cfg |= S3C_CITRGFMT_YCBCR422;
+		break;
 	case S3C_FIMC_YCBYCR422...S3C_FIMC_CRYCBY422:
-		if (frame->fmt->colplanes == 1)
-			cfg |= S3C_CITRGFMT_YCBCR422_1P;
-		else
-			cfg |= S3C_CITRGFMT_YCBCR422;
+		cfg |= S3C_CITRGFMT_YCBCR422_1P;
 		break;
 	default:
 		break;
@@ -425,12 +425,11 @@ void fimc_hw_set_in_dma(struct fimc_ctx *ctx)
 	case S3C_FIMC_YCBCR420:
 		cfg |= S3C_MSCTRL_INFORMAT_YCBCR420;
 		break;
+	case S3C_FIMC_YCBCR422P:
+		cfg |= S3C_MSCTRL_INFORMAT_YCBCR422;
+		break;
 	case S3C_FIMC_YCBYCR422...S3C_FIMC_CRYCBY422:
-		if (frame->fmt->colplanes == 1)
-			cfg |= ctx->in_order_1p
-				| S3C_MSCTRL_INFORMAT_YCBCR422_1P;
-		else
-			cfg |= S3C_MSCTRL_INFORMAT_YCBCR422;
+		cfg |= ctx->in_order_1p | S3C_MSCTRL_INFORMAT_YCBCR422_1P;
 		break;
 	default:
 		break;

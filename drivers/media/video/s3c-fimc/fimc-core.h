@@ -88,16 +88,18 @@ enum fimc_color_fmt {
 	S3C_FIMC_RGB888,
 	S3C_FIMC_RGB30_LOCAL,
 	S3C_FIMC_YCBCR420 = 0x20,
-	S3C_FIMC_YCBYCR422,
+	S3C_FIMC_YCRCB420,
+	S3C_FIMC_YCBCR422P,
+	S3C_FIMC_YCBYCR422 = 0x40,
 	S3C_FIMC_YCRYCB422,
 	S3C_FIMC_CBYCRY422,
 	S3C_FIMC_CRYCBY422,
 	S3C_FIMC_YCBCR444_LOCAL,
-	S3C_FIMC_JPEG = 0x40,
+	S3C_FIMC_JPEG = 0x80,
 };
 
 #define fimc_fmt_is_rgb(x) (!!((x) & 0x10))
-#define fimc_fmt_is_jpeg(x) (!!((x) & 0x40))
+#define fimc_fmt_is_jpeg(x) (!!((x) & 0x80))
 
 #define IS_M2M(__strt) ((__strt) == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE || \
 			__strt == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
