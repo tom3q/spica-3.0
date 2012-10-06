@@ -113,30 +113,22 @@ void fimc_hw_set_target_format(struct fimc_ctx *ctx)
 
 static void fimc_get_burst(u32 hsize, u32 *mburst, u32 *rburst)
 {
-	switch ((hsize / 4) % 16) {
+	unsigned int words = hsize / 4;
+	unsigned int mod = words % 16;
+
+	WARN_ON(mod % 4);
+
+	switch (mod) {
 	case 0:
-		*mburst = 16;
-		*rburst = 16;
-		break;
-
 	case 4:
-		*mburst = 16;
-		*rburst = 4;
-		break;
-
 	case 8:
-		*mburst = 16;
-		*rburst = 8;
+		*mburst = (words < 16) ? mod : 16;
+		*rburst = (mod) ? : 16;
 		break;
-
 	case 12:
 		*mburst = 8;
 		*rburst = 4;
 		break;
-
-	default:
-		*mburst = 4;
-		*rburst = (hsize / 4) % 4;
 	}
 }
 
@@ -170,27 +162,16 @@ void fimc_hw_set_out_dma(struct fimc_ctx *ctx)
 	cfg &= ~S3C_CIOCTRL_BURST_MASK;
 
 	switch (frame->fmt->color) {
-	case S3C_FIMC_RGB888:
-	case S3C_FIMC_RGB666:
-		WARN_ON(frame->width % 2);
-
-		fimc_get_burst(4*frame->width, &y1burst, &y2burst);
+	case S3C_FIMC_RGB565...S3C_FIMC_RGB888:
+		fimc_get_burst((frame->fmt->depth[0] * frame->width) / 8,
+							&y1burst, &y2burst);
 		break;
-
-	case S3C_FIMC_RGB565:
-		WARN_ON(frame->width % 4);
-
-		fimc_get_burst(2*frame->width, &y1burst, &y2burst);
+	case S3C_FIMC_YCBCR420...S3C_FIMC_YCBCR422P:
+		fimc_get_burst(frame->width, &y1burst, &y2burst);
+		fimc_get_burst(frame->width / 2, &c1burst, &c2burst);
 		break;
-
-	case S3C_FIMC_YCBYCR422:
-	case S3C_FIMC_CBYCRY422:
-	case S3C_FIMC_CRYCBY422:
-	case S3C_FIMC_YCRYCB422:
-		WARN_ON(frame->width % 4);
-
+	case S3C_FIMC_YCBYCR422...S3C_FIMC_CRYCBY422:
 		fimc_get_burst(2*frame->width, &y1burst, &y2burst);
-
 		/*
 		 * According to S3C6410 User's Manual:
 		 *
@@ -203,18 +184,13 @@ void fimc_hw_set_out_dma(struct fimc_ctx *ctx)
 		 */
 		if (y1burst == 16 && y2burst != 16)
 			y1burst = 8;
-
 		y1burst /= 2;
 		y2burst /= 2;
 		c1burst = y1burst / 2;
 		c2burst = y2burst / 2;
 		break;
-
 	default:
-		WARN_ON(frame->width % 8);
-
-		fimc_get_burst(frame->width, &y1burst, &y2burst);
-		fimc_get_burst(frame->width / 2, &c1burst, &c2burst);
+		WARN(1, "invalid color format");
 	}
 
 	dbg("y1burst = %d, y2burst = %d, c1burst = %d, c2burst = %d",
