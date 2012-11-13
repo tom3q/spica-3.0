@@ -3795,7 +3795,6 @@ void dhd_detach(dhd_pub_t *dhdp)
 		wake_lock_destroy(&dhd->wl_wifi);
 		wake_lock_destroy(&dhd->wl_rxwake);
 		wake_lock_destroy(&dhd->wl_ctrlwake);
-		wake_lock_destroy(&dhd->wl_wdwake);
 #endif /* CONFIG_HAS_WAKELOCK */
 	}
 }
@@ -3809,8 +3808,12 @@ dhd_free(dhd_pub_t *dhdp)
 
 	if (dhdp) {
 		dhd = (dhd_info_t *)dhdp->info;
-		if (dhd)
+		if (dhd) {
+#ifdef CONFIG_HAS_WAKELOCK
+			wake_lock_destroy(&dhd->wl_wdwake);
+#endif /* CONFIG_HAS_WAKELOCK */
 			MFREE(dhd->pub.osh, dhd, sizeof(*dhd));
+		}
 	}
 }
 
