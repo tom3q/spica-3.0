@@ -347,7 +347,7 @@ static int zram_bvec_write(struct zram *zram, struct bio_vec *bvec, u32 index,
 		goto out;
 	}
 
-	if (unlikely(clen > max_zpage_size)) {
+	if (unlikely(clen >= PAGE_SIZE)) {
 		zram_stat_inc(&zram->stats.bad_compress);
 		src = uncmem;
 		clen = PAGE_SIZE;
