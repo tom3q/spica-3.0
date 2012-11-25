@@ -18,12 +18,14 @@
 static struct snd_soc_dai_driver dfbmcs320_dai = {
 	.name = "dfbmcs320-pcm",
 	.playback = {
+		.stream_name = "PCM Playback",
 		.channels_min = 1,
 		.channels_max = 1,
 		.rates = SNDRV_PCM_RATE_8000,
 		.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	},
 	.capture = {
+		.stream_name = "PCM Capture",
 		.channels_min = 1,
 		.channels_max = 1,
 		.rates = SNDRV_PCM_RATE_8000,
@@ -31,7 +33,15 @@ static struct snd_soc_dai_driver dfbmcs320_dai = {
 	},
 };
 
-static struct snd_soc_codec_driver soc_codec_dev_dfbmcs320;
+static const struct snd_soc_dapm_widget dfbmcs320_dapm_widgets[] = {
+	SND_SOC_DAPM_AIF_OUT("Playback", "PCM Playback", 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_IN("Capture", "PCM Capture", 0, SND_SOC_NOPM, 0, 0),
+};
+
+static struct snd_soc_codec_driver soc_codec_dev_dfbmcs320 = {
+	.dapm_widgets = dfbmcs320_dapm_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(dfbmcs320_dapm_widgets),
+};
 
 static int __devinit dfbmcs320_probe(struct platform_device *pdev)
 {
