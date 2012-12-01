@@ -14,9 +14,11 @@
 /**
  * struct ak4671_platform_data - platform specific AK4641 configuration
  * @gpio_pdn:	GPIO connected to AK4671 nPDN pin
+ * @pllbt_mode:	PCM IF clock generation mode
  */
 struct ak4671_platform_data {
 	int gpio_npdn;
+	int pllbt_mode;
 };
 
 #endif /* __AK4671_H */

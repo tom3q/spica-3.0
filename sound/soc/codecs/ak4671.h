@@ -145,9 +145,57 @@
 #define AK4671_DIF_I2S_MODE			(3 << 0)
 #define AK4671_BCKP				0x04
 #define AK4671_MSBS				0x08
-#define AK4671_SDOD				0x10
+#define AK4671_SDOD_SHIFT			(4)
 
 /* AK4671_LOUT2_POWER_MANAGEMENT (0x10) Fields */
 #define AK4671_MUTEN				0x04
+
+/* AK4671_DIGITAL_MIXING_CONTROL (0x15) Fields */
+#define AK4671_PFMXL_SHIFT			(0)
+#define AK4671_PFMXR_SHIFT			(2)
+#define AK4671_SRMXL_SHIFT			(4)
+#define AK4671_SRMXR_SHIFT			(6)
+
+/* AK4671_MODE_CONTROL1 (0x18) Fields */
+#define AK4671_MIXD_SHIFT			(6)
+#define AK4671_DAM_SHIFT			(7)
+
+/* AK4671_MODE_CONTROL2 (0x19) Fields */
+#define AK4671_BIV_SHIFT			(3)
+#define AK4671_SRA_SHIFT			(6)
+
+/* AK4671_PCM_IF_CONTROL0 (0x53) Fields */
+#define AK4671_PMSRA_SHIFT			(0)
+#define AK4671_PMSRB_SHIFT			(1)
+#define AK4671_PMPCM_SHIFT			(2)
+#define AK4671_PLLBT_SHIFT			(3)
+#define AK4671_PLLBT_0_2_MASK			(7 << 3)
+
+/* AK4671_PCM_IF_CONTROL1/2 (0x54/0x55) Fields */
+#define AK4671_PCM_FMT				0x03
+#define AK4671_PCM_FMT_SHORT			(0 << 0)
+#define AK4671_PCM_FMT_LONG			(1 << 0)
+#define AK4671_PCM_FMT_MSB			(2 << 0)
+#define AK4671_PCM_FMT_I2S			(3 << 0)
+#define AK4671_PCM_LAW				0x0c
+#define AK4671_PCM_LAW_LINEAR			(0 << 2)
+#define AK4671_PCM_LAW_A			(2 << 2)
+#define AK4671_PCM_LAW_MU			(3 << 2)
+#define AK4671_PCM_BCKP				0x10
+#define AK4671_PCM_MSBS				0x20
+#define AK4671_SDOxD_SHIFT			(7)
+
+/* AK4671_PCM_IF_CONTROL2 (0x55) Fields */
+#define AK4671_PLLBT_3_MASK			(1 << 6)
+
+/* AK4671_SIDETONE_VOLUME_CONTROL (0x58) Fields */
+#define AK4671_SVB_SHIFT			(0)
+#define AK4671_SDOA_SHIFT			(3)
+
+/* AK4671_DIGITAL_MIXING_CONTROL2 (0x59) Fields */
+#define AK4671_SBMX_SHIFT			(0)
+#define AK4671_BVMX_SHIFT			(2)
+#define AK4671_SDOL_SHIFT			(4)
+#define AK4671_SDOR_SHIFT			(6)
 
 #endif

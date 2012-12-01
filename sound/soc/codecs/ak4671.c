@@ -4,6 +4,8 @@
  * Copyright (C) 2009 Samsung Electronics Co.Ltd
  * Author: Joonyoung Shim <jy0922.shim@samsung.com>
  *
+ * Copyright (C) 2011-2012 Tomasz Figa <tomasz.figa at gmail.com>
+ *
  *  This program is free software; you can redistribute  it and/or modify it
  *  under  the terms of  the GNU General  Public License as published by the
  *  Free Software Foundation;  either version 2 of the  License, or (at your
@@ -19,6 +21,8 @@
 #include <linux/gpio.h>
 #include <sound/ak4671.h>
 #include <sound/soc.h>
+#include <sound/pcm.h>
+#include <sound/pcm_params.h>
 #include <sound/initval.h>
 #include <sound/tlv.h>
 
@@ -158,7 +162,14 @@ static DECLARE_TLV_DB_SCALE(master_tlv, -11550, 50, 1);
  */
 static DECLARE_TLV_DB_SCALE(mic_amp_tlv, -1500, 300, 0);
 
+/*
+ * PCM side tone and input B volume control:
+ * from -24 to 0 dB in 6 dB steps
+ */
+static DECLARE_TLV_DB_SCALE(svol_bivol_tlv, -2400, 600, 0);
+
 static const struct snd_kcontrol_new ak4671_snd_controls[] = {
+	/* TODO: Move to DAPM */
 	/* Common playback gain controls */
 	SOC_SINGLE_TLV("Line Output1 Playback Volume",
 			AK4671_OUTPUT_VOLUME_CONTROL, 0, 0x6, 0, out1_tlv),
@@ -287,6 +298,95 @@ static const struct soc_enum ak4671_rin_mux_enum =
 static const struct snd_kcontrol_new ak4671_rin_mux_control =
 	SOC_DAPM_ENUM("Route", ak4671_rin_mux_enum);
 
+/* Digital muxes */
+static const char *pfmxl_mux_text[] =
+				{ "SDTI Left", "ADC Left", "PFMXL Mixer" };
+static const SOC_ENUM_SINGLE_DECL(pfmxl_mux_enum, AK4671_DIGITAL_MIXING_CONTROL,
+					AK4671_PFMXL_SHIFT, pfmxl_mux_text);
+static const struct snd_kcontrol_new pfmxl_mux =
+	SOC_DAPM_ENUM("PFMXL Mux", pfmxl_mux_enum);
+
+static const char *pfmxr_mux_text[] =
+				{ "SDTI Right", "ADC Right", "PFMXR Mixer" };
+static const SOC_ENUM_SINGLE_DECL(pfmxr_mux_enum, AK4671_DIGITAL_MIXING_CONTROL,
+					AK4671_PFMXR_SHIFT, pfmxr_mux_text);
+static const struct snd_kcontrol_new pfmxr_mux =
+	SOC_DAPM_ENUM("PFMXR Mux", pfmxr_mux_enum);
+
+static const char *srmxl_mux_text[] =
+				{ "PFMXL Mux", "SRC-B", "SRMXL Mixer" };
+static const SOC_ENUM_SINGLE_DECL(srmxl_mux_enum, AK4671_DIGITAL_MIXING_CONTROL,
+					AK4671_SRMXL_SHIFT, srmxl_mux_text);
+static const struct snd_kcontrol_new srmxl_mux =
+	SOC_DAPM_ENUM("SRMXL Mux", srmxl_mux_enum);
+
+static const char *srmxr_mux_text[] =
+				{ "PFMXR Mux", "SRC-B", "SRMXR Mixer" };
+static const SOC_ENUM_SINGLE_DECL(srmxr_mux_enum, AK4671_DIGITAL_MIXING_CONTROL,
+					AK4671_SRMXR_SHIFT, srmxr_mux_text);
+static const struct snd_kcontrol_new srmxr_mux =
+	SOC_DAPM_ENUM("SRMXR Mux", srmxr_mux_enum);
+
+static const char *dam_mux_text[] = { "SRMX Mux", "MIXD", };
+static const SOC_ENUM_SINGLE_DECL(dam_mux_enum, AK4671_MODE_CONTROL1,
+					AK4671_DAM_SHIFT, dam_mux_text);
+static const struct snd_kcontrol_new dam_mux =
+	SOC_DAPM_ENUM("DAM", dam_mux_enum);
+
+static const char *sra_mux_text[] = { "SRMXL Mux", "SRMXR Mux", "MIXD" };
+static const SOC_ENUM_SINGLE_DECL(sra_mux_enum, AK4671_MODE_CONTROL2,
+					AK4671_SRA_SHIFT, sra_mux_text);
+static const struct snd_kcontrol_new sra_mux =
+	SOC_DAPM_ENUM("SRA Mux", sra_mux_enum);
+
+static const char *sdol_mux_text[] = { "ADC Left", "SRC-B", "SDOL Mixer" };
+static const SOC_ENUM_SINGLE_DECL(sdol_mux_enum, AK4671_DIGITAL_MIXING_CONTROL2,
+					AK4671_SDOL_SHIFT, sdol_mux_text);
+static const struct snd_kcontrol_new sdol_mux =
+	SOC_DAPM_ENUM("SDOL Mux", sdol_mux_enum);
+
+static const char *sdor_mux_text[] = { "ADC Right", "SRC-B", "SDOR Mixer" };
+static const SOC_ENUM_SINGLE_DECL(sdor_mux_enum, AK4671_DIGITAL_MIXING_CONTROL2,
+					AK4671_SDOR_SHIFT, sdor_mux_text);
+static const struct snd_kcontrol_new sdor_mux =
+	SOC_DAPM_ENUM("SDOR Mux", sdor_mux_enum);
+
+static const char *bvmx_mux_text[] = { "PCM-A", "PCM-B", "PCM-A+B" };
+static const SOC_ENUM_SINGLE_DECL(bvmx_mux_enum, AK4671_DIGITAL_MIXING_CONTROL2,
+					AK4671_BVMX_SHIFT, bvmx_mux_text);
+static const struct snd_kcontrol_new bvmx_mux =
+	SOC_DAPM_ENUM("BVMX Mux", bvmx_mux_enum);
+
+static const char *sdoa_mux_text[] = { "SRC-A", "PCM-B" };
+static const SOC_ENUM_SINGLE_DECL(sdoa_mux_enum, AK4671_SIDETONE_VOLUME_CONTROL,
+					AK4671_SDOA_SHIFT, sdoa_mux_text);
+static const struct snd_kcontrol_new sdoa_mux =
+	SOC_DAPM_ENUM("SDOA Mux", sdoa_mux_enum);
+
+static const char *sbmx_mux_text[] =
+				{ "PCM-A In", "PCM-A Out", "PCM-A In+Out" };
+static const SOC_ENUM_SINGLE_DECL(sbmx_mux_enum, AK4671_DIGITAL_MIXING_CONTROL2,
+					AK4671_SBMX_SHIFT, sbmx_mux_text);
+static const struct snd_kcontrol_new sbmx_mux =
+	SOC_DAPM_ENUM("SBMX Mux", sbmx_mux_enum);
+
+static const struct snd_kcontrol_new bivol_ctrl =
+	SOC_DAPM_SINGLE_TLV("BIVOL",
+		AK4671_MODE_CONTROL2, AK4671_BIV_SHIFT, 0x4, 1, svol_bivol_tlv);
+
+static const struct snd_kcontrol_new svolb_ctrl =
+	SOC_DAPM_SINGLE_TLV("SVOLB", AK4671_SIDETONE_VOLUME_CONTROL,
+				AK4671_SVB_SHIFT, 0x4, 1, svol_bivol_tlv);
+
+static const struct snd_kcontrol_new datt_b_ctrl =
+	SOC_DAPM_SINGLE_TLV("DATT-B",
+		AK4671_DIGITAL_VOLUME_B_CONTROL, 0, 0xff, 1, master_tlv);
+
+static const struct snd_kcontrol_new datt_c_ctrl =
+	SOC_DAPM_SINGLE_TLV("DATT-C",
+		AK4671_DIGITAL_VOLUME_C_CONTROL, 0, 0xff, 1, master_tlv);
+
+
 static const struct snd_soc_dapm_widget ak4671_dapm_widgets[] = {
 	/* Inputs */
 	SND_SOC_DAPM_INPUT("LIN1"),
@@ -307,16 +407,14 @@ static const struct snd_soc_dapm_widget ak4671_dapm_widgets[] = {
 	SND_SOC_DAPM_OUTPUT("ROUT3"),
 
 	/* DAC */
-	SND_SOC_DAPM_DAC("DAC Left", "Left HiFi Playback",
+	SND_SOC_DAPM_DAC("DAC Left", NULL,
 			AK4671_AD_DA_POWER_MANAGEMENT, 6, 0),
-	SND_SOC_DAPM_DAC("DAC Right", "Right HiFi Playback",
+	SND_SOC_DAPM_DAC("DAC Right", NULL,
 			AK4671_AD_DA_POWER_MANAGEMENT, 7, 0),
 
 	/* ADC */
-	SND_SOC_DAPM_ADC("ADC Left", "Left HiFi Capture",
-			SND_SOC_NOPM, 0, 0),
-	SND_SOC_DAPM_ADC("ADC Right", "Right HiFi Capture",
-			SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_ADC("ADC Left", NULL, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_ADC("ADC Right", NULL, SND_SOC_NOPM, 0, 0),
 
 	/* Switch */
 	SND_SOC_DAPM_PGA("ADC Left PMU",
@@ -382,6 +480,56 @@ static const struct snd_soc_dapm_widget ak4671_dapm_widgets[] = {
 
 	/* Supply */
 	SND_SOC_DAPM_SUPPLY("PMPLL", AK4671_PLL_MODE_SELECT1, 0, 0, NULL, 0),
+	SND_SOC_DAPM_SUPPLY("PMPCM", AK4671_PCM_IF_CONTROL0,
+			AK4671_PMPCM_SHIFT, 0, NULL, 0),
+
+	/* AIF */
+	SND_SOC_DAPM_AIF_OUT("SDTO", "HiFi Capture", 0, AK4671_FORMAT_SELECT, AK4671_SDOD_SHIFT, 1),
+	SND_SOC_DAPM_AIF_IN("SDTI", "HiFi Playback", 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_OUT("SDTO Left", NULL, 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_OUT("SDTO Right", NULL, 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_IN("SDTI Left", NULL, 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_IN("SDTI Right", NULL, 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_OUT("SRC-A", 0, 0,
+			AK4671_PCM_IF_CONTROL0, AK4671_PMSRA_SHIFT, 0),
+	SND_SOC_DAPM_AIF_OUT("SDTOA", "PCM-A Capture", 0,
+			AK4671_PCM_IF_CONTROL1, AK4671_SDOxD_SHIFT, 1),
+	SND_SOC_DAPM_AIF_OUT("SDTOB", "PCM-B Capture", 0,
+			AK4671_PCM_IF_CONTROL2, AK4671_SDOxD_SHIFT, 1),
+	SND_SOC_DAPM_AIF_IN("SRC-B", 0, 0,
+			AK4671_PCM_IF_CONTROL0, AK4671_PMSRB_SHIFT, 0),
+	SND_SOC_DAPM_AIF_IN("SDTIA", "PCM-A Playback", 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_IN("SDTIB", "PCM-B Playback", 0, SND_SOC_NOPM, 0, 0),
+
+	/* PCM path */
+	SND_SOC_DAPM_MIXER("BVMX Mixer", SND_SOC_NOPM, 0, 0, NULL, 0),
+	SND_SOC_DAPM_MIXER("SBMX Mixer", SND_SOC_NOPM, 0, 0, NULL, 0),
+	SND_SOC_DAPM_MUX("BVMX Mux", SND_SOC_NOPM, 0, 0, &bvmx_mux),
+	SND_SOC_DAPM_MUX("SDOA Mux", SND_SOC_NOPM, 0, 0, &sdoa_mux),
+	SND_SOC_DAPM_MUX("SBMX Mux", SND_SOC_NOPM, 0, 0, &sbmx_mux),
+	SND_SOC_DAPM_MIXER("DATT-B", SND_SOC_NOPM, 0, 0, &datt_b_ctrl, 1),
+	SND_SOC_DAPM_MIXER("BIVOL", SND_SOC_NOPM, 0, 0, &bivol_ctrl, 1),
+	SND_SOC_DAPM_MIXER("SVOLB", SND_SOC_NOPM, 0, 0, &svolb_ctrl, 1),
+	SND_SOC_DAPM_MIXER("DATT-C", SND_SOC_NOPM, 0, 0, &datt_c_ctrl, 1),
+
+	/* Digital path */
+	SND_SOC_DAPM_MIXER("PFMXL Mixer", SND_SOC_NOPM, 0, 0, NULL, 0),
+	SND_SOC_DAPM_MIXER("PFMXR Mixer", SND_SOC_NOPM, 0, 0, NULL, 0),
+	SND_SOC_DAPM_MIXER("SRMXL Mixer", SND_SOC_NOPM, 0, 0, NULL, 0),
+	SND_SOC_DAPM_MIXER("SRMXR Mixer", SND_SOC_NOPM, 0, 0, NULL, 0),
+	SND_SOC_DAPM_MIXER("MIXD", SND_SOC_NOPM, 0, 0, NULL, 0),
+	SND_SOC_DAPM_MUX("PFMXL Mux", SND_SOC_NOPM, 0, 0, &pfmxl_mux),
+	SND_SOC_DAPM_MUX("PFMXR Mux", SND_SOC_NOPM, 0, 0, &pfmxr_mux),
+	SND_SOC_DAPM_MUX("SRMXL Mux", SND_SOC_NOPM, 0, 0, &srmxl_mux),
+	SND_SOC_DAPM_MUX("SRMXR Mux", SND_SOC_NOPM, 0, 0, &srmxr_mux),
+	SND_SOC_DAPM_MUX("DAM Left", SND_SOC_NOPM, 0, 0, &dam_mux),
+	SND_SOC_DAPM_MUX("DAM Right", SND_SOC_NOPM, 0, 0, &dam_mux),
+	SND_SOC_DAPM_MUX("SRA Mux", SND_SOC_NOPM, 0, 0, &sra_mux),
+
+	SND_SOC_DAPM_MIXER("SDOL Mixer", SND_SOC_NOPM, 0, 0, NULL, 0),
+	SND_SOC_DAPM_MIXER("SDOR Mixer", SND_SOC_NOPM, 0, 0, NULL, 0),
+	SND_SOC_DAPM_MUX("SDOL Mux", SND_SOC_NOPM, 0, 0, &sdol_mux),
+	SND_SOC_DAPM_MUX("SDOR Mux", SND_SOC_NOPM, 0, 0, &sdor_mux),
 };
 
 static const struct snd_soc_dapm_route ak4671_intercon[] = {
@@ -389,6 +537,11 @@ static const struct snd_soc_dapm_route ak4671_intercon[] = {
 	{"DAC Right", NULL, "PMPLL"},
 	{"ADC Left", NULL, "PMPLL"},
 	{"ADC Right", NULL, "PMPLL"},
+
+	{"SDTIA", NULL, "PMPCM"},
+	{"SDTIB", NULL, "PMPCM"},
+	{"SDTOA", NULL, "PMPCM"},
+	{"SDTOB", NULL, "PMPCM"},
 
 	/* Outputs */
 	{"LOUT1", NULL, "LOUT1 Mixer"},
@@ -468,6 +621,100 @@ static const struct snd_soc_dapm_route ak4671_intercon[] = {
 	{"ROUT2 Mixer", "RINH4", "RIN4 Mixing Circuit"},
 	{"LOUT3 Mixer", "LINS4", "LIN4 Mixing Circuit"},
 	{"ROUT3 Mixer", "RINS4", "RIN4 Mixing Circuit"},
+
+	/* PCM path */
+	{"DATT-B", "DATT-B", "SDTIA"},
+	{"BIVOL", "BIVOL", "SDTIB"},
+	{"BVMX Mixer", NULL, "DATT-B"},
+	{"BVMX Mixer", NULL, "BIVOL"},
+	{"BVMX Mux", "PCM-A", "DATT-B"},
+	{"BVMX Mux", "PCM-B", "BIVOL"},
+	{"BVMX Mux", "PCM-A+B", "BVMX Mixer"},
+	{"SRC-B", NULL, "BVMX Mux"},
+
+	{"SDOA Mux", "SRC-A", "SRC-A"},
+	{"SDOA Mux", "PCM-B", "BIVOL"},
+	{"SDTOA", NULL, "SDOA Mux"},
+
+	{"SVOLB", "SVOLB", "SDOA Mux"},
+	{"SBMX Mixer", NULL, "SVOLB"},
+	{"SBMX Mixer", NULL, "SDTIA"},
+	{"SBMX Mux", "PCM-A In", "SDTIA"},
+	{"SBMX Mux", "PCM-A Out", "SVOLB"},
+	{"SBMX Mux", "PCM-A In+Out", "SBMX Mixer"},
+	{"DATT-C", "DATT-C", "SBMX Mux"},
+	{"SDTOB", NULL, "DATT-C"},
+
+	/* ADC path */
+	{"SDOL Mixer", NULL, "ADC Left"},
+	{"SDOL Mixer", NULL, "SRC-B"},
+
+	{"SDOR Mixer", NULL, "ADC Right"},
+	{"SDOR Mixer", NULL, "SRC-B"},
+
+	{"SDOL Mux", "ADC Left", "ADC Left"},
+	{"SDOL Mux", "SRC-B", "SRC-B"},
+	{"SDOL Mux", "SDOL Mixer", "SDOL Mixer"},
+
+	{"SDOR Mux", "ADC Right", "ADC Right"},
+	{"SDOR Mux", "SRC-B", "SRC-B"},
+	{"SDOR Mux", "SDOR Mixer", "SDOR Mixer"},
+
+	{"SDTO Left", NULL, "SDOL Mux"},
+	{"SDTO Right", NULL, "SDOR Mux"},
+
+	{"SDTO", NULL, "SDTO Left"},
+	{"SDTO", NULL, "SDTO Right"},
+
+	/* DAC path */
+	{"SDTI Left", NULL, "SDTI"},
+	{"SDTI Right", NULL, "SDTI"},
+
+	{"PFMXL Mixer", NULL, "ADC Left"},
+	{"PFMXL Mixer", NULL, "SDTI Left"},
+
+	{"PFMXR Mixer", NULL, "ADC Right"},
+	{"PFMXR Mixer", NULL, "SDTI Right"},
+
+	{"PFMXL Mux", "ADC Left", "ADC Left"},
+	{"PFMXL Mux", "SDTI Left", "SDTI Left"},
+	{"PFMXL Mux", "PFMXL Mixer", "PFMXL Mixer"},
+
+	{"PFMXR Mux", "ADC Right", "ADC Right"},
+	{"PFMXR Mux", "SDTI Right", "SDTI Right"},
+	{"PFMXR Mux", "PFMXR Mixer", "PFMXR Mixer"},
+
+	{"SRMXL Mixer", NULL, "PFMXL Mux"},
+	{"SRMXL Mixer", NULL, "SRC-B"},
+
+	{"SRMXR Mixer", NULL, "PFMXR Mux"},
+	{"SRMXR Mixer", NULL, "SRC-B"},
+
+	{"SRMXL Mux", "PFMXL Mux", "PFMXL Mux"},
+	{"SRMXL Mux", "SRC-B", "SRC-B"},
+	{"SRMXL Mux", "SRMXL Mixer", "SRMXL Mixer"},
+
+	{"SRMXR Mux", "PFMXR Mux", "PFMXR Mux"},
+	{"SRMXR Mux", "SRC-B", "SRC-B"},
+	{"SRMXR Mux", "SRMXR Mixer", "SRMXR Mixer"},
+
+	{"MIXD", NULL, "SRMXR Mux"},
+	{"MIXD", NULL, "SRMXL Mux"},
+
+	{"DAM Left", "MIXD", "MIXD"},
+	{"DAM Left", "SRMX Mux", "SRMXL Mux"},
+
+	{"DAM Right", "MIXD", "MIXD"},
+	{"DAM Right", "SRMX Mux", "SRMXR Mux"},
+
+	{"DAC Left", NULL, "DAM Left"},
+	{"DAC Right", NULL, "DAM Right"},
+
+	{"SRA Mux", "SRMXL Mux", "SRMXL Mux"},
+	{"SRA Mux", "SRMXR Mux", "SRMXR Mux"},
+	{"SRA Mux", "MIXD", "MIXD"},
+
+	{"SRC-A", NULL, "SRA Mux"},
 };
 
 static int ak4671_hw_params(struct snd_pcm_substream *substream,
@@ -657,6 +904,84 @@ static struct snd_soc_dai_ops ak4671_dai_ops = {
 	.set_fmt	= ak4671_set_dai_fmt,
 };
 
+#define AK4671_VOICE_RATES	(SNDRV_PCM_RATE_8000)
+
+#define AK4671_VOICE_FORMATS	(SNDRV_PCM_FMTBIT_S16_LE \
+				| SNDRV_PCM_FMTBIT_MU_LAW \
+				| SNDRV_PCM_FMTBIT_A_LAW)
+
+static int ak4671_pcm_hw_params(struct snd_pcm_substream *substream,
+		struct snd_pcm_hw_params *params,
+		struct snd_soc_dai *dai)
+{
+	struct snd_soc_codec *codec = dai->codec;
+	unsigned int reg = AK4671_PCM_IF_CONTROL1 + dai->id - 1;
+	u8 ctrl;
+
+	if (params_rate(params) != 8000)
+		return -EINVAL;
+
+	switch (params_format(params)) {
+	case SNDRV_PCM_FORMAT_S16_LE:
+		ctrl = AK4671_PCM_LAW_LINEAR;
+		break;
+	case SNDRV_PCM_FMTBIT_MU_LAW:
+		ctrl = AK4671_PCM_LAW_MU;
+		break;
+	case SNDRV_PCM_FMTBIT_A_LAW:
+		ctrl = AK4671_PCM_LAW_A;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	snd_soc_update_bits(codec, reg, AK4671_PCM_LAW, ctrl);
+	return 0;
+}
+
+static int ak4671_pcm_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
+{
+	struct snd_soc_codec *codec = dai->codec;
+	unsigned int reg = AK4671_PCM_IF_CONTROL1 + dai->id - 1;
+	u8 format;
+
+	if (fmt & SND_SOC_DAIFMT_NB_IF)
+		return -EINVAL;
+
+	/* interface format */
+	format = snd_soc_read(codec, reg);
+	format &= ~AK4671_PCM_FMT;
+
+	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
+	case SND_SOC_DAIFMT_I2S:
+		format = AK4671_PCM_FMT_I2S;
+		break;
+	case SND_SOC_DAIFMT_LEFT_J:
+		format = AK4671_PCM_FMT_MSB;
+		break;
+	case SND_SOC_DAIFMT_DSP_A:
+		format = AK4671_PCM_FMT_SHORT;
+		break;
+	case SND_SOC_DAIFMT_DSP_B:
+		format = AK4671_PCM_FMT_LONG;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	if (fmt & SND_SOC_DAIFMT_IB_NF)
+		format |= AK4671_PCM_BCKP;
+
+	snd_soc_update_bits(codec, reg,
+				AK4671_PCM_FMT | AK4671_PCM_BCKP, format);
+	return 0;
+}
+
+static struct snd_soc_dai_ops ak4671_pcm_dai_ops = {
+	.hw_params	= ak4671_pcm_hw_params,
+	.set_fmt	= ak4671_pcm_set_dai_fmt,
+};
+
 static int ak4671_suspend(struct snd_soc_codec *codec, pm_message_t state)
 {
 	ak4671_set_bias_level(codec, SND_SOC_BIAS_OFF);
@@ -669,21 +994,56 @@ static int ak4671_resume(struct snd_soc_codec *codec)
 	return 0;
 }
 
-static struct snd_soc_dai_driver ak4671_dai = {
-	.name = "ak4671-hifi",
-	.playback = {
-		.stream_name = "Playback",
-		.channels_min = 1,
-		.channels_max = 2,
-		.rates = AK4671_RATES,
-		.formats = AK4671_FORMATS,},
-	.capture = {
-		.stream_name = "Capture",
-		.channels_min = 1,
-		.channels_max = 2,
-		.rates = AK4671_RATES,
-		.formats = AK4671_FORMATS,},
-	.ops = &ak4671_dai_ops,
+static struct snd_soc_dai_driver ak4671_dai[] = {
+	{
+		.id = 0,
+		.name = "ak4671-hifi",
+		.playback = {
+			.stream_name = "HiFi Playback",
+			.channels_min = 1,
+			.channels_max = 2,
+			.rates = AK4671_RATES,
+			.formats = AK4671_FORMATS,},
+		.capture = {
+			.stream_name = "HiFi Capture",
+			.channels_min = 1,
+			.channels_max = 2,
+			.rates = AK4671_RATES,
+			.formats = AK4671_FORMATS,},
+		.ops = &ak4671_dai_ops,
+	}, {
+		.id = 1,
+		.name = "ak4671-pcm-a",
+		.playback = {
+			.stream_name = "PCM-A Playback",
+			.channels_min = 1,
+			.channels_max = 1,
+			.rates = AK4671_VOICE_RATES,
+			.formats = AK4671_VOICE_FORMATS,},
+		.capture = {
+			.stream_name = "PCM-A Capture",
+			.channels_min = 1,
+			.channels_max = 1,
+			.rates = AK4671_VOICE_RATES,
+			.formats = AK4671_VOICE_FORMATS,},
+		.ops = &ak4671_pcm_dai_ops,
+	}, {
+		.id = 2,
+		.name = "ak4671-pcm-b",
+		.playback = {
+			.stream_name = "PCM-B Playback",
+			.channels_min = 1,
+			.channels_max = 1,
+			.rates = AK4671_VOICE_RATES,
+			.formats = AK4671_VOICE_FORMATS,},
+		.capture = {
+			.stream_name = "PCM-B Capture",
+			.channels_min = 1,
+			.channels_max = 1,
+			.rates = AK4671_VOICE_RATES,
+			.formats = AK4671_VOICE_FORMATS,},
+		.ops = &ak4671_pcm_dai_ops,
+	}
 };
 
 static int ak4671_probe(struct snd_soc_codec *codec)
@@ -709,6 +1069,11 @@ static int ak4671_probe(struct snd_soc_codec *codec)
 	}
 
 	ak4671_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+
+	snd_soc_update_bits(codec, AK4671_PCM_IF_CONTROL0,
+		AK4671_PLLBT_0_2_MASK, pdata->pllbt_mode << AK4671_PLLBT_SHIFT);
+	snd_soc_update_bits(codec, AK4671_PCM_IF_CONTROL2,
+		AK4671_PLLBT_3_MASK, pdata->pllbt_mode << AK4671_PLLBT_SHIFT);
 
 	return 0;
 }
@@ -759,7 +1124,7 @@ static int __devinit ak4671_i2c_probe(struct i2c_client *client,
 	ak4671->control_type = SND_SOC_I2C;
 
 	ret = snd_soc_register_codec(&client->dev,
-			&soc_codec_dev_ak4671, &ak4671_dai, 1);
+		&soc_codec_dev_ak4671, ak4671_dai, ARRAY_SIZE(ak4671_dai));
 	if (ret < 0)
 		dev_err(&client->dev, "Failed to register codec (%d)\n", ret);
 	return ret;
