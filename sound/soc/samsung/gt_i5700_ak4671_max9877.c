@@ -85,6 +85,33 @@ static struct snd_soc_ops gt_i5700_hifi_ops = {
 	.hw_params = gt_i5700_hifi_hw_params,
 };
 
+/*
+ * GT-i5700 AK4671 Voice DAI opserations.
+ */
+
+static int gt_i5700_voice_hw_params(struct snd_pcm_substream *substream,
+	struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	int ret = 0;
+
+	if (params_rate(params) != 8000)
+		return -EINVAL;
+
+	/* set codec DAI configuration */
+	ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_DSP_A
+						| SND_SOC_DAIFMT_CBS_CFS);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+static struct snd_soc_ops gt_i5700_voice_ops = {
+	.hw_params = gt_i5700_voice_hw_params,
+};
+
 DEFINE_MUTEX(mic_lock);
 static int mic_enabled = 0;
 
@@ -293,11 +320,21 @@ static struct snd_soc_dai_link gt_i5700_dai[] = {
 		.codec_name = "ak4671-codec.3-0012",
 		.init = gt_i5700_ak4671_init,
 		.ops = &gt_i5700_hifi_ops,
+	}, { /* Voice via BT */
+		.name = "ak4671 voice",
+		.stream_name = "Voice",
+		.cpu_dai_name = "dfbmcs320-pcm",
+		.codec_dai_name = "ak4671-pcm-a",
+		.codec_name = "ak4671-codec.3-0012",
+		.ops = &gt_i5700_voice_ops,
 	},
 };
 
 static struct snd_soc_aux_dev gt_i5700_aux[] = {
-	{ /* Headphone/Speaker amplifier */
+	{ /* Bluetooth */
+		.name = "dfbmcs320",
+		.codec_name = "dfbmcs320.0",
+	}, { /* Headphone/Speaker amplifier */
 		.name = "max9877",
 		.codec_name = "max9877.3-004d",
 		.init = gt_i5700_max9877_init,
@@ -343,19 +380,17 @@ static int __init gt_i5700_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	platform_set_drvdata(audio_pdev, &gt_i5700);
-
 	gt_i5700_pdata = pdata;
 
 	ret = platform_device_add(audio_pdev);
-	if (ret)
-		goto err_free_pdev;
+	if (ret) {
+		dev_err(&pdev->dev,
+			"Failed to register soc-audio device (%d)\n", ret);
+		platform_device_put(audio_pdev);
+		return ret;
+	}
 
 	return 0;
-
-err_free_pdev:
-	platform_device_put(audio_pdev);
-
-	return ret;
 }
 
 static void gt_i5700_shutdown(struct platform_device *pdev)

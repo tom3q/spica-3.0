@@ -1912,6 +1912,10 @@ static struct platform_device spica_jack_device = {
 	},
 };
 
+static struct platform_device spica_bt_pcm_device = {
+	.name = "dfbmcs320",
+};
+
 static struct gt_i5700_audio_pdata spica_audio_pdata = {
 	.set_micbias	= snd_set_mic_bias,
 };
@@ -1994,6 +1998,7 @@ static struct platform_device *spica_devices[] __initdata = {
 	&spica_dpram_device,
 	&spica_vibetonz_device,
 	&spica_jack_device,
+	&spica_bt_pcm_device,
 	&spica_audio_device,
 	&spica_bml_device,
 	&spica_led,

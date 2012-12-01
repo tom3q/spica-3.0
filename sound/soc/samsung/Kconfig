@@ -153,6 +153,7 @@ config SND_SOC_SAMSUNG_GT_I5700
 	select SND_SAMSUNG_I2S
 	select SND_SOC_AK4671
 	select SND_SOC_MAX9877
+	select SND_SOC_DFBMCS320
 	help
 	  Say Y if you want to add support for SoC audio on Samsung
 	  Galaxt GT-i5700 (Spica) phone with the AK4671 audio codec
