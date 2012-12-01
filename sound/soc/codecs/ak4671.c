@@ -622,8 +622,7 @@ static int ak4671_set_bias_level(struct snd_soc_codec *codec,
 		break;
 	case SND_SOC_BIAS_STANDBY:
 		if (codec->dapm.bias_level == SND_SOC_BIAS_OFF) {
-			if (pdata && gpio_is_valid(pdata->gpio_npdn))
-				gpio_set_value(pdata->gpio_npdn, 1);
+			gpio_set_value(pdata->gpio_npdn, 1);
 			mdelay(1);
 			ret = snd_soc_cache_sync(codec);
 			if (ret) {
@@ -637,8 +636,7 @@ static int ak4671_set_bias_level(struct snd_soc_codec *codec,
 		break;
 	case SND_SOC_BIAS_OFF:
 		snd_soc_write(codec, AK4671_AD_DA_POWER_MANAGEMENT, 0x00);
-		if (pdata && gpio_is_valid(pdata->gpio_npdn))
-			gpio_set_value(pdata->gpio_npdn, 0);
+		gpio_set_value(pdata->gpio_npdn, 0);
 		codec->cache_sync = 1;
 		break;
 	}
@@ -694,22 +692,19 @@ static int ak4671_probe(struct snd_soc_codec *codec)
 	struct ak4671_platform_data *pdata = codec->dev->platform_data;
 	int ret;
 
-	if (pdata) {
-		if (gpio_is_valid(pdata->gpio_npdn)) {
-			ret = gpio_request_one(pdata->gpio_npdn,
+	ret = gpio_request_one(pdata->gpio_npdn,
 					GPIOF_OUT_INIT_LOW, "ak4671 npdn");
-			if (ret)
-				return ret;
+	if (ret)
+		return ret;
 
-			udelay(1); /* > 150 ns */
-			gpio_set_value(pdata->gpio_npdn, 1);
-		}
-	}
+	udelay(1); /* > 150 ns */
+	gpio_set_value(pdata->gpio_npdn, 1);
 
 	ret = snd_soc_codec_set_cache_io(codec, 8, 8, ak4671->control_type);
 	if (ret < 0) {
 		dev_err(codec->dev, "Failed to set cache I/O: %d\n", ret);
 		gpio_set_value(pdata->gpio_npdn, 0);
+		gpio_free(pdata->gpio_npdn);
 		return ret;
 	}
 
@@ -720,7 +715,11 @@ static int ak4671_probe(struct snd_soc_codec *codec)
 
 static int ak4671_remove(struct snd_soc_codec *codec)
 {
+	struct ak4671_platform_data *pdata = codec->dev->platform_data;
+
 	ak4671_set_bias_level(codec, SND_SOC_BIAS_OFF);
+	gpio_free(pdata->gpio_npdn);
+
 	return 0;
 }
 
@@ -744,8 +743,12 @@ static struct snd_soc_codec_driver soc_codec_dev_ak4671 = {
 static int __devinit ak4671_i2c_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
+	struct ak4671_platform_data *pdata = client->dev.platform_data;
 	struct ak4671_priv *ak4671;
 	int ret;
+
+	if (!pdata && !gpio_is_valid(pdata->gpio_npdn))
+		return -EINVAL;
 
 	ak4671 = devm_kzalloc(&client->dev, sizeof(struct ak4671_priv), GFP_KERNEL);
 	if (ak4671 == NULL)
