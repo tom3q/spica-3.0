@@ -274,6 +274,8 @@ static int gt_i5700_ak4671_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_ignore_suspend(dapm, "Sub Mic");
 	snd_soc_dapm_ignore_suspend(dapm, "Jack Mic");
 	snd_soc_dapm_ignore_suspend(dapm, "GSM Receive");
+	snd_soc_dapm_ignore_suspend(dapm, "SDTOA");
+	snd_soc_dapm_ignore_suspend(dapm, "SDTIA");
 
 	snd_soc_dapm_sync(dapm);
 	return 0;
