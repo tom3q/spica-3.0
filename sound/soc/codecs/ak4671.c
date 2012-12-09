@@ -28,11 +28,13 @@
 
 #include "ak4671.h"
 
+#define LOUT2_ACTIVE	(1 << 0)
 
 /* codec private data */
 struct ak4671_priv {
 	enum snd_soc_control_type control_type;
 	void *control_data;
+	u32 flags;
 };
 
 /* ak4671 register cache & default register settings */
@@ -206,18 +208,26 @@ static int ak4671_out2_event(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *kcontrol, int event)
 {
 	struct snd_soc_codec *codec = w->codec;
+	struct ak4671_priv *ak4671 = snd_soc_codec_get_drvdata(codec);
 	u8 reg;
 
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
+		if (ak4671->flags & LOUT2_ACTIVE)
+			break;
 		reg = snd_soc_read(codec, AK4671_LOUT2_POWER_MANAGERMENT);
 		reg |= AK4671_MUTEN;
 		snd_soc_write(codec, AK4671_LOUT2_POWER_MANAGERMENT, reg);
+		ak4671->flags |= LOUT2_ACTIVE;
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
+		if (!(ak4671->flags & LOUT2_ACTIVE))
+			break;
 		reg = snd_soc_read(codec, AK4671_LOUT2_POWER_MANAGERMENT);
 		reg &= ~AK4671_MUTEN;
 		snd_soc_write(codec, AK4671_LOUT2_POWER_MANAGERMENT, reg);
+		msleep(200);
+		ak4671->flags &= ~LOUT2_ACTIVE;
 		break;
 	}
 
