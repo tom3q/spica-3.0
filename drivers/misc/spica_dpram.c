@@ -820,6 +820,7 @@ static irqreturn_t dpram_mailbox_irq(int irq, void *dev_id)
 						INT_COMMAND(CMD_SMP_REP));
 			} else if (dpr->sem_req_count == 0) {
 				/* No references? Give it to the modem. */
+				dpram_update_state(dpr);
 				dpr->sem_owner = 0;
 				onedram_semaphore_release(dpr);
 				onedram_write_mailbox(dpr,
@@ -841,6 +842,7 @@ static irqreturn_t dpram_mailbox_irq(int irq, void *dev_id)
 						INT_COMMAND(CMD_RES_ACTIVE));
 			} else if (dpr->sem_req_count == 0) {
 				/* No references? Give it to the modem. */
+				dpram_update_state(dpr);
 				dpr->sem_owner = 0;
 				onedram_semaphore_release(dpr);
 				onedram_write_mailbox(dpr,
