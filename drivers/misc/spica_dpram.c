@@ -2135,7 +2135,11 @@ static void dpram_vnet_handle_rx(struct dpram_pdp_vdev *vdev, size_t len)
 
 	fifo_read(&dev->rx, skb_put(skb, len), len);
 	skb->dev = net;
-	skb->protocol = __constant_htons(ETH_P_IP);
+	/* Get the ethertype from the version in the IP header. */
+	if (skb->data[0] >> 4 == 6)
+		skb->protocol = __constant_htons(ETH_P_IPV6);
+	else
+		skb->protocol = __constant_htons(ETH_P_IP);
 
 	++net->stats.rx_packets;
 	net->stats.rx_bytes += skb->len;
