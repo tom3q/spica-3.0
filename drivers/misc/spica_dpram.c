@@ -2140,6 +2140,7 @@ static void dpram_vnet_handle_rx(struct dpram_pdp_vdev *vdev, size_t len)
 		skb->protocol = __constant_htons(ETH_P_IPV6);
 	else
 		skb->protocol = __constant_htons(ETH_P_IP);
+	skb_reset_mac_header(skb);
 
 	++net->stats.rx_packets;
 	net->stats.rx_bytes += skb->len;
