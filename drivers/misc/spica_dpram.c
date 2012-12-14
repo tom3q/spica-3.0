@@ -145,14 +145,13 @@ static void onedram_semaphore_put(struct dpram *dpr, unsigned bits)
 		} else if (dpr->sem_req_active) {
 			onedram_semaphore_release(dpr);
 			onedram_write_mailbox(dpr, INT_COMMAND(CMD_RES_ACTIVE));
-		} else if (dpr->sem_bp_request) {
+		} else {
 			onedram_semaphore_release(dpr);
 			onedram_write_mailbox(dpr, INT_COMMAND(CMD_SMP_REP));
 		}
 		dpr->sem_owner = 0;
 		dpr->sem_signal_bits = 0;
 		dpr->sem_req_active = 0;
-		dpr->sem_bp_request = 0;
 	}
 
 	local_irq_restore(flags);
@@ -827,8 +826,8 @@ static irqreturn_t dpram_mailbox_irq(int irq, void *dev_id)
 						INT_COMMAND(CMD_SMP_REP));
 				goto done;
 			} else {
-				/* Busy now, remember the modem needs it. */
-				dpr->sem_bp_request = 1;
+				/* Busy now, will be returned later. */
+				break;
 			}
 			break;
 		case CMD_REQ_ACTIVE:

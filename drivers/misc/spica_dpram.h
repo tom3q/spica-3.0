@@ -302,7 +302,6 @@ struct dpram {
 	/* shared memory semaphore management */
 	unsigned sem_req_count;
 	unsigned sem_req_active;
-	unsigned sem_bp_request;
 	unsigned sem_owner;
 	unsigned sem_signal_bits;
 
