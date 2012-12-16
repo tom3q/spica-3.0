@@ -1,0 +1,6 @@
+config OPENFIMG
+	tristate "OpenFIMG kernel driver for Samsung FIMG-3DSE GPU"
+	depends on CPU_S3C6410
+	help
+	  Chose this option to enable OpenFIMG kernel driver for Samsung
+	  FIMG-3DSE GPU.
