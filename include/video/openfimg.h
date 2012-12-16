@@ -27,12 +27,13 @@
 enum g3d_request_id {
 	OPENFIMG_REQUEST_STATE_BUFFER,
 	OPENFIMG_REQUEST_COMMAND_BUFFER,
-	OPENFIMG_REQUEST_FENCE
+	OPENFIMG_REQUEST_FENCE,
+	OPENFIMG_REQUEST_SHADER_SWITCH,
 };
 
 struct g3d_user_request {
 	enum g3d_request_id type;
-	unsigned long priv;
+	unsigned long data[7];
 };
 
 /*
@@ -45,6 +46,7 @@ enum {
 	_ALLOC_NR,
 	_SUBMIT_NR,
 	_FENCE_WAIT_NR,
+	_SHADER_LOAD_NR,
 };
 
 #define OPENFIMG_ALLOC		_IOWR(OPENFIMG_IOCTL_MAGIC, _ALLOC_NR, \
@@ -52,6 +54,8 @@ enum {
 #define OPENFIMG_SUBMIT		_IOW(OPENFIMG_IOCTL_MAGIC, _SUBMIT_NR, \
 						struct g3d_user_request)
 #define OPENFIMG_FENCE_WAIT	_IOR(OPENFIMG_IOCTL_MAGIC, _FENCE_WAIT_NR, \
+						struct g3d_user_request)
+#define OPENFIMG_SHADER_LOAD	_IOW(OPENFIMG_IOCTL_MAGIC, _SHADER_LOAD_NR, \
 						struct g3d_user_request)
 
 #endif /* _VIDEO_OPENFIMG_H_ */
