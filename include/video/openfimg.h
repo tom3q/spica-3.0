@@ -98,15 +98,37 @@ enum g3d_request_id {
 	G3D_REQUEST_SHADER_SWITCH,
 };
 
-struct g3d_user_request {
-	enum g3d_request_id type;
-	unsigned long data[7];
-};
+#define G3D_STATE_NO_PARTIAL	(1 << 0)
 
 struct g3d_state_buffer {
 	u32 registers[G3D_NUM_REGISTERS];
-	u32 dirty_list_len;
-	u32 dirty_list[G3D_NUM_REGISTERS];
+	unsigned long dirty[BITS_TO_LONGS(G3D_NUM_REGISTERS)];
+};
+
+#define G3D_FENCE_FLUSH		(1 << 0)
+#define G3D_FENCE_TIMED_OUT	(1 << 1)
+
+struct g3d_user_request {
+	enum g3d_request_id type;
+	union {
+		struct {
+			struct g3d_state_buffer *buf;
+			unsigned long flags;
+		} state;
+		struct {
+			void *buf;
+			unsigned int count;
+			size_t len;
+		} command;
+		struct {
+			unsigned long flags;
+			unsigned long priv;
+		} fence;
+		struct {
+			unsigned long *id;
+			size_t len;
+		} shader;
+	};
 };
 
 /*
@@ -116,14 +138,11 @@ struct g3d_state_buffer {
 #define G3D_IOCTL_MAGIC		0x3d
 
 enum {
-	_REQUEST_ALLOC_NR,
 	_REQUEST_SUBMIT_NR,
 	_FENCE_WAIT_NR,
 	_SHADER_LOAD_NR,
 };
 
-#define G3D_REQUEST_ALLOC	_IOWR(G3D_IOCTL_MAGIC, _REQUEST_ALLOC_NR, \
-						struct g3d_user_request)
 #define G3D_REQUEST_SUBMIT	_IOW(G3D_IOCTL_MAGIC, _REQUEST_SUBMIT_NR, \
 						struct g3d_user_request)
 #define G3D_FENCE_WAIT		_IOR(G3D_IOCTL_MAGIC, _FENCE_WAIT_NR, \
