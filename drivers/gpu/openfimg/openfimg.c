@@ -17,13 +17,19 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * TODO: (random order)
+ * TODO
+ *
+ * mandatory:
+ *
+ * - ring buffer-based request data allocation
+ * - access to protected registers (some registers of per-fragment unit)
  * - shaders (load, switch, storage)
  * - textures (objects, backing storage, switch, configuration)
  * - framebuffers (objects, backing storage, switch, configuration)
+ *
+ * optional:
+ *
  * - advanced scheduling (instead of simple list)
- * - access to protected registers (some registers of per-fragment unit)
- * - better request buffer allocation (limits, pools)
  * - more intelligent handling of fences (flushing only when necessary)
  */
 
@@ -81,8 +87,22 @@
 struct g3d_context;
 
 enum g3d_state_bits {
-	G3D_STATE_BUSY,
 	G3D_STATE_DISABLED
+};
+
+enum g3d_flush_level {
+	G3D_FLUSH_HOST_FIFO = 0,
+	G3D_FLUSH_HOST_INTERFACE,
+	G3D_FLUSH_VERTEX_FIFO,
+	G3D_FLUSH_VERTEX_CACHE,
+	G3D_FLUSH_VERTEX_SHADER,
+	G3D_FLUSH_PRIMITIVE = 8,
+	G3D_FLUSH_TRIANGLE_SETUP,
+	G3D_FLUSH_RASTER,
+	G3D_FLUSH_PIXEL_SHADER = 12,
+	G3D_FLUSH_PER_FRAGMENT = 16,
+	G3D_FLUSH_COLOR_CACHE = 18,
+	G3D_FLUSH_FULL = 31
 };
 
 struct g3d_drvdata {
@@ -235,13 +255,13 @@ static inline void g3d_soft_reset(struct g3d_drvdata *g3d)
 	udelay(1);
 	g3d_write(g3d, 0, G3D_FGGB_RESET_REG);
 	udelay(1);
-
-	clear_bit(G3D_STATE_BUSY, &g3d->state);
-	wake_up(&g3d->request_wq);
 }
 
-static inline void g3d_idle_irq_enable(struct g3d_drvdata *g3d)
+static inline void g3d_idle_irq_enable(struct g3d_drvdata *g3d, u32 mask)
 {
+	g3d_write(g3d, 0, G3D_FGGB_PIPEMASK_REG);
+	g3d_write(g3d, 0, G3D_FGGB_PIPETGTSTATE_REG);
+	g3d_write(g3d, mask, G3D_FGGB_PIPEMASK_REG);
 	g3d_write(g3d, 1, G3D_FGGB_INTMASK_REG);
 }
 
@@ -251,41 +271,63 @@ static inline void g3d_idle_irq_ack_and_disable(struct g3d_drvdata *g3d)
 	g3d_write(g3d, 0, G3D_FGGB_INTPENDING_REG);
 }
 
-static inline int g3d_wait_for_flush(struct g3d_drvdata *g3d)
+static inline int g3d_flush_caches(struct g3d_drvdata *g3d)
+{
+	int timeout = 100000000;
+	g3d_write(g3d, G3D_FGGB_FLUSH_MSK, G3D_FGGB_CACHECTL_REG);
+
+	do {
+		if(!g3d_read(g3d, G3D_FGGB_CACHECTL_REG))
+			return 0;
+		cpu_relax();
+	} while (--timeout);
+
+	dev_err(g3d->dev, "cache flush timed out\n");
+
+	return -EFAULT;
+}
+
+static inline bool g3d_pipeline_idle(struct g3d_drvdata *g3d, u32 mask)
+{
+	return !(g3d_read(g3d, G3D_FGGB_PIPESTAT_REG) & mask);
+}
+
+static inline int g3d_wait_for_flush(struct g3d_drvdata *g3d,
+							u32 mask, bool idle)
 {
 	int ret;
 
-	while (test_bit(G3D_STATE_BUSY, &g3d->state)) {
-		ret = wait_event_interruptible_timeout(g3d->request_wq,
-					!test_bit(G3D_STATE_BUSY, &g3d->state),
-					msecs_to_jiffies(G3D_FLUSH_TIMEOUT));
-		if (ret) {
-			dev_err(g3d->dev, "pipeline flush timed out\n");
-			g3d_soft_reset(g3d);
-			return ret;
-		}
+	g3d_idle_irq_enable(g3d, mask);
+
+	ret = wait_event_interruptible_timeout(g3d->request_wq,
+				g3d_pipeline_idle(g3d, mask)
+				|| (idle && !list_empty(&g3d->request_queue)),
+				msecs_to_jiffies(G3D_FLUSH_TIMEOUT));
+	if (ret) {
+		dev_err(g3d->dev, "pipeline flush timed out\n");
+		g3d_soft_reset(g3d);
+		return ret;
 	}
 
 	return 0;
 }
 
-static int g3d_flush_pipeline(struct g3d_drvdata *g3d, bool flush_caches)
+static int g3d_flush_pipeline(struct g3d_drvdata *g3d,
+					enum g3d_flush_level level, bool idle)
 {
 	int ret;
+	u32 mask;
 
-	ret = g3d_wait_for_flush(g3d);
+	mask = ((1 << (level + 1)) - 1) & G3D_FGGB_PIPESTAT_MSK;
+
+	ret = g3d_wait_for_flush(g3d, mask, idle);
 	if (ret)
 		return ret;
 
-	if (!flush_caches)
+	if (level != G3D_FLUSH_FULL)
 		return 0;
 
-	g3d_write(g3d, G3D_FGGB_FLUSH_MSK, G3D_FGGB_CACHECTL_REG);
-
-	set_bit(G3D_STATE_BUSY, &g3d->state);
-	g3d_idle_irq_enable(g3d);
-
-	return g3d_wait_for_flush(g3d);
+	return g3d_flush_caches(g3d);
 }
 
 static bool g3d_process_state_buffer(struct g3d_context *ctx,
@@ -408,9 +450,11 @@ static int g3d_handle_command_buffer(struct g3d_request *req)
 		clk_enable(g3d->clock);
 		partial_update = false;
 	} else if (g3d->last_ctx != ctx || !list_empty(&ctx->state_buf_queue)) {
-		g3d_flush_pipeline(g3d, false);
+		g3d_flush_pipeline(g3d, G3D_FLUSH_PER_FRAGMENT, false);
 		if (g3d->last_ctx != ctx)
 			partial_update = false;
+	} else {
+		g3d_flush_pipeline(g3d, G3D_FLUSH_VERTEX_FIFO, false);
 	}
 
 	list_for_each_entry(st_req, &ctx->state_buf_queue, list) {
@@ -428,9 +472,6 @@ static int g3d_handle_command_buffer(struct g3d_request *req)
 	g3d_free_request(g3d, req);
 	g3d->last_ctx = ctx;
 
-	set_bit(G3D_STATE_BUSY, &g3d->state);
-	g3d_idle_irq_enable(g3d);
-
 	return 0;
 }
 
@@ -439,7 +480,7 @@ static int g3d_handle_fence(struct g3d_request *req)
 	struct g3d_context *ctx = req->ctx;
 
 	if (req->usr.fence.flags & G3D_FENCE_FLUSH) {
-		int ret = g3d_flush_pipeline(ctx->g3d, true);
+		int ret = g3d_flush_pipeline(ctx->g3d, G3D_FLUSH_FULL, false);
 		if (ret) {
 			req->usr.fence.flags |= G3D_FENCE_TIMED_OUT;
 			dev_err(ctx->g3d->dev, "fence wait timed out\n");
@@ -481,21 +522,22 @@ static const struct g3d_request_info g3d_requests[] = {
 	},
 };
 
-static inline bool g3d_request_ready(struct g3d_drvdata *g3d)
+static void g3d_do_idle(struct g3d_drvdata *g3d)
 {
-	if (test_bit(G3D_STATE_BUSY, &g3d->state))
-		goto check_queue;
+	if (test_bit(G3D_STATE_DISABLED, &g3d->state))
+		return;
 
-	if (WARN_ON(test_bit(G3D_STATE_DISABLED, &g3d->state)))
-		goto check_queue;
+	g3d_flush_pipeline(g3d, G3D_FLUSH_FULL, true);
+
+	if (!list_empty(&g3d->request_queue))
+		return;
 
 	clk_disable(g3d->clock);
+
 	pm_runtime_mark_last_busy(g3d->dev);
 	pm_runtime_put_autosuspend(g3d->dev);
-	set_bit(G3D_STATE_DISABLED, &g3d->state);
 
-check_queue:
-	return !list_empty(&g3d->request_queue);
+	set_bit(G3D_STATE_DISABLED, &g3d->state);
 }
 
 static int g3d_command_thread(void *data)
@@ -518,8 +560,10 @@ static int g3d_command_thread(void *data)
 
 			mutex_unlock(&g3d->stall_mutex);
 
+			g3d_do_idle(g3d);
+
 			ret = wait_event_freezable(g3d->request_wq,
-							g3d_request_ready(g3d));
+					!list_empty(&g3d->request_queue));
 			if (ret && kthread_should_stop())
 				goto finish;
 
@@ -558,7 +602,6 @@ static irqreturn_t g3d_handle_irq(int irq, void *dev_id)
 
 	g3d_idle_irq_ack_and_disable(g3d);
 
-	clear_bit(G3D_STATE_BUSY, &g3d->state);
 	wake_up(&g3d->request_wq);
 
 	return IRQ_HANDLED;
@@ -755,8 +798,12 @@ static int g3d_release(struct inode *inode, struct file *file)
 
 	mutex_lock(&g3d->stall_mutex);
 
+	spin_lock(&g3d->request_lock);
+
 	list_for_each_entry(req, &ctx->request_list, ctx_list)
 		list_del(&req->list);
+
+	spin_unlock(&g3d->request_lock);
 
 	mutex_unlock(&g3d->stall_mutex);
 
@@ -958,7 +1005,7 @@ static int g3d_runtime_suspend(struct device *dev)
 	int ret;
 
 	clk_enable(g3d->clock);
-	ret = g3d_flush_pipeline(g3d, true);
+	ret = g3d_flush_pipeline(g3d, G3D_FLUSH_FULL, false);
 	clk_disable(g3d->clock);
 
 	return ret;
@@ -984,10 +1031,11 @@ static int g3d_suspend(struct device *dev)
 		return 0;
 
 	if (!test_bit(G3D_STATE_DISABLED, &g3d->state)) {
-		ret = g3d_flush_pipeline(g3d, true);
+		ret = g3d_flush_pipeline(g3d, G3D_FLUSH_FULL, false);
 		if (ret)
 			return ret;
 		clk_disable(g3d->clock);
+		return 0;
 	}
 
 	return g3d_runtime_suspend(dev);
