@@ -20,6 +20,11 @@
 
 #include <linux/ioctl.h>
 
+#ifndef __KERNEL__
+#define DIV_ROUND_UP(n,d)	(((n) + (d) - 1) / (d))
+#define BITS_TO_LONGS(nr)	DIV_ROUND_UP(nr, 8 * sizeof(long))
+#endif
+
 /*
  * Data types
  */
@@ -95,10 +100,9 @@ enum g3d_request_id {
 	G3D_REQUEST_STATE_BUFFER,
 	G3D_REQUEST_COMMAND_BUFFER,
 	G3D_REQUEST_FENCE,
-	G3D_REQUEST_SHADER_SWITCH,
+	G3D_REQUEST_SHADER_PROGRAM,
+	G3D_REQUEST_SHADER_DATA
 };
-
-#define G3D_STATE_NO_PARTIAL	(1 << 0)
 
 struct g3d_state_buffer {
 	u32 registers[G3D_NUM_REGISTERS];
@@ -108,6 +112,21 @@ struct g3d_state_buffer {
 #define G3D_FENCE_FLUSH		(1 << 0)
 #define G3D_FENCE_TIMED_OUT	(1 << 1)
 
+enum g3d_shader_type {
+	G3D_SHADER_VERTEX,
+	G3D_SHADER_PIXEL,
+
+	G3D_NUM_SHADERS
+};
+
+enum g3d_shader_data_type {
+	G3D_SHADER_DATA_FLOAT,
+	G3D_SHADER_DATA_INT,
+	G3D_SHADER_DATA_BOOL,
+
+	G3D_NUM_SHADER_DATA
+};
+
 struct g3d_user_request {
 	enum g3d_request_id type;
 	union {
@@ -116,7 +135,7 @@ struct g3d_user_request {
 			unsigned long flags;
 		} state;
 		struct {
-			void *buf;
+			u32 *buf;
 			unsigned int count;
 			size_t len;
 		} command;
@@ -125,9 +144,17 @@ struct g3d_user_request {
 			unsigned long priv;
 		} fence;
 		struct {
-			unsigned long *id;
+			enum g3d_shader_type type;
+			u32 *code;
 			size_t len;
 		} shader;
+		struct {
+			enum g3d_shader_type shader;
+			enum g3d_shader_data_type type;
+			u32 *buf;
+			off_t offset;
+			size_t len;
+		} shader_data;
 	};
 };
 
@@ -139,15 +166,12 @@ struct g3d_user_request {
 
 enum {
 	_REQUEST_SUBMIT_NR,
-	_FENCE_WAIT_NR,
-	_SHADER_LOAD_NR,
+	_FENCE_WAIT_NR
 };
 
 #define G3D_REQUEST_SUBMIT	_IOW(G3D_IOCTL_MAGIC, _REQUEST_SUBMIT_NR, \
 						struct g3d_user_request)
 #define G3D_FENCE_WAIT		_IOR(G3D_IOCTL_MAGIC, _FENCE_WAIT_NR, \
-						struct g3d_user_request)
-#define G3D_SHADER_LOAD		_IOW(G3D_IOCTL_MAGIC, _SHADER_LOAD_NR, \
 						struct g3d_user_request)
 
 #endif /* _VIDEO_G3D_H_ */
