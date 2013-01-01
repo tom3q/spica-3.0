@@ -101,7 +101,11 @@ enum g3d_request_id {
 	G3D_REQUEST_COMMAND_BUFFER,
 	G3D_REQUEST_FENCE,
 	G3D_REQUEST_SHADER_PROGRAM,
-	G3D_REQUEST_SHADER_DATA
+	G3D_REQUEST_SHADER_DATA,
+	G3D_REQUEST_TEXTURE,
+	G3D_REQUEST_FRAMEBUFFER,
+
+	G3D_NUM_REQUESTS
 };
 
 struct g3d_state_buffer {
@@ -125,6 +129,21 @@ enum g3d_shader_data_type {
 	G3D_SHADER_DATA_BOOL,
 
 	G3D_NUM_SHADER_DATA
+};
+
+enum g3d_buffer_type {
+	G3D_BUFFER_DMA,
+	G3D_BUFFER_PMEM,
+	G3D_BUFFER_DMA_BUF,
+
+	G3D_NUM_BUFFER_TYPES
+};
+
+struct g3d_user_buffer {
+	enum g3d_buffer_type type;
+	off_t offset;
+	size_t length;
+	long handle;
 };
 
 struct g3d_user_request {
@@ -155,7 +174,15 @@ struct g3d_user_request {
 			off_t offset;
 			size_t len;
 		} shader_data;
+		struct {
+			unsigned int unit;
+			unsigned int id;
+		} texture;
+		struct {
+			unsigned int id;
+		} framebuffer;
 	};
+	struct g3d_user_request __user *next;
 };
 
 /*
@@ -166,12 +193,15 @@ struct g3d_user_request {
 
 enum {
 	_REQUEST_SUBMIT_NR,
-	_FENCE_WAIT_NR
+	_FENCE_WAIT_NR,
+	_CREATE_BUFFER_NR
 };
 
 #define G3D_REQUEST_SUBMIT	_IOW(G3D_IOCTL_MAGIC, _REQUEST_SUBMIT_NR, \
 						struct g3d_user_request)
 #define G3D_FENCE_WAIT		_IOR(G3D_IOCTL_MAGIC, _FENCE_WAIT_NR, \
 						struct g3d_user_request)
+#define G3D_CREATE_BUFFER	_IOWR(G3D_IOCTL_MAGIC, _CREATE_BUFFER_NR, \
+						struct g3d_user_buffer)
 
 #endif /* _VIDEO_G3D_H_ */

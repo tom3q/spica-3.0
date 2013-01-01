@@ -34,8 +34,10 @@
 
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/file.h>
 #include <linux/freezer.h>
 #include <linux/fs.h>
+#include <linux/anon_inodes.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/irq.h>
@@ -51,6 +53,10 @@
 #include <linux/semaphore.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
+
+#ifdef CONFIG_ANDROID_PMEM
+#include <linux/android_pmem.h>
+#endif
 
 #include <video/openfimg.h>
 
@@ -182,11 +188,26 @@ struct g3d_request {
 	struct list_head list;
 };
 
+struct g3d_buffer {
+	struct g3d_user_buffer usr;
+	struct file *file;
+	int fd;
+	void *priv;
+	dma_addr_t dma_addr;
+};
+
+struct g3d_buffer_type_info {
+	int (*create)(struct g3d_buffer *);
+	void (*destroy)(struct g3d_buffer *);
+	int (*map)(struct g3d_buffer *);
+};
+
 typedef void *g3d_command_buffer_t;
 
 struct g3d_request_info {
 	int (*allocate)(struct g3d_drvdata *g3d, struct g3d_request *);
 	void (*free)(struct g3d_drvdata *g3d, struct g3d_request *);
+	int (*validate)(struct g3d_drvdata *g3d, struct g3d_request *);
 	int (*handle)(struct g3d_drvdata *g3d, struct g3d_request *);
 	int (*update_state)(struct g3d_drvdata *g3d, struct g3d_request *);
 	unsigned int flags;
@@ -673,7 +694,7 @@ static void g3d_free_shader_data(struct g3d_drvdata *g3d,
 	kfree(req->usr.shader_data.buf);
 }
 
-static const struct g3d_request_info g3d_requests[] = {
+static const struct g3d_request_info g3d_requests[G3D_NUM_REQUESTS] = {
 	[G3D_REQUEST_STATE_BUFFER] = {
 		.allocate = g3d_allocate_state_buffer,
 		.free = g3d_free_state_buffer,
@@ -858,34 +879,77 @@ static struct g3d_request *g3d_allocate_request(struct g3d_drvdata *g3d,
 		}
 	}
 
+	if (g3d_requests[urq->type].validate) {
+		ret = g3d_requests[urq->type].validate(g3d, req);
+		if (ret) {
+			dev_err(g3d->dev, "request validation failed\n");
+			g3d_free_request(g3d, req);
+			return ERR_PTR(ret);
+		}
+	}
+
 	return req;
+}
+
+static int g3d_next_user_request(struct g3d_user_request *urq)
+{
+	struct g3d_user_request __user *next = urq->next;
+	int ret;
+
+	if (!next)
+		return -ENOENT;
+
+	ret = copy_from_user(urq, next, sizeof(*next));
+	if (ret)
+		return -EFAULT;
+
+	return 0;
 }
 
 static int g3d_submit(struct g3d_context *ctx, struct g3d_user_request *urq)
 {
 	struct g3d_drvdata *g3d = ctx->g3d;
-	struct g3d_request *req;
+	struct g3d_request *req, *n;
+	int ret;
+	LIST_HEAD(submit_list);
 
-	if (urq->type >= ARRAY_SIZE(g3d_requests)
-	    || g3d_requests[urq->type].handle == NULL) {
-		dev_err(g3d->dev,
-			"invalid request type %d, ignoring\n", urq->type);
-		return -EINVAL;
+	do {
+		if (urq->type >= ARRAY_SIZE(g3d_requests)
+		    || g3d_requests[urq->type].handle == NULL) {
+			dev_err(g3d->dev,
+					"invalid request type %d, ignoring\n",
+					urq->type);
+			ret = -EINVAL;
+			break;
+		}
+
+		req = g3d_allocate_request(g3d, urq);
+		if (IS_ERR(req)) {
+			ret = PTR_ERR(req);
+			break;
+		}
+
+		req->ctx = ctx;
+		list_add_tail(&req->list, &submit_list);
+	} while (!(ret = g3d_next_user_request(urq)));
+
+	if (ret != -ENOENT) {
+		list_for_each_entry_safe(req, n, &submit_list, list) {
+			list_del(&req->list);
+			g3d_free_request(g3d, req);
+		}
+		return ret;
 	}
 
-	req = g3d_allocate_request(g3d, urq);
-	if (IS_ERR(req))
-		return PTR_ERR(req);
-
-	req->ctx = ctx;
+	spin_lock(&g3d->ready_lock);
 
 	spin_lock(&ctx->request_lock);
-	list_add_tail(&req->list, &ctx->request_list);
+	list_splice(&submit_list, &ctx->request_list);
 	spin_unlock(&ctx->request_lock);
 
-	spin_lock(&g3d->ready_lock);
 	if (list_empty(&ctx->list))
 		list_add_tail(&ctx->list, &g3d->ready_list);
+
 	spin_unlock(&g3d->ready_lock);
 
 	wake_up(&g3d->ready_wq);
@@ -927,22 +991,166 @@ static int g3d_fence_wait(struct g3d_context *ctx, struct g3d_user_request *urq)
 }
 
 /*
+ * Buffer management
+ */
+
+#ifdef CONFIG_ANDROID_PMEM
+static int g3d_buffer_pmem_create(struct g3d_buffer *buf)
+{
+	unsigned long start, vstart, len;
+	struct file *file;
+	int ret;
+
+	ret = get_pmem_file(buf->usr.handle, &start, &vstart, &len, &file);
+	if (ret < 0)
+		return -EFAULT;
+
+	if (!buf->usr.length) {
+		buf->usr.offset = 0;
+		buf->usr.length = len;
+	}
+
+	if (buf->usr.offset + buf->usr.length > len) {
+		put_pmem_file(file);
+		return -EINVAL;
+	}
+
+	buf->dma_addr = start;
+	buf->priv = file;
+
+	return 0;
+}
+
+static void g3d_buffer_pmem_destroy(struct g3d_buffer *buf)
+{
+	struct file *file = buf->priv;
+
+	put_pmem_file(file);
+}
+
+static int g3d_buffer_pmem_map(struct g3d_buffer *buf)
+{
+	struct file *file = buf->priv;
+
+	flush_pmem_file(file, buf->usr.offset, buf->usr.length);
+
+	return 0;
+}
+#endif
+
+static const
+struct g3d_buffer_type_info g3d_buffer_types[G3D_NUM_BUFFER_TYPES] = {
+	[G3D_BUFFER_DMA] = {
+		/* TODO */
+	},
+#ifdef CONFIG_ANDROID_PMEM
+	[G3D_BUFFER_PMEM] = {
+		.create = g3d_buffer_pmem_create,
+		.destroy = g3d_buffer_pmem_destroy,
+		.map = g3d_buffer_pmem_map,
+	},
+#endif
+	[G3D_BUFFER_DMA_BUF] = {
+		/* TODO */
+	},
+};
+
+static inline int is_g3d_buffer_file(struct file *file);
+
+static int g3d_buffer_release(struct inode *inode, struct file *file)
+{
+	struct g3d_buffer *buf;
+
+	if (!is_g3d_buffer_file(file))
+		return -EINVAL;
+
+	buf = file->private_data;
+
+	if (g3d_buffer_types[buf->usr.type].destroy)
+		g3d_buffer_types[buf->usr.type].destroy(buf);
+
+	kfree(buf);
+
+	return 0;
+}
+
+static struct file_operations g3d_buffer_fops = {
+	.release = g3d_buffer_release,
+};
+
+static inline int is_g3d_buffer_file(struct file *file)
+{
+	return file->f_op == &g3d_buffer_fops;
+}
+
+static int g3d_create_buffer(struct g3d_context *ctx,
+						struct g3d_user_buffer *ubuf)
+{
+	struct g3d_buffer *buf;
+	struct file *file;
+	int ret;
+	int fd;
+
+	if (ubuf->type >= G3D_NUM_BUFFER_TYPES)
+		return -EINVAL;
+
+	if (!g3d_buffer_types[ubuf->type].create)
+		return -EINVAL;
+
+	buf = kzalloc(sizeof(*buf), GFP_KERNEL);
+	if (!buf)
+		return -ENOMEM;
+
+	buf->usr = *ubuf;
+
+	ret = g3d_buffer_types[ubuf->type].create(buf);
+	if (ret) {
+		kfree(buf);
+		return ret;
+	}
+
+	ret = get_unused_fd();
+	if (ret < 0) {
+		if (g3d_buffer_types[ubuf->type].destroy)
+			g3d_buffer_types[ubuf->type].destroy(buf);
+		kfree(buf);
+		return ret;
+	}
+	fd = ret;
+
+	file = anon_inode_getfile("g3d_buffer", &g3d_buffer_fops, buf, 0600);
+	if (IS_ERR(file)) {
+		ret = PTR_ERR(file);
+		put_unused_fd(fd);
+		if (g3d_buffer_types[ubuf->type].destroy)
+			g3d_buffer_types[ubuf->type].destroy(buf);
+		kfree(buf);
+		return ret;
+	}
+	fd_install(fd, file);
+
+	buf->file = file;
+	buf->fd = fd;
+
+	return fd;
+}
+
+/*
  * File operations
  */
 static long g3d_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	struct g3d_context *ctx = file->private_data;
 	struct g3d_user_request req;
+	struct g3d_user_buffer buf;
 	int ret = 0;
 
-	if (_IOC_DIR(cmd) & _IOC_WRITE) {
+	switch(cmd) {
+	case G3D_REQUEST_SUBMIT:
 		ret = copy_from_user(&req, (void __user *)arg, sizeof(req));
 		if (ret)
 			return -EFAULT;
-	}
 
-	switch(cmd) {
-	case _REQUEST_SUBMIT_NR:
 		ret = g3d_submit(ctx, &req);
 		if (ret)
 			return ret;
@@ -952,17 +1160,22 @@ static long g3d_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		ret = g3d_fence_wait(ctx, &req);
 		if (ret)
 			return ret;
-		break;
 
-	default:
-		dev_err(ctx->g3d->dev, "invalid IOCTL %x\n", cmd);
-		return -EINVAL;
-	}
-
-	if (_IOC_DIR(cmd) & _IOC_READ) {
 		ret = copy_to_user((void __user *)arg, &req, sizeof(req));
 		if (ret)
 			return -EFAULT;
+		break;
+
+	case G3D_CREATE_BUFFER:
+		ret = copy_from_user(&buf, (void __user *)arg, sizeof(buf));
+		if (ret)
+			return -EFAULT;
+
+		return g3d_create_buffer(ctx, &buf);
+
+	default:
+		dev_err(ctx->g3d->dev, "invalid IOCTL %08x\n", cmd);
+		return -ENOTTY;
 	}
 
 	return 0;
