@@ -177,6 +177,7 @@ struct g3d_context {
 	struct list_head request_list;
 
 	u32 registers[G3D_NUM_REGISTERS];
+	u32 register_masks[G3D_NUM_PROT_REGISTERS];
 	struct g3d_shader_data shader_data[G3D_NUM_SHADERS];
 
 	unsigned long state;
@@ -207,7 +208,6 @@ typedef void *g3d_command_buffer_t;
 struct g3d_request_info {
 	int (*allocate)(struct g3d_drvdata *g3d, struct g3d_request *);
 	void (*free)(struct g3d_drvdata *g3d, struct g3d_request *);
-	int (*validate)(struct g3d_drvdata *g3d, struct g3d_request *);
 	int (*handle)(struct g3d_drvdata *g3d, struct g3d_request *);
 	int (*update_state)(struct g3d_drvdata *g3d, struct g3d_request *);
 	unsigned int flags;
@@ -237,7 +237,27 @@ static const u32 g3d_shader_base[G3D_NUM_SHADERS] = {
 	[G3D_SHADER_PIXEL] = 0x40000,
 };
 
+static const u32 g3d_register_masks_def[G3D_NUM_PROT_REGISTERS] = {
+	[FGPF_FRONTST] = 0xfffffffe,
+	[FGPF_DEPTHT] = 0xfffffffe,
+	[FGPF_DBMSK] = 0xffffffff,
+	[FGPF_FBCTL] = 0xfffffff8,
+};
+
 static const u32 g3d_registers[G3D_NUM_REGISTERS] = {
+	/*
+	 * Protected registers
+	 */
+
+	[FGPF_FRONTST] = 0x7000c,
+	[FGPF_DEPTHT] = 0x70014,
+	[FGPF_DBMSK] = 0x70028,
+	[FGPF_FBCTL] = 0x7002c,
+
+	/*
+	 * Public registers
+	 */
+
 	/* Host interface */
 	[FGHI_ATTRIB0] = 0x8040,
 	[FGHI_ATTRIB1] = 0x8044,
@@ -297,6 +317,7 @@ static const u32 g3d_registers[G3D_NUM_REGISTERS] = {
 
 	/* Per-fragment unit */
 	[FGPF_ALPHAT] = 0x70008,
+	[FGPF_BACKST] = 0x70010,
 	[FGPF_CCLR] = 0x70018,
 	[FGPF_BLEND] = 0x7001c,
 	[FGPF_LOGOP] = 0x70020,
@@ -415,16 +436,33 @@ static int g3d_process_state_buffer(struct g3d_drvdata *g3d,
 						struct g3d_request *req)
 {
 	struct g3d_context *ctx = req->ctx;
-	const struct g3d_state_buffer *buf = req->usr.state.buf;
-	unsigned int i;
+	const struct g3d_state_entry *reg = req->usr.state.regs;
+	unsigned int count;
 
-	memcpy(ctx->registers, buf->registers, G3D_NUM_REGISTERS * sizeof(u32));
+	count = req->usr.state.nr_prot_regs;
+	while (count--) {
+		u32 mask = ctx->register_masks[reg->reg];
+		ctx->registers[reg->reg] &= ~mask;
+		ctx->registers[reg->reg] |= reg->val & mask;
+		++reg;
+	}
+
+	count = req->usr.state.nr_regs - req->usr.state.nr_prot_regs;
+	while (count--) {
+		ctx->registers[reg->reg] = reg->val;
+		++reg;
+	}
 
 	if (test_bit(G3D_CONTEXT_FULL_RESTORE, &ctx->state))
 		return 0;
 
-	for_each_set_bit(i, buf->dirty, G3D_NUM_REGISTERS)
-		g3d_write(g3d, ctx->registers[i], g3d_registers[i]);
+	reg = req->usr.state.regs;
+	count = req->usr.state.nr_regs;
+	while (count--) {
+		g3d_write(g3d, ctx->registers[reg->reg],
+						g3d_registers[reg->reg]);
+		++reg;
+	}
 
 	return 0;
 }
@@ -506,27 +544,61 @@ static void g3d_process_command_buffer(struct g3d_drvdata *g3d,
 static int g3d_allocate_state_buffer(struct g3d_drvdata *g3d,
 						struct g3d_request *req)
 {
-	struct g3d_state_buffer __user *src = req->usr.state.buf;
+	const struct g3d_state_entry __user *src = req->usr.state.regs;
+	struct g3d_state_entry *dst;
+	struct g3d_state_entry *reg;
 	int ret;
+	int count;
+
+	if (req->usr.state.nr_regs > G3D_NUM_REGISTERS)
+		return -EINVAL;
+
+	if (req->usr.state.nr_prot_regs > req->usr.state.nr_regs)
+		return -EINVAL;
 
 	/* TODO: Use better allocation method */
-	req->usr.state.buf = kmalloc(sizeof(*src), GFP_KERNEL);
-	if (!req->usr.state.buf)
+	dst = kmalloc(req->usr.state.nr_regs * sizeof(*dst), GFP_KERNEL);
+	if (!dst)
 		return -ENOMEM;
 
-	ret = copy_from_user(req->usr.state.buf, src, sizeof(*src));
+	ret = copy_from_user(dst, src, req->usr.state.nr_regs * sizeof(*dst));
 	if (ret) {
-		kfree(req->usr.state.buf);
+		kfree(dst);
 		return -EFAULT;
 	}
 
+	reg = dst;
+
+	count = req->usr.state.nr_prot_regs;
+	while (count--) {
+		if (reg->reg >= G3D_NUM_PROT_REGISTERS)
+			goto err_inval;
+		++reg;
+	}
+
+	count = req->usr.state.nr_regs - req->usr.state.nr_prot_regs;
+	while (count--) {
+		if (reg->reg >= G3D_NUM_REGISTERS)
+			goto err_inval;
+		if (reg->reg <= G3D_NUM_PROT_REGISTERS)
+			goto err_inval;
+		++reg;
+	}
+
+	req->usr.state.regs = dst;
+
 	return 0;
+
+err_inval:
+	kfree(dst);
+
+	return -EINVAL;
 }
 
 static void g3d_free_state_buffer(struct g3d_drvdata *g3d,
 						struct g3d_request *req)
 {
-	kfree(req->usr.state.buf);
+	kfree(req->usr.state.regs);
 }
 
 static int g3d_handle_state_update(struct g3d_drvdata *g3d,
@@ -542,19 +614,22 @@ static int g3d_handle_state_update(struct g3d_drvdata *g3d,
 static int g3d_allocate_command_buffer(struct g3d_drvdata *g3d,
 						struct g3d_request *req)
 {
-	void __user *src = req->usr.command.buf;
+	const u32 __user *src = req->usr.command.buf;
+	u32 *dst;
 	int ret;
 
 	/* TODO: Use better allocation method */
-	req->usr.command.buf = kmalloc(req->usr.command.len, GFP_KERNEL);
-	if (!req->usr.command.buf)
+	dst = kmalloc(req->usr.command.len, GFP_KERNEL);
+	if (!dst)
 		return -ENOMEM;
 
-	ret = copy_from_user(req->usr.command.buf, src, req->usr.command.len);
+	ret = copy_from_user(dst, src, req->usr.command.len);
 	if (ret) {
-		kfree(req->usr.command.buf);
+		kfree(dst);
 		return -EFAULT;
 	}
+
+	req->usr.command.buf = dst;
 
 	return 0;
 }
@@ -643,19 +718,22 @@ static int g3d_handle_fence(struct g3d_drvdata *g3d,
 static int g3d_allocate_shader_program(struct g3d_drvdata *g3d,
 						struct g3d_request *req)
 {
-	void __user *src = req->usr.shader.code;
+	const u32 __user *src = req->usr.shader.code;
+	u32 *dst;
 	int ret;
 
 	/* TODO: Use better allocation method */
-	req->usr.shader.code = kmalloc(req->usr.shader.len, GFP_KERNEL);
-	if (!req->usr.shader.code)
+	dst = kmalloc(req->usr.shader.len, GFP_KERNEL);
+	if (!dst)
 		return -ENOMEM;
 
-	ret = copy_from_user(req->usr.shader.code, src, req->usr.shader.len);
+	ret = copy_from_user(dst, src, req->usr.shader.len);
 	if (ret) {
-		kfree(req->usr.shader.code);
+		kfree(dst);
 		return -EFAULT;
 	}
+
+	req->usr.shader.code = dst;
 
 	return 0;
 }
@@ -669,21 +747,22 @@ static void g3d_free_shader_program(struct g3d_drvdata *g3d,
 static int g3d_allocate_shader_data(struct g3d_drvdata *g3d,
 						struct g3d_request *req)
 {
-	void __user *src = req->usr.shader_data.buf;
+	const u32 __user *src = req->usr.shader_data.buf;
+	u32 *dst;
 	int ret;
 
 	/* TODO: Use better allocation method */
-	req->usr.shader_data.buf = kmalloc(req->usr.shader_data.len,
-								GFP_KERNEL);
-	if (!req->usr.shader_data.buf)
+	dst = kmalloc(req->usr.shader_data.len, GFP_KERNEL);
+	if (!dst)
 		return -ENOMEM;
 
-	ret = copy_from_user(req->usr.shader_data.buf, src,
-						req->usr.shader_data.len);
+	ret = copy_from_user(dst, src, req->usr.shader_data.len);
 	if (ret) {
-		kfree(req->usr.shader_data.buf);
+		kfree(dst);
 		return -EFAULT;
 	}
+
+	req->usr.shader_data.buf = dst;
 
 	return 0;
 }
@@ -879,15 +958,6 @@ static struct g3d_request *g3d_allocate_request(struct g3d_drvdata *g3d,
 		}
 	}
 
-	if (g3d_requests[urq->type].validate) {
-		ret = g3d_requests[urq->type].validate(g3d, req);
-		if (ret) {
-			dev_err(g3d->dev, "request validation failed\n");
-			g3d_free_request(g3d, req);
-			return ERR_PTR(ret);
-		}
-	}
-
 	return req;
 }
 
@@ -944,7 +1014,7 @@ static int g3d_submit(struct g3d_context *ctx, struct g3d_user_request *urq)
 	spin_lock(&g3d->ready_lock);
 
 	spin_lock(&ctx->request_lock);
-	list_splice(&submit_list, &ctx->request_list);
+	list_splice_tail(&submit_list, &ctx->request_list);
 	spin_unlock(&ctx->request_lock);
 
 	if (list_empty(&ctx->list))
@@ -1201,7 +1271,7 @@ static int g3d_open(struct inode *inode, struct file *file)
 	struct g3d_drvdata *g3d = container_of(mdev, struct g3d_drvdata, mdev);
 	struct g3d_context *ctx;
 
-	ctx = kmalloc(sizeof(struct g3d_context), GFP_KERNEL);
+	ctx = kzalloc(sizeof(struct g3d_context), GFP_KERNEL);
 	if (!ctx)
 		return -ENOMEM;
 
@@ -1215,6 +1285,9 @@ static int g3d_open(struct inode *inode, struct file *file)
 	INIT_LIST_HEAD(&ctx->state_update_list);
 	spin_lock_init(&ctx->request_lock);
 	INIT_LIST_HEAD(&ctx->request_list);
+
+	memcpy(ctx->register_masks, g3d_register_masks_def,
+						sizeof(ctx->register_masks));
 
 	file->private_data = ctx;
 

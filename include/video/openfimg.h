@@ -20,16 +20,26 @@
 
 #include <linux/ioctl.h>
 
-#ifndef __KERNEL__
-#define DIV_ROUND_UP(n,d)	(((n) + (d) - 1) / (d))
-#define BITS_TO_LONGS(nr)	DIV_ROUND_UP(nr, 8 * sizeof(long))
-#endif
-
 /*
  * Data types
  */
 
 enum g3d_register {
+	/*
+	 * Protected registers
+	 */
+
+	FGPF_FRONTST,
+	FGPF_DEPTHT,
+	FGPF_DBMSK,
+	FGPF_FBCTL,
+
+	G3D_NUM_PROT_REGISTERS,
+
+	/*
+	 * Public registers
+	 */
+
 	/* Host interface */
 	FGHI_ATTRIB0,
 	FGHI_ATTRIB1,
@@ -89,6 +99,7 @@ enum g3d_register {
 
 	/* Per-fragment unit */
 	FGPF_ALPHAT,
+	FGPF_BACKST,
 	FGPF_CCLR,
 	FGPF_BLEND,
 	FGPF_LOGOP,
@@ -108,9 +119,9 @@ enum g3d_request_id {
 	G3D_NUM_REQUESTS
 };
 
-struct g3d_state_buffer {
-	u32 registers[G3D_NUM_REGISTERS];
-	unsigned long dirty[BITS_TO_LONGS(G3D_NUM_REGISTERS)];
+struct g3d_state_entry {
+	enum g3d_register reg;
+	u32 val;
 };
 
 #define G3D_FENCE_FLUSH		(1 << 0)
@@ -150,11 +161,13 @@ struct g3d_user_request {
 	enum g3d_request_id type;
 	union {
 		struct {
-			struct g3d_state_buffer *buf;
+			const struct g3d_state_entry *regs;
+			size_t nr_regs;
+			size_t nr_prot_regs;
 			unsigned long flags;
 		} state;
 		struct {
-			u32 *buf;
+			const u32 *buf;
 			unsigned int count;
 			size_t len;
 		} command;
@@ -164,13 +177,13 @@ struct g3d_user_request {
 		} fence;
 		struct {
 			enum g3d_shader_type type;
-			u32 *code;
+			const u32 *code;
 			size_t len;
 		} shader;
 		struct {
 			enum g3d_shader_type shader;
 			enum g3d_shader_data_type type;
-			u32 *buf;
+			const u32 *buf;
 			off_t offset;
 			size_t len;
 		} shader_data;
