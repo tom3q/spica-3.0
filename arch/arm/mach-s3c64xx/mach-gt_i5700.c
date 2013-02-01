@@ -1576,7 +1576,7 @@ static struct wifi_platform_data spica_wlan_pdata = {
 static struct resource spica_wlan_resources[] = {
 	{
 		.name	= "bcmdhd_wlan_irq",
-		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_LOWLEVEL,
+		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_LOWEDGE,
 		.start	= IRQ_WLAN,
 		.end	= IRQ_WLAN,
 	},
