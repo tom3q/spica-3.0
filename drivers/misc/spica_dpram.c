@@ -785,112 +785,120 @@ static void dpram_handle_offline(struct dpram *dpr, unsigned cmd)
 							cmd, dpr->status);
 }
 
-static irqreturn_t dpram_mailbox_irq(int irq, void *dev_id)
+static void dpram_handle_command(struct dpram *dpr, u32 cmd)
 {
-	struct dpram *dpr = dev_id;
-	unsigned cmd;
-	unsigned long flags;
-
-	cmd = onedram_read_mailbox(dpr);
-
-	dpr->last_irq = cmd;
-
 	if (unlikely(!dpram_phone_running(dpr))) {
 		dpram_handle_offline(dpr, cmd);
-		return IRQ_HANDLED;
+		return;
 	}
 
 	if (!(cmd & INT_MASK_VALID)) {
 		dev_warn(dpr->dev, "Unhandled offline command %08x\n", cmd);
-		return IRQ_HANDLED;
+		return;
 	}
 
-	local_irq_save(flags);
-
-	if (cmd & INT_MASK_COMMAND) {
-		switch (cmd & 15) {
-		case CMD_SMP_REQ:
-			dev_dbg(dpr->dev, "Phone requested semaphore.\n");
-			if (!onedram_semaphore_held(dpr)) {
-				/* Sometimes the modem may ask for the
-				 * sem when it already owns it.  Humor
-				 * it and ack that request.
-				 */
-				onedram_write_mailbox(dpr,
-						INT_COMMAND(CMD_SMP_REP));
-			} else if (dpr->sem_req_count == 0) {
-				/* No references? Give it to the modem. */
-				dpram_update_state(dpr);
-				dpr->sem_owner = 0;
-				onedram_semaphore_release(dpr);
-				onedram_write_mailbox(dpr,
-						INT_COMMAND(CMD_SMP_REP));
-				goto done;
-			} else {
-				/* Busy now, will be returned later. */
-				break;
-			}
-			break;
-		case CMD_REQ_ACTIVE:
-			dev_dbg(dpr->dev, "Phone requested semaphore (CMD_REQ_ACTIVE).\n");
-			if (!onedram_semaphore_held(dpr)) {
-				/* Sometimes the modem may ask for the
-				 * sem when it already owns it.  Humor
-				 * it and ack that request.
-				 */
-				onedram_write_mailbox(dpr,
-						INT_COMMAND(CMD_RES_ACTIVE));
-			} else if (dpr->sem_req_count == 0) {
-				/* No references? Give it to the modem. */
-				dpram_update_state(dpr);
-				dpr->sem_owner = 0;
-				onedram_semaphore_release(dpr);
-				onedram_write_mailbox(dpr,
-						INT_COMMAND(CMD_RES_ACTIVE));
-				goto done;
-			} else {
-				/* Busy now, remember the modem needs it. */
-				dpr->sem_req_active = 1;
-			}
-			break;
-		case CMD_SMP_REP:
-			dev_dbg(dpr->dev, "Phone returned semaphore.\n");
-			break;
-		case CMD_RESET:
-			dev_err(dpr->dev, "Phone reset.\n");
-			dpr->status = DPRAM_PHONE_CRASHED;
-			wake_up(&dpr->wq);
-			break;
-		case CMD_ERR_DISPLAY: {
-			dev_err(dpr->dev, "Phone error.\n");
-			dpr->status = DPRAM_PHONE_CRASHED;
-			if (onedram_semaphore_held(dpr)) {
-				dpr->err_buf[0] = '1';
-				dpr->err_buf[1] = ' ';
-				memcpy(dpr->err_buf + 2,
-					onedram_addr(dpr, OFF_RX_FMT_DATA),
-					SIZ_ERROR_MSG);
-				dpr->err_avail = 1;
-				dev_err(dpr->dev, "$$$ %s $$$\n", dpr->err_buf);
-				wake_up(&dpr->err_wq);
-				kill_fasync(&dpr->err_async, SIGIO, POLL_IN);
-			}
-			wake_up(&dpr->wq);
-			break;
-		}
-		case CMD_SUSPEND:
-			dev_dbg(dpr->dev, "Phone suspended.\n");
-			break;
-		default:
-			dev_dbg(dpr->dev,
-					"Unhandled command: %08x\n", cmd);
-		}
-	} else {
+	if (!(cmd & INT_MASK_COMMAND)) {
 		if (cmd & INT_MASK_REQ_ACK_F)
 			dpr->device[DPRAM_FMT].ack_req = 1;
 		if (cmd & INT_MASK_REQ_ACK_R)
 			dpr->device[DPRAM_RAW].ack_req = 1;
+		return;
 	}
+
+	switch (cmd & 15) {
+	case CMD_SMP_REQ:
+		dev_dbg(dpr->dev, "Phone requested semaphore.\n");
+		if (!onedram_semaphore_held(dpr)) {
+			/* Sometimes the modem may ask for the
+				* sem when it already owns it.  Humor
+				* it and ack that request.
+				*/
+			onedram_write_mailbox(dpr,
+					INT_COMMAND(CMD_SMP_REP));
+		} else if (dpr->sem_req_count == 0) {
+			/* No references? Give it to the modem. */
+			dpram_update_state(dpr);
+			dpr->sem_owner = 0;
+			onedram_semaphore_release(dpr);
+			onedram_write_mailbox(dpr,
+					INT_COMMAND(CMD_SMP_REP));
+			break;
+		} else {
+			/* Busy now, will be returned later. */
+			break;
+		}
+		break;
+	case CMD_REQ_ACTIVE:
+		dev_dbg(dpr->dev, "Phone requested semaphore (CMD_REQ_ACTIVE).\n");
+		if (!onedram_semaphore_held(dpr)) {
+			/* Sometimes the modem may ask for the
+				* sem when it already owns it.  Humor
+				* it and ack that request.
+				*/
+			onedram_write_mailbox(dpr,
+					INT_COMMAND(CMD_RES_ACTIVE));
+		} else if (dpr->sem_req_count == 0) {
+			/* No references? Give it to the modem. */
+			dpram_update_state(dpr);
+			dpr->sem_owner = 0;
+			onedram_semaphore_release(dpr);
+			onedram_write_mailbox(dpr,
+					INT_COMMAND(CMD_RES_ACTIVE));
+			break;
+		} else {
+			/* Busy now, remember the modem needs it. */
+			dpr->sem_req_active = 1;
+		}
+		break;
+	case CMD_SMP_REP:
+		dev_dbg(dpr->dev, "Phone returned semaphore.\n");
+		break;
+	case CMD_RESET:
+		dev_err(dpr->dev, "Phone reset.\n");
+		dpr->status = DPRAM_PHONE_CRASHED;
+		wake_up(&dpr->wq);
+		break;
+	case CMD_ERR_DISPLAY: {
+		dev_err(dpr->dev, "Phone error.\n");
+		dpr->status = DPRAM_PHONE_CRASHED;
+		if (onedram_semaphore_held(dpr)) {
+			dpr->err_buf[0] = '1';
+			dpr->err_buf[1] = ' ';
+			memcpy(dpr->err_buf + 2,
+				onedram_addr(dpr, OFF_RX_FMT_DATA),
+				SIZ_ERROR_MSG);
+			dpr->err_avail = 1;
+			dev_err(dpr->dev, "$$$ %s $$$\n", dpr->err_buf);
+			wake_up(&dpr->err_wq);
+			kill_fasync(&dpr->err_async, SIGIO, POLL_IN);
+		}
+		wake_up(&dpr->wq);
+		break;
+	}
+	case CMD_SUSPEND:
+		dev_dbg(dpr->dev, "Phone suspended.\n");
+		break;
+	default:
+		dev_dbg(dpr->dev,
+				"Unhandled command: %08x\n", cmd);
+	}
+}
+
+static irqreturn_t dpram_mailbox_irq(int irq, void *dev_id)
+{
+	struct dpram *dpr = dev_id;
+
+	if (gpio_get_value(dpr->pdata->gpio_onedram_int_n))
+		return IRQ_NONE;
+
+	do {
+		u32 cmd = onedram_read_mailbox(dpr);
+		dpram_handle_command(dpr, cmd);
+		dpr->last_irq = cmd;
+	} while (!gpio_get_value(dpr->pdata->gpio_onedram_int_n));
+
+	if (unlikely(!dpram_phone_running(dpr)) || !onedram_semaphore_held(dpr))
+		return IRQ_HANDLED;
 
 	/*
 	 * On *any* interrupt from the modem it may have given
@@ -899,31 +907,28 @@ static irqreturn_t dpram_mailbox_irq(int irq, void *dev_id)
 	 * threads waiting for it and we should process any
 	 * messages that the modem has enqueued in its fifos.
 	 */
-	if (onedram_semaphore_held(dpr)) {
-		if (!dpr->sem_owner) {
-			dpram_update_state(dpr);
-			if (dpr->sem_req_count) {
-				dpr->sem_owner = 1;
-				wake_up(&dpr->wq);
-			}
-		}
-
-		/*
-		 * If we have a signal to send and we're not
-		 * hanging on to the mmio hw semaphore, give
-		 * it back to the modem and send the signal.
-		 * Otherwise this will happen when we give up
-		 * the mmio hw sem in onedram_semaphore_put().
-		 */
-		if (dpr->sem_signal_bits && !dpr->sem_owner) {
-			onedram_semaphore_release(dpr);
-			onedram_write_mailbox(dpr,
-					INT_NON_COMMAND(dpr->sem_signal_bits));
-			dpr->sem_signal_bits = 0;
+	if (!dpr->sem_owner) {
+		dpram_update_state(dpr);
+		if (dpr->sem_req_count) {
+			dpr->sem_owner = 1;
+			wake_up(&dpr->wq);
 		}
 	}
-done:
-	local_irq_restore(flags);
+
+	/*
+	* If we have a signal to send and we're not
+	* hanging on to the mmio hw semaphore, give
+	* it back to the modem and send the signal.
+	* Otherwise this will happen when we give up
+	* the mmio hw sem in onedram_semaphore_put().
+	*/
+	if (dpr->sem_signal_bits && !dpr->sem_owner) {
+		onedram_semaphore_release(dpr);
+		onedram_write_mailbox(dpr,
+				INT_NON_COMMAND(dpr->sem_signal_bits));
+		dpr->sem_signal_bits = 0;
+	}
+
 	return IRQ_HANDLED;
 }
 
@@ -2742,7 +2747,7 @@ static int dpram_init_irq(struct dpram *dpr)
 	dpr->onedram_irq = ret;
 
 	ret = request_irq(dpr->onedram_irq, dpram_mailbox_irq,
-				IRQF_TRIGGER_LOW, "OneDRAM mailbox", dpr);
+				IRQF_TRIGGER_FALLING, "OneDRAM mailbox", dpr);
 	if (ret) {
 		dev_err(dpr->dev, "Failed to request OneDRAM IRQ.\n");
 		return ret;
