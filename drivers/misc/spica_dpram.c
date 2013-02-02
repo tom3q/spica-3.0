@@ -1281,55 +1281,47 @@ static irqreturn_t dpram_sim_irq(int irq, void *dev_id)
 {
 	struct dpram *dpr = dev_id;
 	unsigned long flags;
-	int new_sim_state = 0;
-	int i;
+	int state, new_state;
+	int debounce_count = 10;
+	int debounce_retries = 10;
 
-	new_sim_state = gpio_get_value(dpr->pdata->gpio_sim_detect_n);
+	state = gpio_get_value(dpr->pdata->gpio_sim_detect_n);
 
-	if (new_sim_state == dpr->sim_state)
+	if (state == dpr->sim_state)
 		return IRQ_HANDLED;
 
-	if (!new_sim_state) {
-		dev_dbg(dpr->dev, "SIM attached.\n");
+	do {
+		msleep(20);
 
-		local_irq_save(flags);
-
-		memset(dpr->err_buf, 0, SIZ_ERROR_HDR + SIZ_ERROR_MSG);
-		strcpy(dpr->err_buf, "3 $SIM-ATTACHED");
-		dpr->err_avail = 1;
-
-		local_irq_restore(flags);
-
-		wake_up(&dpr->err_wq);
-		kill_fasync(&dpr->err_async, SIGIO, POLL_IN);
-	} else {
-		for( i = 0 ; i < 3 ; i++ ) {
-			msleep(7);
-
-			if (!gpio_get_value(dpr->pdata->gpio_sim_detect_n))
-				return IRQ_HANDLED;
-
-			msleep(200);
-
-			if (!gpio_get_value(dpr->pdata->gpio_sim_detect_n))
-				return IRQ_HANDLED;
+		new_state = gpio_get_value(dpr->pdata->gpio_sim_detect_n);
+		if (new_state != state) {
+			state = new_state;
+			debounce_count = 10;
+			--debounce_retries;
+			continue;
 		}
+	} while (--debounce_count && debounce_retries);
 
-		dev_dbg(dpr->dev, "SIM detached.\n");
-
-		local_irq_save(flags);
-
-		memset(dpr->err_buf, 0, SIZ_ERROR_HDR + SIZ_ERROR_MSG);
-		strcpy(dpr->err_buf, "2 $SIM-DETACHED");
-		dpr->err_avail = 1;
-
-		local_irq_restore(flags);
-
-		wake_up(&dpr->err_wq);
-		kill_fasync(&dpr->err_async, SIGIO, POLL_IN);
+	if (debounce_count && !debounce_retries) {
+		dev_err(dpr->dev, "SIM detect signal failed to stabilize. Disabling SIM card detection.\n");
+		disable_irq_nosync(irq);
+		return IRQ_HANDLED;
 	}
 
-	dpr->sim_state = new_sim_state;
+	dev_dbg(dpr->dev, "SIM state = %d.\n", state);
+
+	local_irq_save(flags);
+
+	memset(dpr->err_buf, 0, SIZ_ERROR_HDR + SIZ_ERROR_MSG);
+	strcpy(dpr->err_buf, (state) ? "2 $SIM-DETACHED" : "3 $SIM-ATTACHED");
+
+	dpr->err_avail = 1;
+	dpr->sim_state = state;
+
+	local_irq_restore(flags);
+
+	wake_up(&dpr->err_wq);
+	kill_fasync(&dpr->err_async, SIGIO, POLL_IN);
 
 	return IRQ_HANDLED;
 }
