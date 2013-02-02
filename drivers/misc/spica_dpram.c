@@ -3291,6 +3291,25 @@ static int __devexit dpram_remove(struct platform_device *pdev)
 static void dpram_shutdown(struct platform_device *pdev)
 {
 	struct dpram *dpr = platform_get_drvdata(pdev);
+	int timeout = 20;
+
+	if (!dpram_phone_running(dpr)) {
+		gpio_set_value(dpr->pdata->gpio_phone_on, 0);
+		gpio_set_value(dpr->pdata->gpio_phone_rst_n, 0);
+		return;
+	}
+
+	dpr->status = DPRAM_PHONE_OFF;
+	onedram_write_mailbox(dpr, INT_COMMAND(CMD_POWER_OFF));
+
+	while (timeout--) {
+		if (!dpram_phone_getstatus(dpr))
+			break;
+		msleep(10);
+	}
+
+	if (!timeout)
+		dev_warn(dpr->dev, "Timed out waiting for modem shutdown, forcing power off.\n");
 
 	gpio_set_value(dpr->pdata->gpio_phone_on, 0);
 	gpio_set_value(dpr->pdata->gpio_phone_rst_n, 0);
