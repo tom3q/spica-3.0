@@ -175,7 +175,7 @@
  * External interrupts
  */
 
-/* Low level */
+/* Falling edge */
 #define IRQ_ONEDRAM		IRQ_EINT(0)
 #define IRQ_WLAN		IRQ_EINT(1)
 /* Rising edge */
