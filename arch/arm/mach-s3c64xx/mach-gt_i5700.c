@@ -1643,11 +1643,80 @@ static int __init spica_init_wifi_mem(void)
 	return -ENOMEM;
 }
 
+/* Customized Locale table : OPTIONAL feature */
+#define WLC_CNTRY_BUF_SZ	4
+typedef struct cntry_locales_custom {
+	char iso_abbrev[WLC_CNTRY_BUF_SZ];
+	char custom_locale[WLC_CNTRY_BUF_SZ];
+	int  custom_locale_rev;
+} cntry_locales_custom_t;
+
+static cntry_locales_custom_t spica_wlan_translate_custom_table[] = {
+/* Table should be filled out based on custom platform regulatory requirement */
+	{"",   "XY", 4},  /* universal */
+	{"US", "US", 69}, /* input ISO "US" to : US regrev 69 */
+	{"CA", "US", 69}, /* input ISO "CA" to : US regrev 69 */
+	{"EU", "EU", 5},  /* European union countries */
+	{"AT", "EU", 5},
+	{"BE", "EU", 5},
+	{"BG", "EU", 5},
+	{"CY", "EU", 5},
+	{"CZ", "EU", 5},
+	{"DK", "EU", 5},
+	{"EE", "EU", 5},
+	{"FI", "EU", 5},
+	{"FR", "EU", 5},
+	{"DE", "EU", 5},
+	{"GR", "EU", 5},
+	{"HU", "EU", 5},
+	{"IE", "EU", 5},
+	{"IT", "EU", 5},
+	{"LV", "EU", 5},
+	{"LI", "EU", 5},
+	{"LT", "EU", 5},
+	{"LU", "EU", 5},
+	{"MT", "EU", 5},
+	{"NL", "EU", 5},
+	{"PL", "EU", 5},
+	{"PT", "EU", 5},
+	{"RO", "EU", 5},
+	{"SK", "EU", 5},
+	{"SI", "EU", 5},
+	{"ES", "EU", 5},
+	{"SE", "EU", 5},
+	{"GB", "EU", 5},  /* input ISO "GB" to : EU regrev 05 */
+	{"IL", "IL", 0},
+	{"CH", "CH", 0},
+	{"TR", "TR", 0},
+	{"NO", "NO", 0},
+	{"KR", "XY", 3},
+	{"AU", "XY", 3},
+	{"CN", "XY", 3},  /* input ISO "CN" to : XY regrev 03 */
+	{"TW", "XY", 3},
+	{"AR", "XY", 3},
+	{"MX", "XY", 3}
+};
+
+static void *spica_wlan_get_country_code(char *ccode)
+{
+	int size = ARRAY_SIZE(spica_wlan_translate_custom_table);
+	int i;
+
+	if (!ccode)
+		return NULL;
+
+	for (i = 0; i < size; i++)
+		if (strcmp(ccode, spica_wlan_translate_custom_table[i].iso_abbrev) == 0)
+			return &spica_wlan_translate_custom_table[i];
+	return &spica_wlan_translate_custom_table[0];
+}
+
 static struct wifi_platform_data spica_wlan_pdata = {
 	.set_power		= spica_wlan_set_power,
 	.set_reset		= spica_wlan_set_reset,
 	.set_carddetect		= spica_wlan_set_carddetect,
 	.mem_prealloc		= spica_wlan_mem_prealloc,
+	.get_country_code	= spica_wlan_get_country_code,
 };
 
 static struct resource spica_wlan_resources[] = {
