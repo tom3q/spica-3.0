@@ -3327,8 +3327,13 @@ static int dpram_suspend(struct device *dev)
 static int dpram_resume(struct device *dev)
 {
 	struct dpram *dpr = dev_get_drvdata(dev);
+	unsigned long flags;
 
 	gpio_set_value(dpr->pdata->gpio_pda_active, 1);
+
+	local_irq_save(flags);
+	dpram_mailbox_irq(dpr->onedram_irq, dpr);
+	local_irq_restore(flags);
 
 	return 0;
 }
