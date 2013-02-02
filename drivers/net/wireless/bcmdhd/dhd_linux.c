@@ -570,7 +570,7 @@ static int dhd_set_suspend(int value, dhd_pub_t *dhd)
 			/* Kernel resumed  */
 			DHD_ERROR(("%s: Remove extra suspend setting\n", __FUNCTION__));
 
-			power_mode = PM_MAX;
+			power_mode = PM_FAST;
 			dhd_wl_ioctl_cmd(dhd, WLC_SET_PM, (char *)&power_mode,
 			                 sizeof(power_mode), TRUE, 0);
 
@@ -2972,7 +2972,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 #if !defined(WL_CFG80211)
 	uint up = 0;
 #endif /* defined(WL_CFG80211) */
-	uint power_mode = PM_MAX;
+	uint power_mode = PM_FAST;
 	uint32 dongle_align = DHD_SDALIGN;
 	uint32 glom = 0;
 	uint bcn_timeout = DHD_BEACON_TIMEOUT_NORMAL;
