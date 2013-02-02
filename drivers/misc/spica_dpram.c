@@ -903,12 +903,41 @@ static int dpram_phone_image_load(struct dpram *dpr)
 	return 0;
 }
 
+static int dpram_phone_getstatus(struct dpram *dpr)
+{
+	return gpio_get_value(dpr->pdata->gpio_phone_active);
+}
+
 static void dpram_phone_power_off(struct dpram *dpr)
 {
+	unsigned long flags;
+	int timeout = 20;
+
 	dev_info(dpr->dev, "Phone power off.\n");
+
+	if (!dpram_phone_running(dpr)) {
+		gpio_set_value(dpr->pdata->gpio_phone_on, 0);
+		gpio_set_value(dpr->pdata->gpio_phone_rst_n, 0);
+		return;
+	}
+
+	local_irq_save(flags);
 
 	dpr->status = DPRAM_PHONE_OFF;
 	wake_up(&dpr->wq);
+
+	local_irq_restore(flags);
+
+	onedram_write_mailbox(dpr, INT_COMMAND(CMD_POWER_OFF));
+
+	while (timeout--) {
+		if (!dpram_phone_getstatus(dpr))
+			break;
+		msleep(10);
+	}
+
+	if (!timeout)
+		dev_warn(dpr->dev, "Timed out waiting for modem shutdown, forcing power off.\n");
 
 	gpio_set_value(dpr->pdata->gpio_phone_on, 0);
 	gpio_set_value(dpr->pdata->gpio_phone_rst_n, 0);
@@ -918,13 +947,14 @@ static void dpram_phone_power_on(struct dpram *dpr)
 {
 	unsigned long flags;
 
+	if (dpram_phone_running(dpr))
+		dpram_phone_power_off(dpr);
+
 	dev_info(dpr->dev, "Phone power on...\n");
 
 	local_irq_save(flags);
 
 	dpr->sem_owner = 0;
-	dpr->status = DPRAM_PHONE_OFF;
-	wake_up(&dpr->wq);
 
 	gpio_set_value(dpr->pdata->gpio_pda_active, 0);
 
@@ -997,35 +1027,12 @@ static int dpram_phone_boot_start(struct dpram *dpr, int ramdump)
 	return 0;
 }
 
-static int dpram_phone_getstatus(struct dpram *dpr)
-{
-	return gpio_get_value(dpr->pdata->gpio_phone_active);
-}
-
 static void dpram_phone_reset(struct dpram *dpr)
 {
 	dev_info(dpr->dev, "Phone reset.\n");
 
-	dpr->status = DPRAM_PHONE_POWER_ON;
-	wake_up(&dpr->wq);
-
-	gpio_set_value(dpr->pdata->gpio_pda_active, 0);
-
-	(void) onedram_read_mailbox(dpr);
-	onedram_write_mailbox(dpr, 0);
-
-	gpio_set_value(dpr->pdata->gpio_cp_boot_sel, 1);
-	gpio_set_value(dpr->pdata->gpio_usim_boot, 1);
-
-	gpio_set_value(dpr->pdata->gpio_phone_rst_n, 0);
-	msleep(100);
-
-	gpio_set_value(dpr->pdata->gpio_phone_rst_n, 1);
-	msleep(200);
-
-	gpio_set_value(dpr->pdata->gpio_pda_active, 1);
-
-	dpr->status = DPRAM_PHONE_POWER_ON;
+	dpram_phone_power_off(dpr);
+	dpram_phone_power_on(dpr);
 }
 
 /*
@@ -3291,28 +3298,8 @@ static int __devexit dpram_remove(struct platform_device *pdev)
 static void dpram_shutdown(struct platform_device *pdev)
 {
 	struct dpram *dpr = platform_get_drvdata(pdev);
-	int timeout = 20;
 
-	if (!dpram_phone_running(dpr)) {
-		gpio_set_value(dpr->pdata->gpio_phone_on, 0);
-		gpio_set_value(dpr->pdata->gpio_phone_rst_n, 0);
-		return;
-	}
-
-	dpr->status = DPRAM_PHONE_OFF;
-	onedram_write_mailbox(dpr, INT_COMMAND(CMD_POWER_OFF));
-
-	while (timeout--) {
-		if (!dpram_phone_getstatus(dpr))
-			break;
-		msleep(10);
-	}
-
-	if (!timeout)
-		dev_warn(dpr->dev, "Timed out waiting for modem shutdown, forcing power off.\n");
-
-	gpio_set_value(dpr->pdata->gpio_phone_on, 0);
-	gpio_set_value(dpr->pdata->gpio_phone_rst_n, 0);
+	dpram_phone_power_off(dpr);
 }
 
 static int dpram_suspend(struct device *dev)
