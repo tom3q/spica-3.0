@@ -33,12 +33,15 @@
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
-#include <linux/wakelock.h>
 #include <linux/usb.h>
 #include <linux/usb/otg.h>
 #include <linux/usb/ulpi.h>
 #include <linux/usb/gadget.h>
 #include <linux/usb/hcd.h>
+
+#ifdef CONFIG_HAS_WAKELOCK
+#include <linux/wakelock.h>
+#endif
 
 /* FSA9480 I2C registers */
 #define FSA9480_REG_DEVID		0x01
@@ -123,7 +126,9 @@ struct fsa9480_usbsw {
 	int				dev2;
 	int				mansw;
 	struct otg_transceiver		otg;
+#ifdef CONFIG_HAS_WAKELOCK
 	struct wake_lock		wakelock;
+#endif
 };
 
 static ssize_t fsa9480_show_control(struct device *dev,
