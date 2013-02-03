@@ -52,6 +52,7 @@ struct sec_jack_info {
 	int dev_id;
 	struct platform_device *send_key_dev;
 	unsigned int cur_jack_type;
+	int jack_status;
 };
 
 /* with some modifications like moving all the gpio structs inside
@@ -363,18 +364,31 @@ static int sec_jack_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int sec_jack_suspend(struct device *dev)
+{
+	struct sec_jack_info *hi = dev_get_drvdata(dev);
+
+	hi->jack_status = gpio_get_value(hi->pdata->det_gpio);
+
+	return 0;
+}
+
 static int sec_jack_resume(struct device *dev)
 {
 	struct sec_jack_info *hi = dev_get_drvdata(dev);
+
+	if (gpio_get_value(hi->pdata->det_gpio) != hi->jack_status) {
 #ifdef CONFIG_HAS_WAKELOCK
-	wake_lock(&hi->det_wake_lock);
+		wake_lock(&hi->det_wake_lock);
 #endif
-	queue_work(hi->workqueue, &hi->work);
+		queue_work(hi->workqueue, &hi->work);
+	}
 
 	return 0;
 }
 
 static struct dev_pm_ops sec_jack_pm_ops = {
+	.suspend = sec_jack_suspend,
 	.resume = sec_jack_resume,
 };
 
