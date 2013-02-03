@@ -187,7 +187,7 @@
 /* Both edges */
 #define IRQ_TF_DETECT		IRQ_EINT(6)
 #define IRQ_PHONE_ACTIVE	IRQ_EINT(7)
-/* Falling edge */
+/* Low level */
 #define IRQ_PMIC		IRQ_EINT(8)
 #define IRQ_FSA9480		IRQ_EINT(9)
 /* Both edges */

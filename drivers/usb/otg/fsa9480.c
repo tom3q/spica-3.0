@@ -39,7 +39,6 @@
 #include <linux/usb/ulpi.h>
 #include <linux/usb/gadget.h>
 #include <linux/usb/hcd.h>
-#include <linux/workqueue.h>
 
 /* FSA9480 I2C registers */
 #define FSA9480_REG_DEVID		0x01
@@ -124,8 +123,6 @@ struct fsa9480_usbsw {
 	int				dev2;
 	int				mansw;
 	struct otg_transceiver		otg;
-	struct work_struct		work;
-	struct workqueue_struct		*workqueue;
 	struct wake_lock		wakelock;
 };
 
@@ -251,6 +248,8 @@ static const struct attribute_group fsa9480_group = {
 	.attrs = fsa9480_attributes,
 };
 
+static irqreturn_t fsa9480_irq_thread(int irq, void *dev_id);
+
 static int fsa9480_set_usb_host(struct fsa9480_usbsw *usbsw, int on)
 {
 	struct otg_transceiver *otg = &usbsw->otg;
@@ -299,7 +298,7 @@ static int fsa9480_set_host(struct otg_transceiver *otg, struct usb_bus *host)
 #endif
 	otg->host = host;
 	dev_dbg(otg->dev, "host driver registered w/ tranceiver\n");
-	queue_work(usbsw->workqueue, &usbsw->work);
+	fsa9480_irq_thread(0, usbsw);
 
 	return 0;
 }
@@ -342,15 +341,14 @@ static int fsa9480_set_peripheral(struct otg_transceiver *otg,
 #endif
 	otg->gadget = gadget;
 	dev_dbg(otg->dev, "peripheral driver registered w/ tranceiver\n");
-	queue_work(usbsw->workqueue, &usbsw->work);
+	fsa9480_irq_thread(0, usbsw);
 
 	return 0;
 }
 
-static void fsa9480_detect_dev(struct work_struct *work)
+static irqreturn_t fsa9480_irq_thread(int irq, void *dev_id)
 {
-	struct fsa9480_usbsw *usbsw =
-				container_of(work, struct fsa9480_usbsw, work);
+	struct fsa9480_usbsw *usbsw = dev_id;
 	int device_type, ret;
 	unsigned char val1, val2;
 	struct fsa9480_platform_data *pdata = usbsw->pdata;
@@ -393,7 +391,7 @@ static void fsa9480_detect_dev(struct work_struct *work)
 			if (fsa9480_set_usb_peripheral(usbsw, 1)) {
 				// Keep the device undetected if failed
 				usbsw->dev1 = usbsw->dev2 = 0;
-				return;
+				goto out;
 			}
 			usbsw->otg.state = OTG_STATE_B_PERIPHERAL;
 		/* OTG */
@@ -403,7 +401,7 @@ static void fsa9480_detect_dev(struct work_struct *work)
 			if (fsa9480_set_usb_host(usbsw, 1)) {
 				// Keep the device undetected if failed
 				usbsw->dev1 = usbsw->dev2 = 0;
-				return;
+				goto out;
 			}
 			usbsw->otg.state = OTG_STATE_A_HOST;
 		/* UART */
@@ -482,7 +480,7 @@ out:
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_unlock(&usbsw->wakelock);
 #endif
-	return;
+	return IRQ_HANDLED;
 }
 
 static void fsa9480_reg_init(struct fsa9480_usbsw *usbsw)
@@ -520,14 +518,12 @@ static void fsa9480_reg_init(struct fsa9480_usbsw *usbsw)
 
 static irqreturn_t fsa9480_irq(int irq, void *data)
 {
-	struct fsa9480_usbsw *usbsw = data;
 #ifdef CONFIG_HAS_WAKELOCK
+	struct fsa9480_usbsw *usbsw = data;
+
 	wake_lock(&usbsw->wakelock);
 #endif
-	/* device detection */
-	queue_work(usbsw->workqueue, &usbsw->work);
-
-	return IRQ_HANDLED;
+	return IRQ_WAKE_THREAD;
 }
 
 static int fsa9480_irq_init(struct fsa9480_usbsw *usbsw)
@@ -536,8 +532,9 @@ static int fsa9480_irq_init(struct fsa9480_usbsw *usbsw)
 	int ret;
 
 	if (client->irq) {
-		ret = request_irq(client->irq, fsa9480_irq,
-			IRQF_TRIGGER_FALLING, "fsa9480 micro USB", usbsw);
+		ret = request_threaded_irq(client->irq, fsa9480_irq,
+			fsa9480_irq_thread, IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+			"fsa9480 micro USB", usbsw);
 		if (ret) {
 			dev_err(&client->dev, "failed to reqeust IRQ\n");
 			return ret;
@@ -582,19 +579,9 @@ static int __devinit fsa9480_probe(struct i2c_client *client,
 		goto err_free_mem;
 
 	i2c_set_clientdata(client, usbsw);
-
-	INIT_WORK(&usbsw->work, fsa9480_detect_dev);
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_init(&usbsw->wakelock, WAKE_LOCK_SUSPEND, "fsa9480");
 #endif
-
-	usbsw->workqueue = create_freezable_workqueue(dev_name(&client->dev));
-	if (!usbsw->workqueue) {
-		dev_err(&client->dev, "Failed to create freezeable workqueue\n");
-		ret = -ENOMEM;
-		goto err_wake_lock_destroy;
-	}
-
 	if (usbsw->pdata->cfg_gpio)
 		usbsw->pdata->cfg_gpio();
 
@@ -602,7 +589,7 @@ static int __devinit fsa9480_probe(struct i2c_client *client,
 
 	ret = fsa9480_irq_init(usbsw);
 	if (ret)
-		goto err_destroy_workqueue;
+		goto err_wake_lock_destroy;
 
 	ret = sysfs_create_group(&client->dev.kobj, &fsa9480_group);
 	if (ret) {
@@ -621,7 +608,7 @@ static int __devinit fsa9480_probe(struct i2c_client *client,
 		usbsw->pdata->reset_cb();
 
 	/* device detection */
-	queue_work(usbsw->workqueue, &usbsw->work);
+	fsa9480_irq_thread(0, usbsw);
 
 	return 0;
 
@@ -630,8 +617,6 @@ err_sysfs_remove:
 err_free_irq:
 	if (client->irq)
 		free_irq(client->irq, usbsw);
-err_destroy_workqueue:
-	destroy_workqueue(usbsw->workqueue);
 err_wake_lock_destroy:
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&usbsw->wakelock);
@@ -652,7 +637,6 @@ static int __devexit fsa9480_remove(struct i2c_client *client)
 		disable_irq_wake(client->irq);
 		free_irq(client->irq, usbsw);
 	}
-	destroy_workqueue(usbsw->workqueue);
 	i2c_set_clientdata(client, NULL);
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&usbsw->wakelock);
@@ -662,27 +646,36 @@ static int __devexit fsa9480_remove(struct i2c_client *client)
 	return 0;
 }
 
-static int fsa9480_resume(struct device *dev)
+static int fsa9480_suspend(struct device *dev)
 {
 	struct fsa9480_usbsw *usbsw = dev_get_drvdata(dev);
-#ifdef CONFIG_HAS_WAKELOCK
-	wake_lock(&usbsw->wakelock);
-#endif
-	/* device detection */
-	queue_work(usbsw->workqueue, &usbsw->work);
+
+	if (usbsw->client->irq)
+		disable_irq(usbsw->client->irq);
 
 	return 0;
 }
+
+static int fsa9480_resume(struct device *dev)
+{
+	struct fsa9480_usbsw *usbsw = dev_get_drvdata(dev);
+
+	if (usbsw->client->irq)
+		enable_irq(usbsw->client->irq);
+
+	return 0;
+}
+
+static struct dev_pm_ops fsa9480_pm_ops = {
+	.suspend	= fsa9480_suspend,
+	.resume		= fsa9480_resume,
+};
 
 static const struct i2c_device_id fsa9480_id[] = {
 	{"fsa9480", 0},
 	{}
 };
 MODULE_DEVICE_TABLE(i2c, fsa9480_id);
-
-static struct dev_pm_ops fsa9480_pm_ops = {
-	.resume = fsa9480_resume,
-};
 
 static struct i2c_driver fsa9480_i2c_driver = {
 	.driver = {
