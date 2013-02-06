@@ -1317,6 +1317,9 @@ static irqreturn_t dpram_sim_irq(int irq, void *dev_id)
 
 	dev_dbg(dpr->dev, "SIM state = %d.\n", state);
 
+	if (state == dpr->sim_state)
+		return IRQ_HANDLED;
+
 	local_irq_save(flags);
 
 	memset(dpr->err_buf, 0, SIZ_ERROR_HDR + SIZ_ERROR_MSG);
