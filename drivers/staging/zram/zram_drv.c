@@ -464,7 +464,7 @@ error:
 	return 0;
 }
 
-static void __zram_reset_device(struct zram *zram)
+void __zram_reset_device(struct zram *zram)
 {
 	size_t index;
 	struct zram_meta *meta;
