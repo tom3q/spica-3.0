@@ -15,7 +15,6 @@
 #include <linux/device.h>
 #include <linux/genhd.h>
 #include <linux/mm.h>
-#include <linux/kernel.h>
 
 #include "zram_drv.h"
 
@@ -55,12 +54,13 @@ static ssize_t disksize_show(struct device *dev,
 static ssize_t disksize_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t len)
 {
+	int ret;
 	u64 disksize;
 	struct zram *zram = dev_to_zram(dev);
 
-	disksize = memparse(buf, NULL);
-	if (!disksize)
-		return -EINVAL;
+	ret = kstrtoull(buf, 10, &disksize);
+	if (ret)
+		return ret;
 
 	down_write(&zram->init_lock);
 	if (zram->init_done) {
