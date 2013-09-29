@@ -43,13 +43,13 @@
 
 	@ check the vic0
 	mov	\irqnr, #IRQ_VIC0_BASE + 31
-	ldr	\irqstat, [ \base, # VIC_IRQ_STATUS ]
+	ldr	\irqstat, [\base, # VIC_IRQ_STATUS]
 	teq	\irqstat, #0
 
 	@ otherwise try vic1
 	addeq	\tmp, \base, #(VA_VIC1 - VA_VIC0)
 	addeq	\irqnr, \irqnr, #(IRQ_VIC1_BASE - IRQ_VIC0_BASE)
-	ldreq	\irqstat, [ \tmp, # VIC_IRQ_STATUS ]
+	ldreq	\irqstat, [\tmp, # VIC_IRQ_STATUS]
 	teqeq	\irqstat, #0
 
 	clzne	\irqstat, \irqstat
