@@ -555,11 +555,15 @@ static int s3c6410_onenand_wait(struct mtd_info *mtd, int state)
 	 */
 	if (stat & LOAD_CMP) {
 		ecc = s3c6410_onenand_read_reg(ECC_ERR_STAT_OFFSET);
-		if (ecc & ONENAND_ECC_4BIT_UNCORRECTABLE) {
+		if (ecc & ONENAND_ECC_2BIT_ALL) {
 			dev_info(dev, "%s: ECC error = 0x%04x\n", __func__,
 				 ecc);
 			mtd->ecc_stats.failed++;
 			return -EBADMSG;
+		} else if (ecc & ONENAND_ECC_1BIT_ALL) {
+			dev_dbg(dev, "%s: correctable ECC error = 0x%04x\n",
+				__func__, ecc);
+			mtd->ecc_stats.corrected++;
 		}
 	}
 
