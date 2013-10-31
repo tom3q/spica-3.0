@@ -125,14 +125,8 @@ struct cpufreq_governor cpufreq_gov_interactive = {
 static void cpufreq_interactive_timer_resched(
 	struct cpufreq_interactive_cpuinfo *pcpu)
 {
-	unsigned long expires = jiffies + usecs_to_jiffies(timer_rate);
+	unsigned long expires;
 	unsigned long flags;
-
-	mod_timer_pinned(&pcpu->cpu_timer, expires);
-	if (timer_slack_val >= 0 && pcpu->target_freq > pcpu->policy->min) {
-		expires += usecs_to_jiffies(timer_slack_val);
-		mod_timer_pinned(&pcpu->cpu_slack_timer, expires);
-	}
 
 	spin_lock_irqsave(&pcpu->load_lock, flags);
 	pcpu->time_in_idle =
@@ -140,6 +134,14 @@ static void cpufreq_interactive_timer_resched(
 				     &pcpu->time_in_idle_timestamp);
 	pcpu->cputime_speedadj = 0;
 	pcpu->cputime_speedadj_timestamp = pcpu->time_in_idle_timestamp;
+	expires = jiffies + usecs_to_jiffies(timer_rate);
+	mod_timer_pinned(&pcpu->cpu_timer, expires);
+
+	if (timer_slack_val >= 0 && pcpu->target_freq > pcpu->policy->min) {
+		expires += usecs_to_jiffies(timer_slack_val);
+		mod_timer_pinned(&pcpu->cpu_slack_timer, expires);
+	}
+
 	spin_unlock_irqrestore(&pcpu->load_lock, flags);
 }
 
@@ -185,9 +187,10 @@ static unsigned int choose_freq(
 		 * than or equal to the target load.
 		 */
 
-		cpufreq_frequency_table_target(
-			pcpu->policy, pcpu->freq_table, loadadjfreq / tl,
-			CPUFREQ_RELATION_L, &index);
+		if (cpufreq_frequency_table_target(
+			    pcpu->policy, pcpu->freq_table, loadadjfreq / tl,
+			    CPUFREQ_RELATION_L, &index))
+			break;
 		freq = pcpu->freq_table[index].frequency;
 
 		if (freq > prevfreq) {
@@ -199,10 +202,11 @@ static unsigned int choose_freq(
 				 * Find the highest frequency that is less
 				 * than freqmax.
 				 */
-				cpufreq_frequency_table_target(
-					pcpu->policy, pcpu->freq_table,
-					freqmax - 1, CPUFREQ_RELATION_H,
-					&index);
+				if (cpufreq_frequency_table_target(
+					    pcpu->policy, pcpu->freq_table,
+					    freqmax - 1, CPUFREQ_RELATION_H,
+					    &index))
+					break;
 				freq = pcpu->freq_table[index].frequency;
 
 				if (freq == freqmin) {
@@ -225,10 +229,11 @@ static unsigned int choose_freq(
 				 * Find the lowest frequency that is higher
 				 * than freqmin.
 				 */
-				cpufreq_frequency_table_target(
-					pcpu->policy, pcpu->freq_table,
-					freqmin + 1, CPUFREQ_RELATION_L,
-					&index);
+				if (cpufreq_frequency_table_target(
+					    pcpu->policy, pcpu->freq_table,
+					    freqmin + 1, CPUFREQ_RELATION_L,
+					    &index))
+					break;
 				freq = pcpu->freq_table[index].frequency;
 
 				/*
@@ -259,7 +264,12 @@ static u64 update_load(int cpu)
 	now_idle = get_cpu_idle_time_us(cpu, &now);
 	delta_idle = (unsigned int)(now_idle - pcpu->time_in_idle);
 	delta_time = (unsigned int)(now - pcpu->time_in_idle_timestamp);
-	active_time = delta_time - delta_idle;
+
+	if (delta_time <= delta_idle)
+		active_time = 0;
+	else
+		active_time = delta_time - delta_idle;
+
 	pcpu->cputime_speedadj += active_time * pcpu->policy->cur;
 
 	pcpu->time_in_idle = now_idle;
@@ -326,11 +336,8 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 	if (cpufreq_frequency_table_target(pcpu->policy, pcpu->freq_table,
 					   new_freq, CPUFREQ_RELATION_L,
-					   &index)) {
-		pr_warn_once("timer %d: cpufreq_frequency_table_target error\n",
-			     (int) data);
+					   &index))
 		goto rearm;
-	}
 
 	new_freq = pcpu->freq_table[index].frequency;
 
